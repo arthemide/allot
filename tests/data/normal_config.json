@@ -1,0 +1,19 @@
+{
+    "fund_name": "toto",
+    "stocks": [
+        {
+            "symbol": "AAPL",
+            "parts_number": 2,
+            "prum": 2,
+            "repartition": 50
+        },
+        {
+            "symbol": "on",
+            "parts_number": 2,
+            "prum": 1.2,
+            "repartition": 75
+        }
+    ],
+    "ENVIRONNEMENT_VARIABLES_UPDATE": 5,
+    "FUND_UPDATE": 100
+}
