@@ -20,10 +20,10 @@ lint:
 	black .
 	echo running isort...
 	isort . --gitignore
-	echo running flake8...
-	flake8 .
 	echo running autoflake...
 	autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv
+	echo running flake8...
+	flake8 .
 
 .PHONY: check ## 📑 Check code format
 check:
@@ -31,7 +31,7 @@ check:
 	poetry run isort . --gitignore --check
 	poetry run flake8 src
 
-.PHONY: test ## 🕵 run tests
-test:
+.PHONY: tests ## 🕵 run tests
+tests:
 	echo running tests...
-	poetry run python -m pytest ./tests --disable-warnings --cov=./src --cov-fail-under 45 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 45 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov

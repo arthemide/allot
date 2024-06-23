@@ -2,6 +2,3 @@
 create = true
 in-project = true
 experimental.new-installer = false
-
-[virtualenvs.options]
-always-copy = true
