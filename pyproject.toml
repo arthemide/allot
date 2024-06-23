@@ -11,6 +11,8 @@ black = "^24.4.2"
 pytest = "^8.2.1"
 pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
+isort = "^5.13.2"
+flake8 = "^7.1.0"
 
 
 [build-system]
