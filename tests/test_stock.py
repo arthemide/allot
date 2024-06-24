@@ -46,8 +46,6 @@ class TestStock:
         stock_symbol = "AAPL"
         parts_number = 107.37
         prum = 50.58
-        # mocker.patch("src.stock.Stock.get_stock_price")
-        # mocker.return_value = 79.75  # Mocking the get_stock_price method
 
         expected_current_amount = 8562.76
         expected_current_profit = 3131.98

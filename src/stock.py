@@ -55,8 +55,8 @@ class Stock:
     def get_stock_price(self, symbol: str, period: str = "1d") -> float:
         stock_data = yf.Ticker(symbol)
         stock_history = stock_data.history(period=period)
-        if yf.shared._ERRORS:
-            raise UserWarning(yf.shared._ERRORS)
+        if stock_history.empty:
+            raise UserWarning(f"{symbol}: No data found, symbol may be delisted")
 
         current_price = stock_history["Close"].iloc[0]
         logger.info(f"Current price of {symbol} on period {period} is {current_price}")

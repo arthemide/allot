@@ -5,13 +5,13 @@
             "symbol": "AAPL",
             "parts_number": 2,
             "prum": 2,
-            "repartition": 50
+            "repartition": 70
         },
         {
             "symbol": "on",
             "parts_number": 2,
             "prum": 1.2,
-            "repartition": 75
+            "repartition": 25
         }
     ],
     "ENVIRONNEMENT_VARIABLES_UPDATE": 5,

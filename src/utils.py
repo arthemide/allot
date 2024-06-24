@@ -35,7 +35,7 @@ def check_and_update_config(fund: Fund, file_path: str):
     logging.info("Checking if configuration variables changed")
     current_env_vars = load_config(file_path)
 
-    # Check for changes and update classes
+    # Check for fund name change and update class
     fund_name_key = "fund_name"
     current_fund_name = current_env_vars[fund_name_key]
     if current_fund_name != fund.name:
@@ -44,15 +44,19 @@ def check_and_update_config(fund: Fund, file_path: str):
         )
         fund.name = current_fund_name
 
-    # for stock in current_env_vars["stocks"]:
-    #     repartition_key = "repartition"
-    #     current_repartition = current_env_vars[repartition_key]
-    #     if current_repartition != stock.repartition:
-    #         logging.info(
-    #             f"Detected change in {repartition_key}: {stock.repartition} -> {current_repartition}"
-    #         )
-    #         if fund.check_on_repartition(current_repartition):
-    #             stock.repartition = current_repartition
+    # Check for stock repartition change and update class
+    for stock in fund.stocks:
+        for current_stock in current_env_vars["stocks"]:
+            if stock.symbol != current_stock["symbol"]:
+                continue
+            else:
+                current_repartition = current_stock["repartition"]
+                if stock.repartition != current_repartition:
+                    logging.info(
+                        f"Detected change in repartition: {stock.repartition} -> {current_repartition}"
+                    )
+                    # update fund repartition
+                    fund.update_repartition(stock, current_repartition)
 
     # update existing stock
 

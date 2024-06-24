@@ -10,10 +10,24 @@ class TestFund:
         expected_total_amount = 0.0
 
         # When
-        actual_fund = Fund("My Fund")
+        actual_fund = Fund("Empty Fund")
 
         # Then
         assert actual_fund.total_amount == expected_total_amount
+
+    def test_create_two_funds_one_full_and_one_empty_should_be_normal(self):
+        # Given
+        actual_full_fund = Fund("Full Fund")
+        stock = Stock("AAPL", 1, 107.37, 100.0)
+        actual_full_fund.add_stock(stock)
+        excepted_number_on_full_fund = 1
+
+        actual_empty_fund = Fund("Empty Fund")
+        excepted_number_on_empty_fund = 0
+
+        # Then
+        assert len(actual_empty_fund.stocks) == excepted_number_on_empty_fund
+        assert len(actual_full_fund.stocks) == excepted_number_on_full_fund
 
     def test_add_new_stock_should_increase_total_amount(self):
         # Given
@@ -23,6 +37,20 @@ class TestFund:
 
         # When
         fund.add_stock(stock)
+
+        # Then
+        assert fund.total_amount == expected_total_amount
+
+    def test_add_two_new_stock_should_increase_total_amount(self):
+        # Given
+        fund = Fund("My Fund")
+        stock_aapl = Stock("AAPL", 1, 107.37, 50)
+        stock_googl = Stock("GOOGL", 1, 10.37, 50)
+        expected_total_amount = stock_aapl.current_amount + stock_googl.current_amount
+
+        # When
+        fund.add_stock(stock_aapl)
+        fund.add_stock(stock_googl)
 
         # Then
         assert fund.total_amount == expected_total_amount

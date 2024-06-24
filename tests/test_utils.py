@@ -21,7 +21,6 @@ class TestUtils:
         # Given
         actual_config_file_path = "tests/data/normal_config.json"
         actual_config = load_config(actual_config_file_path)
-        excepted_repartition = 75.0
 
         fund = Fund("tata", [Stock("on", 2, 1.2, 50), Stock("AAPL", 2, 2, 50)])
 
@@ -33,3 +32,7 @@ class TestUtils:
             fund.get_stock_from_symbol("on").repartition
             == actual_config["stocks"][1]["repartition"]
         )
+        assert fund.total_repartition == sum(
+            [stock.repartition for stock in fund.stocks]
+        )
+        assert fund.check_on_repartition(fund.total_repartition)
