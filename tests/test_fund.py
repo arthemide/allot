@@ -24,7 +24,10 @@ class TestFund:
             fund.check_on_repartition(-1)
 
         # Then
-        assert str(e.value) == "The repartition of the fund is greater than 100% (-1).Please adjust the repartition of the stocks."
+        assert (
+            str(e.value)
+            == "The repartition of the fund is greater than 100% (-1).Please adjust the repartition of the stocks."
+        )
 
     def test_should_raise_error_when_symbol_is_not_in_fund(self):
         # Given

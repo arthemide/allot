@@ -63,6 +63,7 @@ class Stock:
     # def get_stock_price_evolution_percentage(self):
     #     pass
 
+
 if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger.info("Starting the stock script")
