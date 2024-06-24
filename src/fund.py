@@ -23,7 +23,7 @@ class Fund:
             return sum([stock.current_amount for stock in self.stocks])
 
     def check_on_repartition(self, repartition: float):
-        if repartition > 100:
+        if repartition < 0 or repartition > 100:
             raise ValueError(
                 f"The repartition of the fund is greater than 100% ({repartition})."
                 "Please adjust the repartition of the stocks."
@@ -69,9 +69,6 @@ class Fund:
         self.stocks.remove(stock)
 
     def update_repartition(self, stock: Stock, new_repartition: float):
-        if stock not in self.stocks:
-            raise ValueError(f"{stock.symbol} is not in the fund")
-
         # check if the stock repartition is not greater than 100%
         total_repartition = (
             sum([s.repartition for s in self.stocks])

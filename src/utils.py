@@ -14,7 +14,6 @@ def load_config(file_path: str) -> dict:
 
 
 def set_classes(config: dict) -> Fund:
-    fund = Fund(config["fund_name"])
     stocks = []
     for stock in config["stocks"]:
         stocks.append(
@@ -25,6 +24,7 @@ def set_classes(config: dict) -> Fund:
                 stock["repartition"],
             )
         )
+    fund = Fund(config["fund_name"], stocks)
 
     return fund
 

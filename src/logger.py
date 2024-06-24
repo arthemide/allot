@@ -1,7 +1,7 @@
 import logging.config
 
 
-def setup_logging():
+def setup_logging(): # pragma: no cover
     logging.config.dictConfig(
         {
             "version": 1,

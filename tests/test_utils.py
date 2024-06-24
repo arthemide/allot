@@ -1,9 +1,29 @@
 from src.fund import Fund
 from src.stock import Stock
-from src.utils import check_and_update_config, load_config
+from src.utils import check_and_update_config, load_config, set_classes
 
 
 class TestUtils:
+    def test_set_classes_should_well_set_classes(self):
+        # Given
+        config = {
+            "fund_name": "My Fund",
+            "stocks": [
+                {"symbol": "AAPL", "parts_number": 2, "prum": 2, "repartition": 50},
+                {"symbol": "GOOGL", "parts_number": 2, "prum": 2, "repartition": 50},
+            ],
+        }
+
+        # When
+        fund = set_classes(config)
+
+        # Then
+        assert fund.name == config["fund_name"]
+        assert len(fund.stocks) == len(config["stocks"])
+        assert fund.total_repartition == sum(
+            [stock["repartition"] for stock in config["stocks"]]
+        )
+
     def test_update_fund_name_should_update_class(self, caplog):
         # Given
         actual_config_file_path = "tests/data/normal_config.json"

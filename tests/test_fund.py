@@ -15,6 +15,28 @@ class TestFund:
         # Then
         assert actual_fund.total_amount == expected_total_amount
 
+    def test_should_raise_error_on_repartition_lower_than_zero(self):
+        # Given
+        fund = Fund("My Fund")
+
+        # When
+        with pytest.raises(ValueError) as e:
+            fund.check_on_repartition(-1)
+
+        # Then
+        assert str(e.value) == "The repartition of the fund is greater than 100% (-1).Please adjust the repartition of the stocks."
+
+    def test_should_raise_error_when_symbol_is_not_in_fund(self):
+        # Given
+        fund = Fund("My Fund")
+
+        # When
+        with pytest.raises(ValueError) as e:
+            fund.get_stock_from_symbol("AAPL")
+
+        # Then
+        assert str(e.value) == "AAPL is not in the fund"
+
     def test_create_two_funds_one_full_and_one_empty_should_be_normal(self):
         # Given
         actual_full_fund = Fund("Full Fund")

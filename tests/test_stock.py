@@ -57,3 +57,15 @@ class TestStock:
             # Then
             assert actual_stock.current_amount == expected_current_amount
             assert actual_stock.current_profit == expected_current_profit
+
+    def test_should_raise_error_on_invalid_repartition(self):
+        # Given
+        stock_symbol = "AAPL"
+        invalid_repartition = 101
+
+        # When
+        with pytest.raises(ValueError) as exc_info:
+            Stock(stock_symbol, repartition=invalid_repartition)
+
+        # Then
+        assert str(exc_info.value) == "The repartition must be between 0 and 100"

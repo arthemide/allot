@@ -47,10 +47,6 @@ class Stock:
             raise ValueError("The repartition must be between 0 and 100")
         return True
 
-    # update repartition of the stock
-    def update_repartition(self, new_repartition: float):
-        self.repartition = new_repartition
-
     # get a stock price from yahoo finance
     def get_stock_price(self, symbol: str, period: str = "1d") -> float:
         stock_data = yf.Ticker(symbol)
@@ -67,14 +63,9 @@ class Stock:
     # def get_stock_price_evolution_percentage(self):
     #     pass
 
-
-def main():  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger.info("Starting the stock script")
     stock = Stock("APDL")
     logger.info(stock.current_price)
     logger.info("Ending the stock script")
-
-
-if __name__ == "__main__":
-    main()

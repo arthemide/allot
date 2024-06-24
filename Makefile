@@ -34,4 +34,4 @@ check:
 .PHONY: tests ## 🕵 run tests
 tests:
 	echo running tests...
-	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 78 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 86 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
