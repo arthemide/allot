@@ -9,7 +9,7 @@ class TestStock:
         stock_symbol = "AAPL"
 
         # When
-        stock = Stock(stock_symbol)
+        stock = Stock(stock_symbol, 107.37, 10, 15, 100, 50, 1)
 
         # Then
         assert stock.current_price > 0
@@ -21,7 +21,7 @@ class TestStock:
 
         # When
         with pytest.raises(UserWarning):
-            Stock(stock_symbol)
+            Stock(stock_symbol, 107.37, 10, 15, 100, 50, 1)
 
         # Then
         assert error_expected in caplog.text
@@ -36,7 +36,7 @@ class TestStock:
 
         # When
         with pytest.raises(UserWarning):
-            Stock(stock_symbol)
+            Stock(stock_symbol, 107.37, 10, 15, 100, 50, 1)
 
         # Then
         assert error_expected in caplog.messages[0]
@@ -52,7 +52,15 @@ class TestStock:
 
         # When
         with mocker.patch("src.stock.Stock.get_stock_price", return_value=79.75):
-            actual_stock = Stock(stock_symbol, parts_number, prum)
+            actual_stock = Stock(
+                symbol=stock_symbol,
+                parts_number=parts_number,
+                prum=prum,
+                current_repartition=100,
+                target_repartition=100,
+                arbitration_threshold=10,
+                threshold_to_alert=15,
+            )
 
             # Then
             assert actual_stock.current_amount == expected_current_amount
@@ -65,7 +73,15 @@ class TestStock:
 
         # When
         with pytest.raises(ValueError) as exc_info:
-            Stock(stock_symbol, repartition=invalid_repartition)
+            Stock(
+                symbol=stock_symbol,
+                parts_number=107.37,
+                prum=1,
+                current_repartition=invalid_repartition,
+                target_repartition=100,
+                arbitration_threshold=10,
+                threshold_to_alert=15,
+            )
 
         # Then
         assert str(exc_info.value) == "The repartition must be between 0 and 100"

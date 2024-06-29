@@ -21,7 +21,10 @@ def set_classes(config: dict) -> Fund:
                 stock["symbol"],
                 stock["parts_number"],
                 stock["prum"],
-                stock["repartition"],
+                stock["current_repartition"],
+                stock["target_repartition"],
+                stock["arbitration_threshold"],
+                stock["threshold_to_alert"],
             )
         )
     fund = Fund(config["fund_name"], stocks)
@@ -34,15 +37,15 @@ def check_and_update_config(fund: Fund, file_path: str):
     # Fetch current configuration
     logging.info("Checking if configuration variables changed")
     current_env_vars = load_config(file_path)
+    current_fund = set_classes(current_env_vars)
 
     # Check for fund name change and update class
     fund_name_key = "fund_name"
-    current_fund_name = current_env_vars[fund_name_key]
+    current_fund_name = current_fund.name
     if current_fund_name != fund.name:
         logging.info(
             f"Detected change in {fund_name_key}: {fund.name} -> {current_fund_name}"
         )
-        fund.name = current_fund_name
 
     # Check for stock repartition change and update class
     for stock in fund.stocks:
@@ -50,13 +53,12 @@ def check_and_update_config(fund: Fund, file_path: str):
             if stock.symbol != current_stock["symbol"]:
                 continue
             else:
-                current_repartition = current_stock["repartition"]
-                if stock.repartition != current_repartition:
+                current_repartition = current_stock["current_repartition"]
+                if stock.current_repartition != current_repartition:
                     logging.info(
-                        f"Detected change in repartition: {stock.repartition} -> {current_repartition}"
+                        f"Detected change in current repartition: {stock.current_repartition} -> {current_repartition}"
                     )
-                    # update fund repartition
-                    fund.update_repartition(stock, current_repartition)
+    return current_fund
 
     # update existing stock
 

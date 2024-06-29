@@ -5,13 +5,19 @@
             "symbol": "AAPL",
             "parts_number": 2,
             "prum": 2,
-            "repartition": 70
+            "current_repartition": 70,
+            "target_repartition": 80,
+            "arbitration_threshold": 5,
+            "threshold_to_alert": 10
         },
         {
             "symbol": "on",
             "parts_number": 2,
             "prum": 1.2,
-            "repartition": 25
+            "current_repartition": 30,
+            "target_repartition": 20,
+            "arbitration_threshold": 5,
+            "threshold_to_alert": 10
         }
     ],
     "ENVIRONNEMENT_VARIABLES_UPDATE": 5,

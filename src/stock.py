@@ -11,21 +11,26 @@ class Stock:
     def __init__(
         self,
         symbol: str,
-        parts_number: int = 1,
-        prum: float = 0.0,
-        repartition: float = 100.0,
+        parts_number: float,
+        prum: float,
+        current_repartition: float,
+        target_repartition: float,
+        arbitration_threshold: float,
+        threshold_to_alert: float,
     ):
         """
         Initializes a Stock object.
 
         Args:
             symbol (str): The symbol of the stock.
+            arbitration_threshold: (float): Last arbitration threshold triggered on the stock.
             current_price (float): The current price of the stock.
-            parts_number (int, optional): The number of parts of the stock. Defaults to 1.
-            prum (float, optional): The "Prix de Revient Unitaire Moyen" value. Defaults to 0.0.
+            parts_number (float, optional): The number of parts of the stock. Defaults to 1.
+            prum (float, optional): The "Prix de Revient Unitaire Moyen" value.
             current_amount (float): The current amount of the stock.
             current_profit (float): The current profit of the stock.
-            repartition (float): The repartition in percentage on the fund of the stock.
+            current_repartition (float): The current_repartition in percentage on the fund of the stock.
+            target_repartition (float): The target_repartition in percentage on the fund of the stock.
         """
         self.symbol = symbol
         self.current_price = self.get_stock_price(symbol)
@@ -38,8 +43,15 @@ class Stock:
             (self.current_price - self.prum) * self.parts_number, 2
         )
 
-        self.check_repartition(repartition)
-        self.repartition = repartition
+        self.check_repartition(current_repartition)
+        self.current_repartition = current_repartition
+
+        self.check_repartition(target_repartition)
+        self.target_repartition = target_repartition
+
+        self.arbitration_threshold = arbitration_threshold
+
+        self.threshold_to_alert = threshold_to_alert
 
     # make sure repartition is between 0 and 100
     def check_repartition(self, repartition: float):
@@ -67,6 +79,6 @@ class Stock:
 if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger.info("Starting the stock script")
-    stock = Stock("APDL")
+    stock = Stock("APDL", 107.37, 10, 15, 100, 100, 1)
     logger.info(stock.current_price)
     logger.info("Ending the stock script")
