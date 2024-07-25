@@ -155,3 +155,103 @@ class TestFund:
 
         # Then
         assert fund.total_amount == expected_total_amount
+
+    def test_add_stock_at_construction_of_fund_should_raise_error_if_repartition_is_not_100(
+        self,
+    ):
+        # Given
+        stock_aapl = Stock("AAPL", 1, 107.37, 30, 50, 10, 15, 10, 15)
+        stock_googl = Stock("GOOGL", 1, 107.37, 50, 50, 10, 15, 10, 15)
+
+        # When
+        with pytest.raises(ValueError) as e:
+            Fund("My Fund", [stock_aapl, stock_googl])
+
+        # Then
+        assert (
+            str(e.value)
+            == "The repartition of the fund is not equal to 100% (80).Please adjust the repartition of the stocks."
+        )
+
+    def test_add_stock_should_well_define_amount_to_move(self, mocker):
+        # Given
+        fund = Fund("My Fund")
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1, 107.37, 10, 20, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
+            stock_googl = Stock("GOOGL", 1, 10, 90, 80, 10, 15)
+        fund.add_stocks([stock_aapl, stock_googl])
+        expected_amount_to_move_for_aapl = 0.5
+        expected_amount_to_move_for_googl = -0.5
+
+        # When
+        actual_amount_to_move_for_aapl = stock_aapl.amount_to_move
+        actual_amount_to_move_for_googl = stock_googl.amount_to_move
+
+        # Then
+        assert actual_amount_to_move_for_aapl == expected_amount_to_move_for_aapl
+        assert actual_amount_to_move_for_googl == expected_amount_to_move_for_googl
+
+    def test_add_stock_that_go_over_100_per_should_raise_error(self, mocker):
+        # Given
+        fund = Fund("My Fund")
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1, 107.37, 100, 100, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
+            stock_googl = Stock("GOOGL", 1, 10, 90, 80, 10, 15)
+        fund.add_stock(stock_aapl)
+
+        # When
+        with pytest.raises(ValueError) as e:
+            fund.add_stock(stock_googl)
+
+        # Then
+        assert (
+            str(e.value)
+            == "The repartition of the fund is not equal to 100% (190).Please adjust the repartition of the stocks."
+        )
+
+    def test_add_stock_that_go_over_100_per_should_return_old_fund(self, mocker):
+        # Given
+        fund = Fund("My Fund")
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1, 107.37, 100, 100, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
+            stock_googl = Stock("GOOGL", 1, 10, 90, 80, 10, 15)
+        fund.add_stock(stock_aapl)
+
+        # When
+        with pytest.raises(ValueError) as e:
+            fund.add_stock(stock_googl)
+
+        # Then
+        assert len(fund.stocks) == 1
+        assert fund.total_amount == stock_aapl.current_amount
+    
+    def test_give_stock_should_calculate_right_part_to_move(self, mocker):
+        # Given
+        fund = Fund("My Fund")
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1, 107.37, 80, 20, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
+            stock_googl = Stock("GOOGL", 1, 10, 20, 80, 10, 15)
+        excepted_parts_to_move = 3.0
+
+        # When
+        fund.add_stocks([stock_googl, stock_aapl])
+
+        # Then
+        assert stock_googl.parts_to_move == excepted_parts_to_move
+    
+    def test_give_stock_should_not_raise_error_for_parts_to_move(self, mocker):
+        # Given
+        fund = Fund("My Fund")
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1.0, 107.37, 100, 100, 10, 15)
+        excepted_parts_to_move = 0
+
+        # When
+        fund.add_stock(stock_aapl)
+
+        # Then
+        assert stock_aapl.parts_to_move == excepted_parts_to_move

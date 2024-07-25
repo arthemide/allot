@@ -73,3 +73,38 @@ class TestUtils:
             [stock.current_repartition for stock in actual_fund.stocks]
         )
         assert actual_fund.check_on_repartition(actual_fund.total_current_repartition)
+
+
+    def test_add_stock_should_well_redefine_amount_to_move(self, mocker):
+        # Given
+        actual_config_file_path = "tests/data/normal_config.json"
+        actual_config = load_config(actual_config_file_path)
+        current_fund = set_classes(actual_config)
+        new_config_file_path = "tests/data/three_stocks_config.json"
+        
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            stock_aapl = Stock("AAPL", 1, 107.37, 100, 100, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
+            new_stock_aapl_repartition = Stock("AAPL", 1, 107.37, 100, 100, 10, 15)
+        with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
+            stock_googl = Stock("GOOGL", 1, 10, 90, 80, 10, 15)
+
+        expected_amount_to_move_for_aapl = current_fund.define_amount_to_move(current_fund.get_stock_from_symbol("AAPL"))
+        
+        # Then
+        assert current_fund.get_stock_from_symbol("AAPL").amount_to_move == expected_amount_to_move_for_aapl
+        
+        # When
+        updated_fund = check_and_update_config(current_fund, new_config_file_path)
+        expected_amount_to_move_for_aapl_after_add_googl = updated_fund.define_amount_to_move(updated_fund.get_stock_from_symbol("AAPL"))
+        expected_amount_to_move_for_googl = updated_fund.define_amount_to_move(updated_fund.get_stock_from_symbol("GOOGL"))
+        
+        actual_amount_to_move_for_aapl = updated_fund.get_stock_from_symbol("AAPL").amount_to_move
+        actual_amount_to_move_for_googl = updated_fund.get_stock_from_symbol("GOOGL").amount_to_move
+
+        # Then
+        assert  actual_amount_to_move_for_aapl != expected_amount_to_move_for_aapl
+        assert actual_amount_to_move_for_aapl == expected_amount_to_move_for_aapl_after_add_googl
+        assert actual_amount_to_move_for_aapl == expected_amount_to_move_for_aapl_after_add_googl
+        assert actual_amount_to_move_for_googl == expected_amount_to_move_for_googl
+

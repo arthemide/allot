@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import yfinance as yf
 
@@ -17,6 +18,8 @@ class Stock:
         target_repartition: float,
         arbitration_threshold: float,
         threshold_to_alert: float,
+        amount_to_move: Optional[float] = None,
+        parts_to_move: Optional[float] = None,
     ):
         """
         Initializes a Stock object.
@@ -31,6 +34,10 @@ class Stock:
             current_profit (float): The current profit of the stock.
             current_repartition (float): The current_repartition in percentage on the fund of the stock.
             target_repartition (float): The target_repartition in percentage on the fund of the stock.
+            arbitration_threshold (float): The arbitration threshold of the stock.
+            threshold_to_alert (float): The threshold define manually to alert on the stock.
+            amount_to_move (float): The amount of money to move to reach the target_repartition.
+            parts_to_move (float): The number of parts to move to reach the target_repartition.
         """
         self.symbol = symbol
         self.current_price = self.get_stock_price(symbol)
@@ -52,15 +59,19 @@ class Stock:
         self.arbitration_threshold = arbitration_threshold
 
         self.threshold_to_alert = threshold_to_alert
+        self.amount_to_move = amount_to_move
+        self.parts_to_move = parts_to_move
 
     # make sure repartition is between 0 and 100
-    def check_repartition(self, repartition: float):
+    def check_repartition(self, repartition: float)-> bool:
+        logger.info(f"Checking repartition")
         if repartition < 0 or repartition > 100:
             raise ValueError("The repartition must be between 0 and 100")
         return True
 
     # get a stock price from yahoo finance
     def get_stock_price(self, symbol: str, period: str = "1d") -> float:
+        logger.info(f"Getting stock price of {symbol}")
         stock_data = yf.Ticker(symbol)
         stock_history = stock_data.history(period=period)
         if stock_history.empty:
@@ -69,6 +80,12 @@ class Stock:
         current_price = stock_history["Close"].iloc[0]
         logger.info(f"Current price of {symbol} on period {period} is {current_price}")
         return current_price
+    
+    def define_parts_to_move(self)-> float:
+        try:
+            return self.amount_to_move // self.parts_number
+        except ZeroDivisionError:
+            return 0
 
     # get the stock price evolution percentage
     # TODO: implement the method

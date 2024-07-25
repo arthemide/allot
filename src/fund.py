@@ -9,25 +9,20 @@ logger = logging.getLogger(__name__)
 class Fund:
     def __init__(self, name: str, stocks: Optional[List[Stock]] = None):
         self.name = name
-        if stocks is None:
-            self.stocks = []
-        else:
-            self.stocks = stocks
-        self.total_amount = self.define_total_amount()
-        self.total_current_repartition = self.define_total_repartition(
-            "current_repartition"
-        )
-        self.total_target_repartition = self.define_total_repartition(
-            "target_repartition"
-        )
+        self.stocks = []
+        self.total_amount = 0.0
+        self.total_current_repartition = 0.0
+        self.total_target_repartition = 0.0
+        if stocks:
+            self.add_stocks(stocks)
 
-    def define_total_amount(self):
+    def define_total_amount(self) -> float:
         if len(self.stocks) == 0:
             return 0.0
         else:
             return sum([stock.current_amount for stock in self.stocks])
 
-    def check_on_repartition(self, repartition: float):
+    def check_on_repartition(self, repartition: float) -> bool:
         if repartition != 100:
             raise ValueError(
                 f"The repartition of the fund is not equal to 100% ({repartition})."
@@ -35,31 +30,40 @@ class Fund:
             )
         return True
 
-    def define_total_repartition(self, attr_as_str: str):
-        if len(self.stocks) == 0:
+    def update_total_repartition(self, attr_as_str: str, current_repartition: float = 0.0, stocks: list[Stock] = [])-> float:
+        # todo: not working if fund is empty at is construction
+        if len(self.stocks) == 0 and len(stocks) == 0 and current_repartition == 0:
             return 0.0
         else:
-            total_repartition = sum(
-                [getattr(stock, attr_as_str) for stock in self.stocks]
-            )
-            if self.check_on_repartition(total_repartition):
-                return total_repartition
-
-    def update_total_repartition(
-        self, attr_as_str: str, current_repartition: float = 0.0
-    ):
-        total_repartition = (
-            sum([getattr(stock, attr_as_str) for stock in self.stocks])
-            + current_repartition
-        )
-        if self.check_on_repartition(total_repartition):
+            total_repartition = sum([getattr(stock, attr_as_str) for stock in self.stocks]
+            ) + sum([getattr(stock, attr_as_str) for stock in stocks]
+            ) + current_repartition
+            try:
+                self.check_on_repartition(total_repartition)
+            except ValueError as e:
+                raise e
             return total_repartition
 
-    def add_stock(self, stock: Stock):
-        # check if the stock is already in the fund
+    def define_amount_to_move(self, stock: Stock)-> float:
+        return round(
+            (stock.target_repartition - stock.current_repartition)
+            / 100
+            * self.total_amount,
+            2,
+        )
+    
+    def check_stock_not_existing(self, stock) -> bool:
+        if self.stocks == []:
+            return True
         for s in self.stocks:
             if s.symbol == stock.symbol:
                 raise ValueError(f"{stock.symbol} is already in the fund")
+        return True
+
+
+    def add_stock(self, stock: Stock):
+        # check if the stock is already in the fund
+        self.check_stock_not_existing(stock)
 
         # check if the current stock repartition is not greater than 100%
         self.total_current_repartition = self.update_total_repartition(
@@ -71,9 +75,48 @@ class Fund:
             "target_repartition", stock.target_repartition
         )
 
+        # update the total amount of the fund
         self.total_amount += stock.current_amount
 
+        # define the amount to move for the stock
+        stock.amount_to_move = self.define_amount_to_move(stock)
+
+        # define the parts to move for the stock
+        stock.parts_to_move = stock.define_parts_to_move()
+
+        # add the stock to the fund
         self.stocks.append(stock)
+
+
+    def add_stocks(self, stocks: List[Stock]):
+        # check if the stock is already in the fund
+        for s in stocks:
+            self.check_stock_not_existing(s)
+
+        # check if the current stock repartition is not greater than 100%
+        self.total_current_repartition = self.update_total_repartition(
+            "current_repartition", 0, stocks
+        )
+
+        # check if the target stock repartition is not greater than 100%
+        self.total_target_repartition = self.update_total_repartition(
+            "target_repartition", 0, stocks
+        )
+
+        # update the total amount of the fund
+        self.total_amount += sum([stock.current_amount for stock in stocks]
+            )
+
+        for stock in stocks:
+            # define the amount to move for the stock
+            stock.amount_to_move = self.define_amount_to_move(stock)
+
+            # define the parts to move for the stock
+            stock.parts_to_move = stock.define_parts_to_move()
+
+        # add the stock to the fund
+        self.stocks.extend(stocks)
+
 
     def remove_stock(self, stock: Stock):
         if stock not in self.stocks:
@@ -82,18 +125,6 @@ class Fund:
         self.total_amount -= stock.current_amount
 
         self.stocks.remove(stock)
-
-    def update_repartition(self, list_new_repartitions: list[float]):
-        if len(list_new_repartitions) != len(self.stocks):
-            raise ValueError(
-                "The number of new repartitions must be equal to the number of stocks"
-            )
-
-        self.check_on_repartition(sum(list_new_repartitions))
-
-        self.total_current_repartition = self.define_total_repartition(
-            "current_repartition"
-        )
 
     def get_stock_from_symbol(self, symbol: str) -> Stock:
         for stock in self.stocks:
