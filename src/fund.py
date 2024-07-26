@@ -16,12 +16,6 @@ class Fund:
         if stocks:
             self.add_stocks(stocks)
 
-    def define_total_amount(self) -> float:
-        if len(self.stocks) == 0:
-            return 0.0
-        else:
-            return sum([stock.current_amount for stock in self.stocks])
-
     def check_on_repartition(self, repartition: float) -> bool:
         if repartition != 100:
             raise ValueError(
@@ -30,28 +24,31 @@ class Fund:
             )
         return True
 
-    def update_total_repartition(self, attr_as_str: str, current_repartition: float = 0.0, stocks: list[Stock] = [])-> float:
-        # todo: not working if fund is empty at is construction
-        if len(self.stocks) == 0 and len(stocks) == 0 and current_repartition == 0:
-            return 0.0
-        else:
-            total_repartition = sum([getattr(stock, attr_as_str) for stock in self.stocks]
-            ) + sum([getattr(stock, attr_as_str) for stock in stocks]
-            ) + current_repartition
-            try:
-                self.check_on_repartition(total_repartition)
-            except ValueError as e:
-                raise e
-            return total_repartition
+    def update_total_repartition(
+        self,
+        attr_as_str: str,
+        current_repartition: float = 0.0,
+        stocks: list[Stock] = [],
+    ) -> float:
+        total_repartition = (
+            sum([getattr(stock, attr_as_str) for stock in self.stocks])
+            + sum([getattr(stock, attr_as_str) for stock in stocks])
+            + current_repartition
+        )
+        try:
+            self.check_on_repartition(total_repartition)
+        except ValueError as e:
+            raise e
+        return total_repartition
 
-    def define_amount_to_move(self, stock: Stock)-> float:
+    def define_amount_to_move(self, stock: Stock) -> float:
         return round(
             (stock.target_repartition - stock.current_repartition)
             / 100
             * self.total_amount,
             2,
         )
-    
+
     def check_stock_not_existing(self, stock) -> bool:
         if self.stocks == []:
             return True
@@ -59,7 +56,6 @@ class Fund:
             if s.symbol == stock.symbol:
                 raise ValueError(f"{stock.symbol} is already in the fund")
         return True
-
 
     def add_stock(self, stock: Stock):
         # check if the stock is already in the fund
@@ -87,7 +83,6 @@ class Fund:
         # add the stock to the fund
         self.stocks.append(stock)
 
-
     def add_stocks(self, stocks: List[Stock]):
         # check if the stock is already in the fund
         for s in stocks:
@@ -104,8 +99,7 @@ class Fund:
         )
 
         # update the total amount of the fund
-        self.total_amount += sum([stock.current_amount for stock in stocks]
-            )
+        self.total_amount += sum([stock.current_amount for stock in stocks])
 
         for stock in stocks:
             # define the amount to move for the stock
@@ -116,7 +110,6 @@ class Fund:
 
         # add the stock to the fund
         self.stocks.extend(stocks)
-
 
     def remove_stock(self, stock: Stock):
         if stock not in self.stocks:

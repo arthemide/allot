@@ -63,8 +63,8 @@ class Stock:
         self.parts_to_move = parts_to_move
 
     # make sure repartition is between 0 and 100
-    def check_repartition(self, repartition: float)-> bool:
-        logger.info(f"Checking repartition")
+    def check_repartition(self, repartition: float) -> bool:
+        logger.info("Checking repartition")
         if repartition < 0 or repartition > 100:
             raise ValueError("The repartition must be between 0 and 100")
         return True
@@ -80,8 +80,8 @@ class Stock:
         current_price = stock_history["Close"].iloc[0]
         logger.info(f"Current price of {symbol} on period {period} is {current_price}")
         return current_price
-    
-    def define_parts_to_move(self)-> float:
+
+    def define_parts_to_move(self) -> float:
         try:
             return self.amount_to_move // self.parts_number
         except ZeroDivisionError:

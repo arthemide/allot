@@ -221,13 +221,13 @@ class TestFund:
         fund.add_stock(stock_aapl)
 
         # When
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             fund.add_stock(stock_googl)
 
         # Then
         assert len(fund.stocks) == 1
         assert fund.total_amount == stock_aapl.current_amount
-    
+
     def test_give_stock_should_calculate_right_part_to_move(self, mocker):
         # Given
         fund = Fund("My Fund")
@@ -242,7 +242,7 @@ class TestFund:
 
         # Then
         assert stock_googl.parts_to_move == excepted_parts_to_move
-    
+
     def test_give_stock_should_not_raise_error_for_parts_to_move(self, mocker):
         # Given
         fund = Fund("My Fund")

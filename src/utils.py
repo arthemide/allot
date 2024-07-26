@@ -33,7 +33,7 @@ def set_classes(config: dict) -> Fund:
 
 
 # Function to check the JSON file and update classes
-def check_and_update_config(fund: Fund, file_path: str)-> Fund:
+def check_and_update_config(fund: Fund, file_path: str) -> Fund:
     # Fetch current configuration
     logging.info("Checking if configuration variables changed")
     current_env_vars = load_config(file_path)

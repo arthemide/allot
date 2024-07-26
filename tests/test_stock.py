@@ -85,3 +85,22 @@ class TestStock:
 
         # Then
         assert str(exc_info.value) == "The repartition must be between 0 and 100"
+
+    def test_give_zero_should_return_zero_parts_to_move(self):
+        # Given
+        parts_number = 0
+
+        # When
+        stock = Stock(
+            symbol="AAPL",
+            parts_number=parts_number,
+            prum=1,
+            current_repartition=100,
+            target_repartition=100,
+            arbitration_threshold=10,
+            threshold_to_alert=15,
+            amount_to_move=3,
+        )
+
+        # Then
+        assert stock.define_parts_to_move() == 0
