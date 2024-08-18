@@ -16,18 +16,18 @@ install:
 
 .PHONY: lint ## 🕵 run lint
 lint:
-	black .
-	isort . --gitignore
 	autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv
+	isort . --gitignore
+	black .
 	flake8 .
 
 .PHONY: check ## 📑 Check code format
 check:
-	poetry run black . --check
-	poetry run isort . --gitignore --check
-	poetry run flake8 src
 	poetry run autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv --check
+	poetry run isort . --gitignore --check
+	poetry run black . --check
+	poetry run flake8 src
 
 .PHONY: tests ## 🕵 run tests
 tests:
-	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 88 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 89 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov

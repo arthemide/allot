@@ -1,6 +1,14 @@
+import json
+
 from src.fund import Fund
 from src.stock import Stock
-from src.utils import check_and_update_config, load_config, set_classes
+from src.utils import check_and_update_config
+
+
+# Function to load configuration from the JSON file
+def load_config(file_path: str) -> dict:
+    with open(file_path, "r") as file:
+        return json.load(file)
 
 
 class TestUtils:
@@ -10,7 +18,7 @@ class TestUtils:
         actual_config = load_config(actual_config_file_path)
 
         # When
-        fund = set_classes(actual_config)
+        fund = Fund.parse_file(actual_config_file_path)
 
         # Then
         assert fund.name == actual_config["fund_name"]
@@ -74,11 +82,24 @@ class TestUtils:
         )
         assert actual_fund.check_on_repartition(actual_fund.total_current_repartition)
 
+    def test_check_and_update_config_with_same_config_should_return_same(self, caplog):
+        # Given
+        actual_config_file_path = "tests/data/normal_config.json"
+        actual_config = load_config(actual_config_file_path)
+
+        excepted_fund = Fund.parse_obj(actual_config)
+
+        # When
+        actual_fund = check_and_update_config(excepted_fund, actual_config_file_path)
+
+        # Then
+        assert actual_fund == excepted_fund
+
     def test_add_stock_should_well_redefine_amount_to_move(self, mocker):
         # Given
         actual_config_file_path = "tests/data/normal_config.json"
         actual_config = load_config(actual_config_file_path)
-        current_fund = set_classes(actual_config)
+        current_fund = Fund.parse_obj(actual_config)
         new_config_file_path = "tests/data/three_stocks_config.json"
 
         expected_amount_to_move_for_aapl = current_fund.define_amount_to_move(
