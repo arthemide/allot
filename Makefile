@@ -14,6 +14,10 @@ help:
 install:
 	poetry install -v --no-root
 
+.PHONY: run ## 🏃 run the application
+run:
+	python -m src.server
+
 .PHONY: lint ## 🕵 run lint
 lint:
 	autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv

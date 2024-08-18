@@ -20,6 +20,5 @@
             "threshold_to_alert": 10
         }
     ],
-    "ENVIRONNEMENT_VARIABLES_UPDATE": 5,
-    "FUND_UPDATE": 100
+    "FUND_UPDATE_INTERVAL": 100
 }
