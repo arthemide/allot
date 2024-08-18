@@ -1,6 +1,8 @@
+import json
 import logging
 from typing import List, Optional
 
+from src.config import FundConfig
 from src.stock import Stock
 
 logger = logging.getLogger(__name__)
@@ -15,6 +17,16 @@ class Fund:
         self.total_target_repartition = 0.0
         if stocks:
             self.add_stocks(stocks)
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Fund):
+            return all(
+                (
+                    self.name == other.name,
+                    self.stocks == other.stocks,
+                )
+            )
+        return NotImplemented
 
     def check_on_repartition(self, repartition: float) -> bool:
         if repartition != 100:
@@ -124,6 +136,23 @@ class Fund:
             if stock.symbol == symbol:
                 return stock
         raise ValueError(f"{symbol} is not in the fund")
+
+    @classmethod
+    def create_fund(cls, fund_config: FundConfig) -> "Fund":
+        fund = Fund(fund_config.fund_name)
+
+        fund.add_stocks([Stock(**stock.model_dump()) for stock in fund_config.stocks])
+        return fund
+
+    @classmethod
+    def parse_file(cls, path: str, **kwargs) -> "Fund":
+        with open(path, "rb") as fp:
+            fund_dict = json.load(fp)
+            return cls.parse_obj(fund_dict)
+
+    @classmethod
+    def parse_obj(cls, obj: dict, **kwargs) -> "Fund":
+        return cls.create_fund(FundConfig.model_validate(obj))
 
 
 if __name__ == "__main__":  # pragma: no cover

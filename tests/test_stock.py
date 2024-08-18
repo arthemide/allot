@@ -104,3 +104,25 @@ class TestStock:
 
         # Then
         assert stock.define_parts_to_move() == 0
+
+
+def test_give_stock_and_other_obj_equal_should_raise_not_implemented():
+    # Given
+    stock = Stock(
+        symbol="AAPL",
+        parts_number=3,
+        prum=1,
+        current_repartition=100,
+        target_repartition=100,
+        arbitration_threshold=10,
+        threshold_to_alert=15,
+        amount_to_move=3,
+    )
+    other = object()  # An instance of a different class
+    excepted_error = NotImplemented
+
+    # When
+    is_equal = stock.__eq__(other)
+
+    # Then
+    assert is_equal == excepted_error

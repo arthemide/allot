@@ -62,6 +62,21 @@ class Stock:
         self.amount_to_move = amount_to_move
         self.parts_to_move = parts_to_move
 
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Stock):
+            return all(
+                (
+                    self.symbol == other.symbol,
+                    self.parts_number == other.parts_number,
+                    self.prum == other.prum,
+                    self.current_repartition == other.current_repartition,
+                    self.target_repartition == other.target_repartition,
+                    self.arbitration_threshold == other.arbitration_threshold,
+                    self.threshold_to_alert == other.threshold_to_alert,
+                )
+            )
+        return NotImplemented
+
     # make sure repartition is between 0 and 100
     def check_repartition(self, repartition: float) -> bool:
         logger.info("Checking repartition")
