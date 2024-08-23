@@ -1,11 +1,11 @@
 import json
-import logging
+from logging import getLogger
 from typing import List, Optional
 
 from src.config import FundConfig
 from src.stock import Stock
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 class Fund:
@@ -146,6 +146,7 @@ class Fund:
 
     @classmethod
     def parse_file(cls, path: str, **kwargs) -> "Fund":
+        logger.info(f"Trying to parse file from path: '{path}'")
         with open(path, "rb") as fp:
             fund_dict = json.load(fp)
             return cls.parse_obj(fund_dict)

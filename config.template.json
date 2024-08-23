@@ -1,0 +1,14 @@
+{
+    "fund_name": "example",
+    "stocks": [
+        {
+            "symbol": "test",
+            "parts_number": 2,
+            "prum": 2,
+            "current_repartition": 70,
+            "target_repartition": 80,
+            "arbitration_threshold": 5,
+            "threshold_to_alert": 10
+        }
+    ]
+}

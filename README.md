@@ -24,7 +24,7 @@ To launch the project you have to setup a configuration file `config.json` in th
 }
 ```
 
-
+Then you can launch the project with the following command:
 ```bash
 make run
 ```
