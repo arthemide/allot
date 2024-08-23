@@ -19,6 +19,5 @@
             "arbitration_threshold": 5,
             "threshold_to_alert": 10
         }
-    ],
-    "FUND_UPDATE_INTERVAL": 100
+    ]
 }

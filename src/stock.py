@@ -1,11 +1,11 @@
-import logging
+from logging import getLogger
 from typing import Optional
 
 import yfinance as yf
 
 from src.logger import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 class Stock:
@@ -79,21 +79,23 @@ class Stock:
 
     # make sure repartition is between 0 and 100
     def check_repartition(self, repartition: float) -> bool:
-        logger.info("Checking repartition")
+        logger.debug("Checking repartition")
         if repartition < 0 or repartition > 100:
             raise ValueError("The repartition must be between 0 and 100")
         return True
 
     # get a stock price from yahoo finance
     def get_stock_price(self, symbol: str, period: str = "1d") -> float:
-        logger.info(f"Getting stock price of {symbol}")
+        logger.debug(f"Getting stock price of {symbol}")
         stock_data = yf.Ticker(symbol)
         stock_history = stock_data.history(period=period)
         if stock_history.empty:
             raise UserWarning(f"{symbol}: No data found, symbol may be delisted")
 
         current_price = stock_history["Close"].iloc[0]
-        logger.info(f"Current price of {symbol} on period {period} is {current_price}")
+        logger.info(
+            f"Current price of '{symbol}' on period {period} is {current_price}"
+        )
         return current_price
 
     def define_parts_to_move(self) -> float:
