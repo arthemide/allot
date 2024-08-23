@@ -40,9 +40,13 @@ def define_server():
     # define the server
     while True:
         logger.info("Check if alert has to be send")
-        fund = check_and_update_config(fund, config_file_path)
 
-        sleep(sleep_time)
+        try:
+            fund = check_and_update_config(fund, config_file_path)
+        except Exception as ex:
+            logger.error(ex)
+        finally:
+            sleep(sleep_time)
 
 
 if __name__ == "__main__":
