@@ -51,4 +51,3 @@ def define_server():
 
 if __name__ == "__main__":
     define_server()
-    print("Server started")
