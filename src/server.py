@@ -48,7 +48,7 @@ class Server:
                 sleep(self.sleep_time)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger = getLogger(__name__)
 
