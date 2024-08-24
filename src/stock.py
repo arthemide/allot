@@ -3,6 +3,7 @@ from typing import Optional
 
 import yfinance as yf
 
+from src.config import StockConfig
 from src.logger import setup_logging
 
 logger = getLogger(__name__)
@@ -93,7 +94,7 @@ class Stock:
             raise UserWarning(f"{symbol}: No data found, symbol may be delisted")
 
         current_price = stock_history["Close"].iloc[0]
-        logger.info(
+        logger.debug(
             f"Current price of '{symbol}' on period {period} is {current_price}"
         )
         return current_price
@@ -103,6 +104,17 @@ class Stock:
             return self.amount_to_move // self.parts_number
         except ZeroDivisionError:
             return 0
+
+    def pydantic(self):
+        return StockConfig(
+            symbol=self.symbol,
+            parts_number=self.parts_number,
+            prum=self.prum,
+            current_repartition=self.current_repartition,
+            target_repartition=self.target_repartition,
+            arbitration_threshold=self.arbitration_threshold,
+            threshold_to_alert=self.threshold_to_alert,
+        )
 
     # get the stock price evolution percentage
     # TODO: implement the method

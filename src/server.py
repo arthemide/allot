@@ -1,6 +1,6 @@
 import os
 import sys
-from logging import getLogger
+from logging import Logger, getLogger
 from pathlib import Path
 from time import sleep
 
@@ -15,9 +15,43 @@ from logger import setup_logging
 from utils import check_and_update_config
 
 
-def define_server():
+class Server:
+    def __init__(self, logger: Logger, config_file_path: str, sleep_time: int):
+        self._stop = False
+        self.logger = logger
+        self.config_file_path = config_file_path
+        self.sleep_time = sleep_time
+        self.fund = None
+
+    def stop(self):
+        self._stop = True
+
+    def define_fund(self):
+        is_parsed = False
+        while not is_parsed:
+            try:
+                self.fund = Fund.parse_file(self.config_file_path)
+                is_parsed = True
+            except Exception as ex:
+                logger.error(ex)
+            finally:
+                sleep(self.sleep_time)
+
+    def define_server(self):
+        # define the server
+        while not self._stop:
+            try:
+                self.fund = check_and_update_config(self.fund, self.config_file_path)
+            except Exception as ex:
+                self.logger.error(ex)
+            finally:
+                sleep(self.sleep_time)
+
+
+if __name__ == "__main__":
     setup_logging()
     logger = getLogger(__name__)
+
     logger.info("Starting the application")
 
     # get config file path to environment variable
@@ -26,28 +60,6 @@ def define_server():
     # get sleep time from environment variable
     sleep_time = int(os.getenv("FUND_UPDATE_INTERVAL", 30))
 
-    is_parsed = False
-    fund = None
-    while not is_parsed:
-        try:
-            fund = Fund.parse_file(config_file_path)
-            is_parsed = True
-        except Exception as ex:
-            logger.error(ex)
-        finally:
-            sleep(sleep_time)
-
-    # define the server
-    while True:
-        logger.info("Check if alert has to be send")
-
-        try:
-            fund = check_and_update_config(fund, config_file_path)
-        except Exception as ex:
-            logger.error(ex)
-        finally:
-            sleep(sleep_time)
-
-
-if __name__ == "__main__":
-    define_server()
+    server = Server(logger, config_file_path, sleep_time)
+    server.define_fund()
+    server.define_server()

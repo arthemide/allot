@@ -155,6 +155,21 @@ class Fund:
     def parse_obj(cls, obj: dict, **kwargs) -> "Fund":
         return cls.create_fund(FundConfig.model_validate(obj))
 
+    def pydantic(self, reset: bool = False) -> FundConfig:
+        return FundConfig(
+            fund_name=self.name,
+            stocks=[stock.pydantic() for stock in self.stocks],
+        )
+
+    def write_to_file(self, path: str):
+        with open(path, "w") as fp:
+            json.dump(
+                self.pydantic().model_dump(exclude_none=True),
+                fp,
+                default=str,
+                indent=4,
+            )
+
 
 if __name__ == "__main__":  # pragma: no cover
     fund = Fund("My Fund")
