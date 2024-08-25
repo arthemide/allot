@@ -28,12 +28,12 @@ class Server:
 
     def define_fund(self):
         is_parsed = False
-        while not is_parsed:
+        while not is_parsed and not self._stop:
             try:
                 self.fund = Fund.parse_file(self.config_file_path)
                 is_parsed = True
             except Exception as ex:
-                logger.error(ex)
+                self.logger.error(ex)
             finally:
                 sleep(self.sleep_time)
 

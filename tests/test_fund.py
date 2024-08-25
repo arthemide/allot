@@ -256,15 +256,14 @@ class TestFund:
         # Then
         assert stock_aapl.parts_to_move == excepted_parts_to_move
 
+    def test_give_fund_and_other_obj_equal_should_raise_not_implemented(self):
+        # Given
+        fund = Fund("My Fund")
+        other = object()  # An instance of a different class
+        excepted_error = NotImplemented
 
-def test_give_fund_and_other_obj_equal_should_raise_not_implemented():
-    # Given
-    fund = Fund("My Fund")
-    other = object()  # An instance of a different class
-    excepted_error = NotImplemented
+        # When
+        is_equal = fund.__eq__(other)
 
-    # When
-    is_equal = fund.__eq__(other)
-
-    # Then
-    assert is_equal == excepted_error
+        # Then
+        assert is_equal == excepted_error
