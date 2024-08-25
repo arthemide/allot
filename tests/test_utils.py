@@ -1,14 +1,7 @@
-import json
-
 from src.fund import Fund
 from src.stock import Stock
 from src.utils import check_and_update_config
-
-
-# Function to load configuration from the JSON file
-def load_config(file_path: str) -> dict:
-    with open(file_path, "r") as file:
-        return json.load(file)
+from tests.utils import load_config
 
 
 class TestUtils:

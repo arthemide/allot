@@ -20,4 +20,5 @@ def check_and_update_config(cur_fund: Fund, file_path: str) -> Fund:
     if new_fund.stocks != cur_fund.stocks:
         logger.info("Detected change in stock repartition")
         return new_fund
+    logger.info("No change in configuration variables")
     return cur_fund
