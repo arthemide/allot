@@ -1,89 +1,52 @@
 ###############################################
 # Builder Image
 ###############################################
-FROM alpine AS builder
+FROM python:3.12-slim AS builder
 
-ENV POETRY_VERSION=1.8.2  \
-    POETRY_HOME="/etc/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/home/k8s" \
-    VENV_PATH="/home/k8s/.venv" \
-    SHELL="/bin/bash"
+ENV PYSETUP_PATH="/home/k8s" \
+    UV_SYSTEM_PYTHON=1
 
-
-RUN apk add --no-cache \
-    make \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    git \
-    bash \
-    build-base \
-    libffi-dev \
-    openssl-dev \
-    bzip2-dev \
-    zlib-dev \
-    readline-dev \
-    sqlite-dev
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the default shell to bash
-SHELL ["/bin/bash", "-c"]
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install pyenv
-RUN curl https://pyenv.run | bash && \
-    export PYENV_ROOT="$HOME/.pyenv" && \
-    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH" && \
-    eval "$(pyenv init -)"
+ENV PATH="/root/.cargo/bin:$PATH"
 
-# Set environment variables for pyenv
-ENV PYENV_ROOT /root/.pyenv
-ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-
-# Copy .python-version into the Docker image
-COPY .python-version ./
-
-# # Install the Python version specified in .python-version
-RUN pyenv install $(cat .python-version) && \
-    pyenv global $(cat .python-version)
-
-# Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN curl -sSL https://install.python-poetry.org | python3 - --version $POETRY_VERSION
-
-# prepend poetry and venv to path
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
-
-# copy project requirement files here to ensure they will be cached.
+# Copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
-COPY ./pyproject.toml ./poetry.lock ./Makefile ./
+COPY ./pyproject.toml ./uv.lock ./Makefile ./
 
-RUN make install
+# Install dependencies
+RUN uv sync --frozen
 
 COPY ./src/ $PYSETUP_PATH/src/
 COPY ./README.md $PYSETUP_PATH/README.md
 
-# ###############################################
-# # Production Image
-# ###############################################
-FROM python:3.11-slim AS production
+###############################################
+# Production Image
+###############################################
+FROM python:3.12-slim AS production
 
-ENV POETRY_VERSION=1.8.2  \
-    POETRY_HOME="/etc/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/home/k8s" \
-    VENV_PATH="/home/k8s/.venv"
-
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH:$PYSETUP_PATH/.venv/bin"
+ENV PYSETUP_PATH="/home/k8s" \
+    UV_SYSTEM_PYTHON=1
 
 WORKDIR $PYSETUP_PATH
 
-COPY --from=builder /home/k8s/.venv /home/k8s/.venv
-
+# Copy the virtual environment from builder
+COPY --from=builder /root/.cargo/bin/uv /usr/local/bin/uv
+COPY --from=builder $PYSETUP_PATH/.venv $PYSETUP_PATH/.venv
 COPY --from=builder $PYSETUP_PATH/src ./src
 COPY --from=builder $PYSETUP_PATH/README.md .
+
+ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"
 
 # Mount the config.json file to the container
 VOLUME ./config.json
 
-# Run app as non root and expost it to port 5000
+# Run app as non root and expose it to port 5000
 USER 999
-RUN make run
+
+CMD ["python", "-m", "src.server"]

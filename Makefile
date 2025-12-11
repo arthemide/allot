@@ -12,26 +12,28 @@ help:
 
 .PHONY: install ## 💁 install dependencies
 install:
-	poetry install -v --no-root
+	uv sync
 
 .PHONY: run ## 🏃 run the application
 run:
-	python -m src.server
+	uv run python -m src.server
+
+# .PHONY: lint ## 🕵 run lint
+# lint:
+# 	uv run autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv
+# 	uv run isort . --gitignore
+# 	uv run black .
+# 	uv run flake8 .
 
 .PHONY: lint ## 🕵 run lint
 lint:
-	autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv
-	isort . --gitignore
-	black .
-	flake8 .
+	uv run ruff check . --fix
+	uv run ruff format .
 
-.PHONY: check ## 📑 Check code format
+.PHONY: check ## 🕵 run check
 check:
-	poetry run autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv --check
-	poetry run isort . --gitignore --check
-	poetry run black . --check
-	poetry run flake8 src
+	uv run ruff check .
 
 .PHONY: tests ## 🕵 run tests
 tests:
-	poetry run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 99 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+	uv run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 99 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
