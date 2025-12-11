@@ -37,3 +37,11 @@ check:
 .PHONY: tests ## 🕵 run tests
 tests:
 	uv run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 99 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+
+.PHONY: docker-build ## 🐳 build docker image
+docker-build:
+	docker build -t stock-alerting:latest .
+
+.PHONY: docker-run ## 🐳 run docker container
+docker-run:
+	docker run -v "$${PWD}/config.json:/app/config.json:ro" stock-alerting:latest
