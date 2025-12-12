@@ -34,4 +34,4 @@ ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"
 # Mount the config.json file to the container
 VOLUME ./config.json
 
-CMD ["python", "-m", "src.server"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

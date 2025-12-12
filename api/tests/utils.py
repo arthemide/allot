@@ -1,8 +1,8 @@
 import json
-import os
 from logging import Handler, Logger, basicConfig, getLogger
 from queue import Queue
 
+from src.config import SLEEP_TIME
 from src.server import Server
 
 log_queue = Queue()
@@ -28,15 +28,8 @@ def setup_logging() -> tuple[Logger, Queue]:
 
 
 def setup_server(logger: Logger, config_file_path: str) -> Server:
-    # Set the config file path environment variable
-    os.environ["CONFIG_FILE_PATH"] = config_file_path
-    config_file_path = os.getenv("CONFIG_FILE_PATH")
-
-    # get sleep time from environment variable
-    sleep_time = int(os.getenv("FUND_UPDATE_INTERVAL", 2))
-
     # Launch the server
-    return Server(logger, config_file_path, sleep_time)
+    return Server(logger, config_file_path, SLEEP_TIME)
 
 
 # Function to load configuration from the JSON file

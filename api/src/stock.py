@@ -1,12 +1,10 @@
-from logging import getLogger
 from typing import Optional
 
 import yfinance as yf
+from loguru import logger
 
-from src.config import StockConfig
 from src.logger import setup_logging
-
-logger = getLogger(__name__)
+from src.models import StockConfig
 
 
 class Stock:
@@ -116,6 +114,43 @@ class Stock:
             threshold_to_alert=self.threshold_to_alert,
         )
 
+    @staticmethod
+    def search_symbol(query: str, max_results: int = 10) -> list[dict]:
+        """
+        Search for stock symbols using yfinance.
+
+        Args:
+            query (str): The search query (company name, symbol, etc.)
+            max_results (int): Maximum number of results to return (default: 10)
+
+        Returns:
+            list[dict]: List of dictionaries containing symbol information with keys:
+                - symbol: Stock ticker symbol
+                - name: Company name
+                - exchange: Stock exchange
+                - type: Security type (e.g., EQUITY, ETF)
+        """
+        logger.debug(f"Searching for symbol: {query}")
+        try:
+            search_results = yf.Search(query)
+            results = []
+
+            for i, quote in enumerate(search_results.quotes[:max_results]):
+                results.append(
+                    {
+                        "symbol": quote.get("symbol", ""),
+                        "name": quote.get("shortname") or quote.get("longname", ""),
+                        "exchange": quote.get("exchange", ""),
+                        "type": quote.get("quoteType", ""),
+                    }
+                )
+
+            logger.debug(f"Found {len(results)} results for query: {query}")
+            return results
+        except Exception as e:
+            logger.error(f"Error searching for symbol '{query}': {e}")
+            return []
+
     # get the stock price evolution percentage
     # TODO: implement the method
     # def get_stock_price_evolution_percentage(self):
@@ -125,6 +160,10 @@ class Stock:
 if __name__ == "__main__":  # pragma: no cover
     setup_logging()
     logger.info("Starting the stock script")
-    stock = Stock("APDL", 107.37, 10, 15, 100, 100, 1)
-    logger.info(stock.current_price)
+
+    # Example: Search for symbols
+    results = Stock.search_symbol("Afer")
+    for result in results:
+        print(f"{result['symbol']:15} {result['name']:50} [{result['exchange']}]")
+
     logger.info("Ending the stock script")

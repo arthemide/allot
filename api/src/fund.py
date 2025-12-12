@@ -1,11 +1,10 @@
 import json
-from logging import getLogger
 from typing import List, Optional
 
-from src.config import FundConfig
-from src.stock import Stock
+from loguru import logger
 
-logger = getLogger(__name__)
+from src.models import FundConfig
+from src.stock import Stock
 
 
 class Fund:

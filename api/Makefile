@@ -14,17 +14,6 @@ help:
 install:
 	uv sync
 
-.PHONY: run ## 🏃 run the application
-run:
-	uv run python -m src.server
-
-# .PHONY: lint ## 🕵 run lint
-# lint:
-# 	uv run autoflake -i --remove-all-unused-imports -r --ignore-init-module-imports . --exclude venv
-# 	uv run isort . --gitignore
-# 	uv run black .
-# 	uv run flake8 .
-
 .PHONY: lint ## 🕵 run lint
 lint:
 	uv run ruff check . --fix
@@ -37,6 +26,10 @@ check:
 .PHONY: tests ## 🕵 run tests
 tests:
 	uv run pytest ./tests --disable-warnings --cov=./src --cov-fail-under 99 --junitxml=coverage/junit-report.xml --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlcov
+
+.PHONY: run ## 🏃 run the application
+run:
+	uv run --no-dev uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
 .PHONY: docker-build ## 🐳 build docker image
 docker-build:

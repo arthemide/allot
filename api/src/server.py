@@ -1,15 +1,11 @@
-import os
 import sys
 from logging import Logger, getLogger
 from pathlib import Path
 from time import sleep
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 sys.path.append(Path(__file__).parent.absolute().as_posix())
 
+from config import CONFIG_FILE_PATH, SLEEP_TIME
 from fund import Fund
 from logger import setup_logging
 from utils import check_and_update_config
@@ -54,12 +50,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     logger.info("Starting the application")
 
-    # get config file path to environment variable
-    config_file_path = os.getenv("CONFIG_FILE_PATH", "config.json")
-
-    # get sleep time from environment variable
-    sleep_time = int(os.getenv("FUND_UPDATE_INTERVAL", 30))
-
-    server = Server(logger, config_file_path, sleep_time)
+    server = Server(logger, CONFIG_FILE_PATH, SLEEP_TIME)
     server.define_fund()
     server.define_server()

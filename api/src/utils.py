@@ -1,8 +1,6 @@
-from logging import getLogger
+from loguru import logger
 
 from src.fund import Fund
-
-logger = getLogger(__name__)
 
 
 # Function to check the JSON file and update classes
