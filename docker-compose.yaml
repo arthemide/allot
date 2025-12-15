@@ -1,0 +1,29 @@
+services:
+  api:
+    container_name: api
+    image: "api"
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    env_file: "./api/.env"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  front:
+    container_name: front
+    image: "front"
+    build:
+      context: ./front
+      dockerfile: "Dockerfile"
+    ports:
+      - "5173:3000" # External 5173 maps to internal container port 3000
+    depends_on:
+      - api

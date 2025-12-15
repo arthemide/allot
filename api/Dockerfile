@@ -13,7 +13,6 @@ COPY ./pyproject.toml ./uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY ./src/ $PYSETUP_PATH/src/
-COPY ./README.md $PYSETUP_PATH/README.md
 
 ###############################################
 # Production Image
@@ -27,7 +26,6 @@ WORKDIR $PYSETUP_PATH
 # Copy the virtual environment from builder
 COPY --from=builder $PYSETUP_PATH/.venv $PYSETUP_PATH/.venv
 COPY --from=builder $PYSETUP_PATH/src ./src
-COPY --from=builder $PYSETUP_PATH/README.md .
 
 ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"
 

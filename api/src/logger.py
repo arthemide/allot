@@ -18,7 +18,7 @@ def setup_logging():  # pragma: no cover
 
     # Add file handler
     logger.add(
-        "app.log",
+        "logs/app.log",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         level="INFO",
         rotation="10 MB",
