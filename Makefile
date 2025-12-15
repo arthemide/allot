@@ -14,4 +14,4 @@ up:
 
 .PHONY: up-debug ## 🚀 up-debug
 up-debug:
-	docker-compose -f docker-compose.yaml up --build --force-recreate
+	docker-compose -f docker-compose.yaml  -f sandbox-shared-volumes.yaml up --build --force-recreate

@@ -1,0 +1,17 @@
+# sandbox-shared-volumes.yaml
+
+services:
+  api:
+    volumes:
+      - ./api/src:/app/src
+  
+  front:
+    volumes:
+      # Keep these for live code reloading
+      - ./front/src:/app/src
+      - ./front/svelte.config.js:/app/svelte.config.js
+      - ./front/postcss.config.js:/app/postcss.config.js
+      - stock_front_node_modules:/app/stock_front_node_modules
+      
+    # UPDATE the command to install dependencies before starting the dev server
+    command: sh -c "npm install && npm run dev -- --host --port 3000"

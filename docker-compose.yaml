@@ -27,3 +27,7 @@ services:
       - "5173:3000" # External 5173 maps to internal container port 3000
     depends_on:
       - api
+
+volumes:
+  stock_front_node_modules:
+    name: stock_front_node_modules
