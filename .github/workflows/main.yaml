@@ -10,68 +10,84 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-python@v5
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    - name: checkout repo
-      uses: actions/checkout@main
-    - name: Install and configure Poetry
-      uses: snok/install-poetry@v1
+        python-version: '3.12'
+
+    - name: Install uv
+      run: pip install uv
+
     - name: Set up cache
-      id: cached-poetry-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        path: api/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+
     - name: Install dependencies
-      run: make install
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - name: save cache status
-      id: cache-status
-      run: echo "cache-hit=${{ steps.cached-poetry-dependencies.outputs.cache-hit }}" >> $GITHUB_ENV
+      working-directory: api
+      run: uv sync
+      if: steps.cache.outputs.cache-hit != 'true'
 
   check:
     runs-on: ubuntu-latest
     needs: setup
     steps:
-    - uses: actions/setup-python@v5
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    - name: checkout repo
-      uses: actions/checkout@main
-    - name: Install and configure Poetry
-      uses: snok/install-poetry@v1
+        python-version: '3.12'
+
+    - name: Install uv
+      run: pip install uv
+
     - name: Set up cache
-      id: cached-poetry-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        path: api/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+
     - name: Install dependencies
-      run: make install
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - name: check code
+      working-directory: api
+      run: uv sync
+      if: steps.cache.outputs.cache-hit != 'true'
+
+    - name: Check code
+      working-directory: api
       run: make check
 
   tests:
     runs-on: ubuntu-latest
     needs: setup
     steps:
-    - uses: actions/setup-python@v5
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    - name: checkout repo
-      uses: actions/checkout@main
-    - name: Install and configure Poetry
-      uses: snok/install-poetry@v1
+        python-version: '3.12'
+
+    - name: Install uv
+      run: pip install uv
+
     - name: Set up cache
-      id: cached-poetry-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        path: api/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+
     - name: Install dependencies
-      run: make install
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - name: run tests
+      working-directory: api
+      run: uv sync
+      if: steps.cache.outputs.cache-hit != 'true'
+
+    - name: Run tests
+      working-directory: api
       run: make tests
