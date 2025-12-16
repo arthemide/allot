@@ -10,6 +10,8 @@ services:
       # Keep these for live code reloading
       - ./front/src:/app/src
       - ./front/svelte.config.js:/app/svelte.config.js
+      - ./front/tailwind.config.js:/app/tailwind.config.js
+      - ./front/vite.config.ts:/app/vite.config.ts
       - ./front/postcss.config.js:/app/postcss.config.js
       - stock_front_node_modules:/app/stock_front_node_modules
       
