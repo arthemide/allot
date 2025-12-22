@@ -10,7 +10,7 @@ help:
 
 .PHONY: up ## 🚀 up
 up:
-	docker-compose -f docker-compose.yaml up --build --force-recreate -d
+	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml up --build --force-recreate -d
 
 .PHONY: up-debug ## 🚀 up-debug
 up-debug:
