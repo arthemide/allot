@@ -1,0 +1,20 @@
+services:
+  migration:
+    container_name: migration
+    build:
+      context: ./api
+      dockerfile: Dockerfile.migrations
+    environment:
+      POSTGRESQL_CONNECTION_STRING: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_NAME}
+    depends_on:
+      db:
+        condition: service_healthy # Ensure db is ready before migrations
+    # add sleep time of 4 seconds to wait for the db to be ready
+    entrypoint: ["sh", "-c", "sleep 4 && uv run alembic upgrade head"]
+
+  api: # Augment the api service from the main docker-compose.yaml
+    depends_on:
+      migration: # Add dependency on migration service
+        condition: service_completed_successfully
+      db: # Keep existing dependency on db
+        condition: service_healthy

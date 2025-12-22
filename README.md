@@ -4,33 +4,21 @@ This project is a simple stock alerting system that sends an email when a stock 
 
 ## Launch the project
 
-To launch the project you have to setup a configuration file `config.json` in the root directory of the project. The configuration file should have the following structure:
-
-```json
-{
-    "fund_name": "Fund name",
-    "stocks": [
-        {
-            "symbol": "symbol_name",
-            "parts_number": 1,
-            "prum": 2,
-            "current_repartition": 70,
-            "target_repartition": 80,
-            "arbitration_threshold": 5,
-            "threshold_to_alert": 10
-        },
-    ],
-    "FUND_UPDATE_INTERVAL": 60,
-}
-```
+Setup the environment variables by creating a `.env` file based on the `.env.example` file on the api folder.
 
 Then you can launch the project with the following command:
 ```bash
-make run
+make up-debug
+```
+
+If you do not need to make the db migration, you can launch the project with:
+```bash
+make up-debug-no-mig
 ```
 
 ## Run the tests
 
 ```bash
+cd api
 make tests
 ```

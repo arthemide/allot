@@ -14,4 +14,8 @@ up:
 
 .PHONY: up-debug ## 🚀 up-debug
 up-debug:
-	docker-compose -f docker-compose.yaml  -f sandbox-shared-volumes.yaml up --build --force-recreate
+	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml -f shared-volumes.yaml up --build --force-recreate
+
+.PHONY: up-debug-no-mig ## 🚀 up-debug-no-mig (no migrations)
+up-debug-no-mig:
+	docker-compose -f docker-compose.yaml -f shared-volumes.yaml up --build --force-recreate db api front

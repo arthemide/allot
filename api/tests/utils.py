@@ -2,8 +2,11 @@ import json
 from logging import Handler, Logger, basicConfig, getLogger
 from queue import Queue
 
+from api.tests.server import Server
+from loguru import logger
+
 from src.config import SLEEP_TIME
-from src.server import Server
+from src.old.fund import Fund
 
 log_queue = Queue()
 
@@ -36,3 +39,22 @@ def setup_server(logger: Logger, config_file_path: str) -> Server:
 def load_config(file_path: str) -> dict:
     with open(file_path, "r") as file:
         return json.load(file)
+
+
+# Function to check the JSON file and update classes
+def check_and_update_config(cur_fund: Fund, file_path: str) -> Fund:
+    # Fetch current configuration
+    logger.info("Checking if configuration variables changed")
+    new_fund = Fund.parse_file(file_path)
+
+    # Check for fund name change and update class
+    if new_fund.name != cur_fund.name:
+        logger.warn(f"Detected change in fund_name: {cur_fund.name} -> {new_fund.name}")
+        return new_fund
+
+    # Check for stock repartition change and update class
+    if new_fund.stocks != cur_fund.stocks:
+        logger.info("Detected change in stock repartition")
+        return new_fund
+    logger.info("No change in configuration variables")
+    return cur_fund

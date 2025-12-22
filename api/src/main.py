@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.logger import setup_logging
-from src.routes import router as stock_router
+from src.routes import router
 
 setup_logging()
 
@@ -10,7 +10,8 @@ app = FastAPI(
     title="Stock Alerting API",
     description="API for stock search and portfolio management",
 )
-app.include_router(stock_router)
+
+app.include_router(router)
 
 
 # Configure CORS to allow requests from the frontend

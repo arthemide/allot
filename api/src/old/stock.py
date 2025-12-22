@@ -4,7 +4,7 @@ import yfinance as yf
 from loguru import logger
 
 from src.logger import setup_logging
-from src.models import StockConfig
+from src.models.pydantic.schema import StockSchema
 
 
 class Stock:
@@ -104,7 +104,7 @@ class Stock:
             return 0
 
     def pydantic(self):
-        return StockConfig(
+        return StockSchema(
             symbol=self.symbol,
             parts_number=self.parts_number,
             prum=self.prum,

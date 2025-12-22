@@ -1,11 +1,18 @@
 <script lang="ts">
 	import StockSearch from '$lib/components/StockSearch.svelte';
+	import { Button } from '$lib/components/ui/button';
 </script>
 
 <div class="container">
 	<header>
 		<h1>Stock Alerting</h1>
 		<p>Search for stocks and manage your portfolio</p>
+		
+		<div class="nav-buttons">
+			<button on:click={() => window.location.href = '/config'}>
+				<Button>Manage Fund Configurations</Button>
+			</button>
+		</div>
 	</header>
 
 	<main>
@@ -23,6 +30,13 @@
 	header {
 		text-align: center;
 		margin-bottom: 3rem;
+	}
+
+	.nav-buttons {
+		margin-top: 1.5rem;
+		display: flex;
+		justify-content: center;
+		gap: 1rem;
 	}
 
 	h1 {

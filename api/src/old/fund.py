@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from loguru import logger
 
-from src.models import FundConfig
+from src.models.pydantic.schema import FundSchema
 from src.stock import Stock
 
 
@@ -137,7 +137,7 @@ class Fund:
         raise ValueError(f"{symbol} is not in the fund")
 
     @classmethod
-    def create_fund(cls, fund_config: FundConfig) -> "Fund":
+    def create_fund(cls, fund_config: FundSchema) -> "Fund":
         fund = Fund(fund_config.fund_name)
 
         fund.add_stocks([Stock(**stock.model_dump()) for stock in fund_config.stocks])
@@ -152,10 +152,10 @@ class Fund:
 
     @classmethod
     def parse_obj(cls, obj: dict, **kwargs) -> "Fund":
-        return cls.create_fund(FundConfig.model_validate(obj))
+        return cls.create_fund(FundSchema.model_validate(obj))
 
-    def pydantic(self, reset: bool = False) -> FundConfig:
-        return FundConfig(
+    def pydantic(self, reset: bool = False) -> FundSchema:
+        return FundSchema(
             fund_name=self.name,
             stocks=[stock.pydantic() for stock in self.stocks],
         )

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
-from src.models import StockSearchResponse, StockSearchResult
-from src.stock import Stock
+from src.models.pydantic.schema import StockSearchResponse, StockSearchResult
+from src.old.stock import Stock
 
-router = APIRouter(prefix="/stocks", tags=["debug"])
+router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
 @router.get("/search", response_model=StockSearchResponse)

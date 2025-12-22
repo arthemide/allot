@@ -1,12 +1,19 @@
 import os
 
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv()
 
 
-# get config file path to environment variable
-CONFIG_FILE_PATH = os.getenv("CONFIG_FILE_PATH", "config.json")
+# Database configuration
+POSTGRESQL_CONNECTION_STRING = os.getenv("POSTGRESQL_CONNECTION_STRING")
+if not POSTGRESQL_CONNECTION_STRING:
+    raise ValueError("POSTGRESQL_CONNECTION_STRING environment variable is not set")
 
-# get sleep time from environment variable
-SLEEP_TIME = int(os.getenv("FUND_UPDATE_INTERVAL", 30))
+engine = create_engine(POSTGRESQL_CONNECTION_STRING)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Declarative base for all models
+Base = declarative_base()
