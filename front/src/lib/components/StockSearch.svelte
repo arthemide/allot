@@ -59,6 +59,8 @@
 		/>
 		{#if loading}
 			<div class="spinner"></div>
+		{:else if results.length === 0 && query && !loading}
+			<div class="no-results">No results found for "{query}"</div>
 		{/if}
 	</div>
 
@@ -85,8 +87,6 @@
 				</div>
 			{/each}
 		</div>
-	{:else if query && !loading}
-		<div class="no-results">No results found for "{query}"</div>
 	{/if}
 </div>
 
@@ -95,6 +95,8 @@
 		width: 100%;
 		max-width: 600px;
 		margin: 0 auto;
+		position: relative;
+		z-index: 50;
 	}
 
 	.search-input-wrapper {
@@ -150,6 +152,9 @@
 		overflow: hidden;
 		background-color: white;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		position: absolute;
+		width: 100%;
+		z-index: 50;
 	}
 
 	.result-item {

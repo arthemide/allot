@@ -197,10 +197,6 @@
 </script>
 
 <div class="container mx-auto p-6 max-w-7xl">
-	<header class="mb-8">
-		<h1 class="text-4xl font-bold text-slate-900 mb-2">Fund Configuration Manager</h1>
-		<p class="text-slate-600">Manage your fund portfolios and stock allocations</p>
-	</header>
 
 	{#if error}
 		<div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
