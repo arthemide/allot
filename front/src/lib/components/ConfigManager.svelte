@@ -23,6 +23,7 @@
 	let newFundName: string = $state('');
 	let showStockDialog: boolean = $state(false);
 	let editingStock: Stock | null = $state(null);
+	let prefilledSymbol: string | null = $state(null);
 
 	// Load configurations on mount
 	$effect(() => {
@@ -112,9 +113,14 @@
 		}
 	}
 
-	function openAddStockDialog() {
+	function openAddStockDialog(symbol?: string) {
 		editingStock = null;
+		prefilledSymbol = symbol || null;
 		showStockDialog = true;
+	}
+
+	export function openAddStockDialogWithSymbol(symbol: string) {
+		openAddStockDialog(symbol);
 	}
 
 	function openEditStockDialog(stock: Stock) {
@@ -291,7 +297,7 @@
 				<div class="space-y-4">
 					<div class="flex justify-between items-center">
 						<h3 class="text-lg font-semibold">Stocks ({selectedConfig.stocks.length})</h3>
-						<Button onclick={openAddStockDialog} disabled={saving}>
+						<Button onclick={() => openAddStockDialog()} disabled={saving}>
 							Add Stock
 						</Button>
 					</div>					{#if selectedConfig.stocks.length === 0}
@@ -305,8 +311,13 @@
                                         <Table.Header>
                                             <Table.Row>
                                                 <Table.Head class="w-[100px]">Symbol</Table.Head>
-                                                <Table.Head>Parts</Table.Head>
+                                                <Table.Head>Shares</Table.Head>
+                                                <Table.Head>Cost</Table.Head>
                                                 <Table.Head>PRUM</Table.Head>
+                                                <Table.Head>Today Price</Table.Head>
+												<Table.Head>Market Value</Table.Head>
+												<Table.Head>Gain/Loss</Table.Head>
+												<Table.Head>Gain/Loss %</Table.Head>
 												<Table.Head>Current %</Table.Head>
 												<Table.Head>Target %</Table.Head>
 												<Table.Head>Arb. Threshold</Table.Head>
@@ -318,8 +329,17 @@
 											{#each selectedConfig.stocks as stock}
 												<Table.Row>
 													<Table.Cell class="font-medium">{stock.symbol}</Table.Cell>
-													<Table.Cell>{stock.parts_number}</Table.Cell>
+													<Table.Cell>{stock.shares_number}</Table.Cell>
+													<Table.Cell>{stock.cost ? stock.cost.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.prum.toFixed(2)}€</Table.Cell>
+													<Table.Cell>{stock.today_price ? stock.today_price.toFixed(2) + '€' : 'N/A'}</Table.Cell>
+													<Table.Cell>{stock.market_value ? stock.market_value.toFixed(2) + '€' : 'N/A'}</Table.Cell>
+													<Table.Cell class={stock.gain_loss && stock.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
+														{stock.gain_loss ? stock.gain_loss.toFixed(2) + '€' : 'N/A'}
+													</Table.Cell>
+													<Table.Cell class={stock.gain_loss_percentage && stock.gain_loss_percentage >= 0 ? 'text-green-600' : 'text-red-600'}>
+														{stock.gain_loss_percentage ? stock.gain_loss_percentage.toFixed(2) + '%' : 'N/A'}
+													</Table.Cell>
 													<Table.Cell>{stock.current_repartition}%</Table.Cell>
 													<Table.Cell>{stock.target_repartition}%</Table.Cell>
 													<Table.Cell>{stock.arbitration_threshold}%</Table.Cell>
@@ -355,29 +375,31 @@
 									<h4 class="font-semibold mb-2">Portfolio Summary</h4>
 									<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 										<div>
-											<p class="text-slate-600">Total Stocks</p>
-											<p class="text-lg font-semibold">{selectedConfig.stocks.length}</p>
-										</div>
-										<div>
-											<p class="text-slate-600">Total Parts</p>
+											<p class="text-slate-600">Total Cost</p>
 											<p class="text-lg font-semibold">
-												{selectedConfig.stocks.reduce((sum, s) => sum + s.parts_number, 0)}
+												{selectedConfig.total_cost?.toFixed(2) || '0.00'}€
 											</p>
 										</div>
 										<div>
-											<p class="text-slate-600">Current Allocation</p>
+											<p class="text-slate-600">Total Market Value</p>
 											<p class="text-lg font-semibold">
-												{selectedConfig.stocks
-													.reduce((sum, s) => sum + s.current_repartition, 0)
-													.toFixed(1)}%
+												{selectedConfig.total_market_value?.toFixed(2) || '0.00'}€
 											</p>
 										</div>
 										<div>
-											<p class="text-slate-600">Target Allocation</p>
-											<p class="text-lg font-semibold">
-												{selectedConfig.stocks
-													.reduce((sum, s) => sum + s.target_repartition, 0)
-													.toFixed(1)}%
+											<p class="text-slate-600">Total Gain/Loss</p>
+											<p class="text-lg font-semibold" 
+												class:text-green-600={(selectedConfig.total_gain_loss || 0) >= 0} 
+												class:text-red-600={(selectedConfig.total_gain_loss || 0) < 0}>
+												{selectedConfig.total_gain_loss?.toFixed(2) || '0.00'}€
+											</p>
+										</div>
+										<div>
+											<p class="text-slate-600">Average Gain/Loss %</p>
+											<p class="text-lg font-semibold" 
+												class:text-green-600={(selectedConfig.average_gain_loss_percentage || 0) >= 0} 
+												class:text-red-600={(selectedConfig.average_gain_loss_percentage || 0) < 0}>
+												{selectedConfig.average_gain_loss_percentage?.toFixed(2) || '0.00'}%
 											</p>
 										</div>
 									</div>
@@ -391,9 +413,11 @@
 				<StockForm
 					bind:open={showStockDialog}
 					stock={editingStock}
+					prefilledSymbol={prefilledSymbol}
 					onClose={() => {
 						showStockDialog = false;
 						editingStock = null;
+						prefilledSymbol = null;
 					}}
 					onSubmit={handleStockSubmit}
 				/>

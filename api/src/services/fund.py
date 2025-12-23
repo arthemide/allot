@@ -47,7 +47,7 @@ class FundService:
             for stock in updates.stocks:
                 stock_data = {
                     "symbol": stock.symbol,
-                    "parts_number": stock.parts_number,
+                    "shares_number": stock.shares_number,
                     "prum": stock.prum,
                     "current_repartition": stock.current_repartition,
                     "target_repartition": stock.target_repartition,

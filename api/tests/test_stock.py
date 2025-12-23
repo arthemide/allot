@@ -44,7 +44,7 @@ class TestStock:
     def test_should_well_calculated_profit(self, mocker):
         # Given
         stock_symbol = "AAPL"
-        parts_number = 107.37
+        shares_number = 107.37
         prum = 50.58
 
         expected_current_amount = 8562.76
@@ -54,7 +54,7 @@ class TestStock:
         with mocker.patch("src.stock.Stock.get_stock_price", return_value=79.75):
             actual_stock = Stock(
                 symbol=stock_symbol,
-                parts_number=parts_number,
+                shares_number=shares_number,
                 prum=prum,
                 current_repartition=100,
                 target_repartition=100,
@@ -75,7 +75,7 @@ class TestStock:
         with pytest.raises(ValueError) as exc_info:
             Stock(
                 symbol=stock_symbol,
-                parts_number=107.37,
+                shares_number=107.37,
                 prum=1,
                 current_repartition=invalid_repartition,
                 target_repartition=100,
@@ -86,14 +86,14 @@ class TestStock:
         # Then
         assert str(exc_info.value) == "The repartition must be between 0 and 100"
 
-    def test_give_zero_should_return_zero_parts_to_move(self):
+    def test_give_zero_should_return_zero_shares_to_move(self):
         # Given
-        parts_number = 0
+        shares_number = 0
 
         # When
         stock = Stock(
             symbol="AAPL",
-            parts_number=parts_number,
+            shares_number=shares_number,
             prum=1,
             current_repartition=100,
             target_repartition=100,
@@ -103,13 +103,13 @@ class TestStock:
         )
 
         # Then
-        assert stock.define_parts_to_move() == 0
+        assert stock.define_shares_to_move() == 0
 
     def test_give_stock_and_other_obj_equal_should_raise_not_implemented(self):
         # Given
         stock = Stock(
             symbol="AAPL",
-            parts_number=3,
+            shares_number=3,
             prum=1,
             current_repartition=100,
             target_repartition=100,

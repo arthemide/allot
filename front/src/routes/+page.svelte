@@ -1,6 +1,14 @@
 <script lang="ts">
 	import StockSearch from '$lib/components/StockSearch.svelte';
 	import ConfigManager from '$lib/components/ConfigManager.svelte';
+
+	let configManager: ConfigManager;
+
+	function handleAddStock(symbol: string) {
+		if (configManager) {
+			configManager.openAddStockDialogWithSymbol(symbol);
+		}
+	}
 </script>
 
 <div class="container">
@@ -10,8 +18,8 @@
 	</header>
 
 	<main>
-		<StockSearch />
-		<ConfigManager />
+		<StockSearch onAddStock={handleAddStock} />
+		<ConfigManager bind:this={configManager} />
 	</main>
 </div>
 

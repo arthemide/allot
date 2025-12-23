@@ -16,7 +16,16 @@ class StockRepository:
         with SessionLocal() as session:
             with session.begin():
                 # Exclude id field from stock data
-                stock_data = stock.model_dump(exclude={"id"})
+                stock_data = stock.model_dump(
+                    exclude={
+                        "id",
+                        "gain_loss",
+                        "gain_loss_percentage",
+                        "market_value",
+                        "today_price",
+                        "cost",
+                    }
+                )
                 session.add(StockTable(fund_id=fund_id, **stock_data))
 
             # Return the fund with stocks loaded
@@ -36,7 +45,18 @@ class StockRepository:
                 StockTable.fund_id == fund_id,
                 StockTable.id == stock_id,
             )
-            .values(**stock.model_dump(exclude={"id"}))
+            .values(
+                **stock.model_dump(
+                    exclude={
+                        "id",
+                        "gain_loss",
+                        "gain_loss_percentage",
+                        "market_value",
+                        "today_price",
+                        "cost",
+                    }
+                )
+            )
         )
         with SessionLocal() as session:
             with session.begin():

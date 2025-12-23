@@ -12,7 +12,7 @@ class StockTable(Base):
         Integer, ForeignKey("funds.id", ondelete="CASCADE"), nullable=False
     )
     symbol = Column(String(20), nullable=False)
-    parts_number = Column(Float, nullable=False)
+    shares_number = Column(Integer, nullable=False)
     prum = Column(Float, nullable=False)
     current_repartition = Column(Float, nullable=False)
     target_repartition = Column(Float, nullable=False)

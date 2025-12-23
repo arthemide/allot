@@ -11,14 +11,14 @@ class Stock:
     def __init__(
         self,
         symbol: str,
-        parts_number: float,
+        shares_number: float,
         prum: float,
         current_repartition: float,
         target_repartition: float,
         arbitration_threshold: float,
         threshold_to_alert: float,
         amount_to_move: Optional[float] = None,
-        parts_to_move: Optional[float] = None,
+        shares_to_move: Optional[float] = None,
     ):
         """
         Initializes a Stock object.
@@ -27,7 +27,7 @@ class Stock:
             symbol (str): The symbol of the stock.
             arbitration_threshold: (float): Last arbitration threshold triggered on the stock.
             current_price (float): The current price of the stock.
-            parts_number (float, optional): The number of parts of the stock. Defaults to 1.
+            shares_number (float, optional): The number of shares of the stock. Defaults to 1.
             prum (float, optional): The "Prix de Revient Unitaire Moyen" value.
             current_amount (float): The current amount of the stock.
             current_profit (float): The current profit of the stock.
@@ -36,17 +36,17 @@ class Stock:
             arbitration_threshold (float): The arbitration threshold of the stock.
             threshold_to_alert (float): The threshold define manually to alert on the stock.
             amount_to_move (float): The amount of money to move to reach the target_repartition.
-            parts_to_move (float): The number of parts to move to reach the target_repartition.
+            shares_to_move (float): The number of shares to move to reach the target_repartition.
         """
         self.symbol = symbol
-        self.current_price = self.get_stock_price(symbol)
+        self.current_price = Stock.get_stock_price(symbol)
 
-        self.parts_number = parts_number
+        self.shares_number = shares_number
         self.prum = prum
 
-        self.current_amount = round(self.parts_number * self.current_price, 2)
+        self.current_amount = round(self.shares_number * self.current_price, 2)
         self.current_profit = round(
-            (self.current_price - self.prum) * self.parts_number, 2
+            (self.current_price - self.prum) * self.shares_number, 2
         )
 
         self.check_repartition(current_repartition)
@@ -59,14 +59,14 @@ class Stock:
 
         self.threshold_to_alert = threshold_to_alert
         self.amount_to_move = amount_to_move
-        self.parts_to_move = parts_to_move
+        self.shares_to_move = shares_to_move
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Stock):
             return all(
                 (
                     self.symbol == other.symbol,
-                    self.parts_number == other.parts_number,
+                    self.shares_number == other.shares_number,
                     self.prum == other.prum,
                     self.current_repartition == other.current_repartition,
                     self.target_repartition == other.target_repartition,
@@ -83,8 +83,9 @@ class Stock:
             raise ValueError("The repartition must be between 0 and 100")
         return True
 
-    # get a stock price from yahoo finance
-    def get_stock_price(self, symbol: str, period: str = "1d") -> float:
+    # get a stock price from yf
+    @staticmethod
+    def get_stock_price(symbol: str, period: str = "1d") -> float:
         logger.debug(f"Getting stock price of {symbol}")
         stock_data = yf.Ticker(symbol)
         stock_history = stock_data.history(period=period)
@@ -95,18 +96,18 @@ class Stock:
         logger.debug(
             f"Current price of '{symbol}' on period {period} is {current_price}"
         )
-        return current_price
+        return round(current_price, 2)
 
-    def define_parts_to_move(self) -> float:
+    def define_shares_to_move(self) -> float:
         try:
-            return self.amount_to_move // self.parts_number
+            return self.amount_to_move // self.shares_number
         except ZeroDivisionError:
             return 0
 
     def pydantic(self):
         return StockSchema(
             symbol=self.symbol,
-            parts_number=self.parts_number,
+            shares_number=self.shares_number,
             prum=self.prum,
             current_repartition=self.current_repartition,
             target_repartition=self.target_repartition,
@@ -129,6 +130,7 @@ class Stock:
                 - name: Company name
                 - exchange: Stock exchange
                 - type: Security type (e.g., EQUITY, ETF)
+                - price: Current market price
         """
         logger.debug(f"Searching for symbol: {query}")
         try:
@@ -136,12 +138,21 @@ class Stock:
             results = []
 
             for i, quote in enumerate(search_results.quotes[:max_results]):
+                history_metadata = yf.Ticker(
+                    quote.get("symbol", "")
+                ).get_history_metadata()
+                price = (
+                    history_metadata["regularMarketPrice"]
+                    if history_metadata is not None
+                    else 0.0
+                )
                 results.append(
                     {
                         "symbol": quote.get("symbol", ""),
                         "name": quote.get("shortname") or quote.get("longname", ""),
                         "exchange": quote.get("exchange", ""),
                         "type": quote.get("quoteType", ""),
+                        "price": price,
                     }
                 )
 

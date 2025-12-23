@@ -1,8 +1,13 @@
 export interface Stock {
 	id?: string;
 	symbol: string;
-	parts_number: number;
+	shares_number: number;
+	cost?: number;
+	today_price?: number;
 	prum: number;
+	market_value?: number;
+	gain_loss?: number;
+	gain_loss_percentage?: number;
 	current_repartition: number;
 	target_repartition: number;
 	arbitration_threshold: number;
@@ -15,11 +20,15 @@ export interface FundConfig {
 	stocks: Stock[];
 	created_at?: string;
 	updated_at?: string;
+	total_cost?: number;
+	total_market_value?: number;
+	total_gain_loss?: number;
+	average_gain_loss_percentage?: number;
 }
 
 export interface StockFormData {
 	symbol: string;
-	parts_number: string;
+	shares_number: string;
 	prum: string;
 	current_repartition: string;
 	target_repartition: string;

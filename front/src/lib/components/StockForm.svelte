@@ -8,15 +8,16 @@
 	type Props = {
 		open: boolean;
 		stock?: Stock | null;
+		prefilledSymbol?: string | null;
 		onClose: () => void;
 		onSubmit: (stock: Omit<Stock, 'id'>) => void;
 	};
 
-	let { open = $bindable(), stock = null, onClose, onSubmit }: Props = $props();
+	let { open = $bindable(), stock = null, prefilledSymbol = null, onClose, onSubmit }: Props = $props();
 
 	let formData: StockFormData = $state({
 		symbol: '',
-		parts_number: '',
+		shares_number: '',
 		prum: '',
 		current_repartition: '',
 		target_repartition: '',
@@ -26,27 +27,37 @@
 
 	let errors: Partial<Record<keyof StockFormData, string>> = $state({});
 
-	// Initialize form when stock changes
+	// Initialize form when stock or prefilledSymbol changes
 	$effect(() => {
 		if (stock) {
 			formData = {
 				symbol: stock.symbol,
-				parts_number: stock.parts_number.toString(),
+				shares_number: stock.shares_number.toString(),
 				prum: stock.prum.toString(),
 				current_repartition: stock.current_repartition.toString(),
 				target_repartition: stock.target_repartition.toString(),
 				arbitration_threshold: stock.arbitration_threshold.toString(),
 				threshold_to_alert: stock.threshold_to_alert.toString()
 			};
-		} else {
-			resetForm();
+		} else if (open) {
+			// Only reset when dialog opens, not on every effect run
+			formData = {
+				symbol: prefilledSymbol || '',
+				shares_number: '',
+				prum: '',
+				current_repartition: '',
+				target_repartition: '',
+				arbitration_threshold: '5',
+				threshold_to_alert: '10'
+			};
+			errors = {};
 		}
 	});
 
 	function resetForm() {
 		formData = {
 			symbol: '',
-			parts_number: '',
+			shares_number: '',
 			prum: '',
 			current_repartition: '',
 			target_repartition: '',
@@ -66,7 +77,7 @@
 		}
 
 		const numericFields: (keyof StockFormData)[] = [
-			'parts_number',
+			'shares_number',
 			'prum',
 			'current_repartition',
 			'target_repartition',
@@ -116,7 +127,7 @@
 
 		const stockData: Omit<Stock, 'id'> = {
 			symbol: formData.symbol.trim().toUpperCase(),
-			parts_number: Number(formData.parts_number),
+			shares_number: Number(formData.shares_number),
 			prum: Number(formData.prum),
 			current_repartition: Number(formData.current_repartition),
 			target_repartition: Number(formData.target_repartition),
@@ -157,16 +168,16 @@
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 			<div class="space-y-2">
-				<Label for="parts_number">Number of Parts *</Label>
+				<Label for="shares_number">Number of Shares *</Label>
 				<Input
-					id="parts_number"
+					id="shares_number"
 					type="number"
-					bind:value={formData.parts_number}
+					bind:value={formData.shares_number}
 					placeholder="10"
-					class={errors.parts_number ? 'border-red-500' : ''}
+					class={errors.shares_number ? 'border-red-500' : ''}
 				/>
-				{#if errors.parts_number}
-					<p class="text-sm text-red-500">{errors.parts_number}</p>
+				{#if errors.shares_number}
+					<p class="text-sm text-red-500">{errors.shares_number}</p>
 				{/if}
 			</div>
 

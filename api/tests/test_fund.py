@@ -59,7 +59,7 @@ class TestFund:
         fund = Fund("My Fund")
         stock = Stock(
             symbol="AAPL",
-            parts_number=107.37,
+            shares_number=107.37,
             prum=1,
             current_repartition=100,
             target_repartition=100,
@@ -91,7 +91,7 @@ class TestFund:
         fund = Fund("My Fund")
         stock = Stock(
             symbol="AAPL",
-            parts_number=107.37,
+            shares_number=107.37,
             prum=1,
             current_repartition=100,
             target_repartition=100,
@@ -235,26 +235,26 @@ class TestFund:
             stock_aapl = Stock("AAPL", 1, 107.37, 80, 20, 10, 15)
         with mocker.patch("src.stock.Stock.get_stock_price", return_value=2):
             stock_googl = Stock("GOOGL", 1, 10, 20, 80, 10, 15)
-        excepted_parts_to_move = 3.0
+        excepted_shares_to_move = 3.0
 
         # When
         fund.add_stocks([stock_googl, stock_aapl])
 
         # Then
-        assert stock_googl.parts_to_move == excepted_parts_to_move
+        assert stock_googl.shares_to_move == excepted_shares_to_move
 
-    def test_give_stock_should_not_raise_error_for_parts_to_move(self, mocker):
+    def test_give_stock_should_not_raise_error_for_shares_to_move(self, mocker):
         # Given
         fund = Fund("My Fund")
         with mocker.patch("src.stock.Stock.get_stock_price", return_value=3):
             stock_aapl = Stock("AAPL", 1.0, 107.37, 100, 100, 10, 15)
-        excepted_parts_to_move = 0
+        excepted_shares_to_move = 0
 
         # When
         fund.add_stock(stock_aapl)
 
         # Then
-        assert stock_aapl.parts_to_move == excepted_parts_to_move
+        assert stock_aapl.shares_to_move == excepted_shares_to_move
 
     def test_give_fund_and_other_obj_equal_should_raise_not_implemented(self):
         # Given

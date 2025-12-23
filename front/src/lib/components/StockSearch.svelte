@@ -1,15 +1,26 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button';
+	import ExternalLink from "@lucide/svelte/icons/external-link";
+	import Plus from "@lucide/svelte/icons/plus";
+
 	interface SearchResult {
 		symbol: string;
 		name: string;
 		exchange: string;
 		type: string;
+		price?: number;
 	}
 
-	let query = '';
-	let results: SearchResult[] = [];
-	let loading = false;
-	let error = '';
+	type Props = {
+		onAddStock?: (symbol: string) => void;
+	};
+
+	let { onAddStock }: Props = $props();
+
+	let query = $state('');
+	let results: SearchResult[] = $state([]);
+	let loading = $state(false);
+	let error = $state('');
 
 	async function searchStocks() {
 		if (!query.trim()) {
@@ -31,6 +42,7 @@
 
 			const data = await response.json();
 			results = data.results || [];
+			console.log("Fetched results:", results)
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'An error occurred';
 			results = [];
@@ -44,6 +56,38 @@
 		clearTimeout(timeoutId);
 		timeoutId = setTimeout(searchStocks, 300);
 	}
+
+	function openStockDetails(symbol: string) {
+		// Open Yahoo Finance or Google Finance with stock symbol
+		window.open(`https://finance.yahoo.com/quote/${symbol}`, '_blank');
+	}
+
+	function addStockToFund(stock: SearchResult) {
+		if (onAddStock) {
+			onAddStock(stock.symbol);
+			// Clear search after adding
+			query = '';
+			results = [];
+		}
+	}
+
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		const searchContainer = document.querySelector('.search-container');
+		
+		if (searchContainer && !searchContainer.contains(target)) {
+			query = '';
+			results = [];
+		}
+	}
+
+	$effect(() => {
+		document.addEventListener('click', handleClickOutside);
+		
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
+	});
 
 	let timeoutId: ReturnType<typeof setTimeout>;
 </script>
@@ -83,6 +127,30 @@
 								• {result.type}
 							{/if}
 						</div>
+					</div>
+					<div class="result-price">
+					<div class="result-actions">
+						<Button
+							size="icon-sm"
+							variant="outline"
+							onclick={() => openStockDetails(result.symbol)}
+							title="View details"
+						>
+							<ExternalLink class="w-4 h-4" />
+						</Button>
+						<Button
+							size="icon-sm"
+							onclick={() => addStockToFund(result)}
+							title="Add to fund"
+						>
+							<Plus class="w-4 h-4" />
+						</Button>
+					</div>
+						{#if result.price !== undefined}
+							{result.price.toFixed(2)}€
+						{:else}
+							N/A
+						{/if}
 					</div>
 				</div>
 			{/each}
@@ -162,8 +230,8 @@
 		align-items: center;
 		padding: 12px 16px;
 		border-bottom: 1px solid #e2e8f0;
-		cursor: pointer;
 		transition: background-color 0.2s;
+		position: relative;
 	}
 
 	.result-item:last-child {
@@ -194,6 +262,28 @@
 	.result-meta {
 		font-size: 12px;
 		color: #94a3b8;
+	}
+
+	.result-price {
+		font-size: 12px;
+		color: #94a3b8;
+		min-width: 60px;
+		text-align: right;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.result-actions {
+		display: flex;
+		flex-direction: row;
+		gap: 8px;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	.result-item:hover .result-actions {
+		opacity: 1;
 	}
 
 	.no-results {

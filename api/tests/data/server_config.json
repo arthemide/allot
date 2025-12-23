@@ -3,7 +3,7 @@
     "stocks": [
         {
             "symbol": "AAPL",
-            "parts_number": 2.0,
+            "shares_number": 2.0,
             "prum": 2.0,
             "current_repartition": 100.0,
             "target_repartition": 100.0,

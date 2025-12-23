@@ -88,8 +88,8 @@ class Fund:
         # define the amount to move for the stock
         stock.amount_to_move = self.define_amount_to_move(stock)
 
-        # define the parts to move for the stock
-        stock.parts_to_move = stock.define_parts_to_move()
+        # define the shares to move for the stock
+        stock.shares_to_move = stock.define_shares_to_move()
 
         # add the stock to the fund
         self.stocks.append(stock)
@@ -116,8 +116,8 @@ class Fund:
             # define the amount to move for the stock
             stock.amount_to_move = self.define_amount_to_move(stock)
 
-            # define the parts to move for the stock
-            stock.parts_to_move = stock.define_parts_to_move()
+            # define the shares to move for the stock
+            stock.shares_to_move = stock.define_shares_to_move()
 
         # add the stock to the fund
         self.stocks.extend(stocks)
