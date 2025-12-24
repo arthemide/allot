@@ -12,7 +12,7 @@
 	}
 
 	type Props = {
-		onAddStock?: (symbol: string) => void;
+		onAddStock?: (symbol: string, name: string) => void;
 	};
 
 	let { onAddStock }: Props = $props();
@@ -64,7 +64,7 @@
 
 	function addStockToFund(stock: SearchResult) {
 		if (onAddStock) {
-			onAddStock(stock.symbol);
+			onAddStock(stock.symbol, stock.name);
 			// Clear search after adding
 			query = '';
 			results = [];

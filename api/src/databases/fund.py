@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
@@ -21,7 +21,7 @@ class FundRepository:
         return records
 
     @staticmethod
-    def get_by_id(id: str) -> Optional[FundTable]:
+    def get_by_id(id: str) -> FundTable | None:
         """Get a fund by ID with its stocks"""
         with SessionLocal() as session:
             stmt = (
@@ -52,7 +52,7 @@ class FundRepository:
         return fund_with_stocks
 
     @staticmethod
-    def update(fund_id: str, name: Optional[str] = None) -> Optional[FundTable]:
+    def update(fund_id: str, name: str | None = None) -> FundTable | None:
         """Update fund details"""
         stmt = update(FundTable).where(FundTable.id == fund_id).values(name=name)
         with SessionLocal() as session:

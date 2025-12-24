@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import List
 
 from loguru import logger
 
@@ -8,7 +8,7 @@ from src.stock import Stock
 
 
 class Fund:
-    def __init__(self, name: str, stocks: Optional[List[Stock]] = None):
+    def __init__(self, name: str, stocks: List[Stock] | None):
         self.name = name
         self.stocks = []
         self.total_amount = 0.0

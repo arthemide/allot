@@ -4,9 +4,9 @@
 
 	let configManager: ConfigManager;
 
-	function handleAddStock(symbol: string) {
+	function handleAddStock(symbol: string, name: string) {
 		if (configManager) {
-			configManager.openAddStockDialogWithSymbol(symbol);
+			configManager.openAddStockDialogWithSymbol(symbol, name);
 		}
 	}
 </script>

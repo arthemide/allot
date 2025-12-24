@@ -9,16 +9,17 @@
 		open: boolean;
 		stock?: Stock | null;
 		prefilledSymbol?: string | null;
+		prefilledName?: string | null;
 		onClose: () => void;
 		onSubmit: (stock: Omit<Stock, 'id'>) => void;
 	};
 
-	let { open = $bindable(), stock = null, prefilledSymbol = null, onClose, onSubmit }: Props = $props();
+	let { open = $bindable(), stock = null, prefilledSymbol = null, prefilledName = null, onClose, onSubmit }: Props = $props();
 
 	let formData: StockFormData = $state({
 		symbol: '',
 		shares_number: '',
-		prum: '',
+		cost: '',
 		current_repartition: '',
 		target_repartition: '',
 		arbitration_threshold: '',
@@ -33,7 +34,7 @@
 			formData = {
 				symbol: stock.symbol,
 				shares_number: stock.shares_number.toString(),
-				prum: stock.prum.toString(),
+				cost: stock.cost.toString(),
 				current_repartition: stock.current_repartition.toString(),
 				target_repartition: stock.target_repartition.toString(),
 				arbitration_threshold: stock.arbitration_threshold.toString(),
@@ -44,7 +45,7 @@
 			formData = {
 				symbol: prefilledSymbol || '',
 				shares_number: '',
-				prum: '',
+				cost: '',
 				current_repartition: '',
 				target_repartition: '',
 				arbitration_threshold: '5',
@@ -58,7 +59,7 @@
 		formData = {
 			symbol: '',
 			shares_number: '',
-			prum: '',
+			cost: '',
 			current_repartition: '',
 			target_repartition: '',
 			arbitration_threshold: '5',
@@ -78,7 +79,7 @@
 
 		const numericFields: (keyof StockFormData)[] = [
 			'shares_number',
-			'prum',
+			'cost',
 			'current_repartition',
 			'target_repartition',
 			'arbitration_threshold',
@@ -126,9 +127,10 @@
 		if (!validateForm()) return;
 
 		const stockData: Omit<Stock, 'id'> = {
+			name: prefilledName,
 			symbol: formData.symbol.trim().toUpperCase(),
 			shares_number: Number(formData.shares_number),
-			prum: Number(formData.prum),
+			cost: Number(formData.cost),
 			current_repartition: Number(formData.current_repartition),
 			target_repartition: Number(formData.target_repartition),
 			arbitration_threshold: Number(formData.arbitration_threshold),
@@ -172,6 +174,7 @@
 				<Input
 					id="shares_number"
 					type="number"
+					step="0.01"
 					bind:value={formData.shares_number}
 					placeholder="10"
 					class={errors.shares_number ? 'border-red-500' : ''}
@@ -182,17 +185,17 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label for="prum">PRUM (Average Price) *</Label>
+				<Label for="cost">Cost *</Label>
 				<Input
-					id="prum"
+					id="cost"
 					type="number"
 					step="0.01"
-					bind:value={formData.prum}
+					bind:value={formData.cost}
 					placeholder="150.25"
-					class={errors.prum ? 'border-red-500' : ''}
+					class={errors.cost ? 'border-red-500' : ''}
 				/>
-				{#if errors.prum}
-					<p class="text-sm text-red-500">{errors.prum}</p>
+				{#if errors.cost}
+					<p class="text-sm text-red-500">{errors.cost}</p>
 				{/if}
 			</div>
 		</div>
@@ -203,7 +206,7 @@
 				<Input
 					id="current_repartition"
 					type="number"
-					step="0.1"
+					step="0.01"
 					bind:value={formData.current_repartition}
 					placeholder="35"
 					class={errors.current_repartition ? 'border-red-500' : ''}
@@ -218,7 +221,7 @@
 				<Input
 					id="target_repartition"
 					type="number"
-					step="0.1"
+					step="0.01"
 					bind:value={formData.target_repartition}
 					placeholder="40"
 					class={errors.target_repartition ? 'border-red-500' : ''}

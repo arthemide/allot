@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import List
 
+from src.databases.fund import FundRepository
+from src.databases.stock import StockRepository
 from src.models.pydantic.schema import (
     FundSchema,
     FundSchemaUpdate,
 )
-from src.repositories.fund import FundRepository
-from src.repositories.stock import StockRepository
 from src.services.utils import fund_table_to_pydantic
 
 
@@ -19,7 +19,7 @@ class FundService:
         return [fund_table_to_pydantic(fund) for fund in funds]
 
     @staticmethod
-    def get_by_id(fund_id: str) -> Optional[FundSchema]:
+    def get_by_id(fund_id: str) -> FundSchema | None:
         """Get a single fund configuration"""
         fund = FundRepository.get_by_id(fund_id)
         return fund_table_to_pydantic(fund) if fund else None
@@ -31,10 +31,10 @@ class FundService:
         return fund_table_to_pydantic(fund)
 
     @staticmethod
-    def update(fund_id: str, updates: FundSchemaUpdate) -> Optional[FundSchema]:
+    def update(fund_id: str, updates: FundSchemaUpdate) -> FundSchema | None:
         """Update an existing fund configuration"""
 
-        if updates.stocks is not None:
+        if updates.stocks:
             fund = FundRepository.get_by_id(fund_id)
             if not fund:
                 return None
@@ -48,7 +48,7 @@ class FundService:
                 stock_data = {
                     "symbol": stock.symbol,
                     "shares_number": stock.shares_number,
-                    "prum": stock.prum,
+                    "cost": stock.cost,
                     "current_repartition": stock.current_repartition,
                     "target_repartition": stock.target_repartition,
                     "arbitration_threshold": stock.arbitration_threshold,
@@ -57,7 +57,7 @@ class FundService:
                 StockRepository.add(fund_id, stock_data)
 
         # Update fund name if provided
-        if updates.fund_name is not None:
+        if updates.fund_name:
             fund = FundRepository.update(fund_id, updates.fund_name)
         else:
             fund = FundRepository.get_by_id(fund_id)

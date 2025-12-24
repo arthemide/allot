@@ -24,6 +24,7 @@
 	let showStockDialog: boolean = $state(false);
 	let editingStock: Stock | null = $state(null);
 	let prefilledSymbol: string | null = $state(null);
+	let prefilledName: string | null = $state(null);
 
 	// Load configurations on mount
 	$effect(() => {
@@ -113,14 +114,15 @@
 		}
 	}
 
-	function openAddStockDialog(symbol?: string) {
+	function openAddStockDialog(symbol?: string, name?: string) {
 		editingStock = null;
 		prefilledSymbol = symbol || null;
+		prefilledName = name || null;
 		showStockDialog = true;
 	}
 
-	export function openAddStockDialogWithSymbol(symbol: string) {
-		openAddStockDialog(symbol);
+	export function openAddStockDialogWithSymbol(symbol: string, name: string) {
+		openAddStockDialog(symbol, name);
 	}
 
 	function openEditStockDialog(stock: Stock) {
@@ -310,7 +312,7 @@
 									<Table.Root>
                                         <Table.Header>
                                             <Table.Row>
-                                                <Table.Head class="w-[100px]">Symbol</Table.Head>
+												<Table.Head class="w-[100px]">Name/Symbol</Table.Head>
                                                 <Table.Head>Shares</Table.Head>
                                                 <Table.Head>Cost</Table.Head>
                                                 <Table.Head>PRUM</Table.Head>
@@ -328,10 +330,15 @@
 										<Table.Body>
 											{#each selectedConfig.stocks as stock}
 												<Table.Row>
-													<Table.Cell class="font-medium">{stock.symbol}</Table.Cell>
+													<Table.Cell class="font-medium">
+														<div class="flex flex-col">
+															<span>{stock.name}</span>
+															<span class="text-sm text-slate-500">{stock.symbol}</span>
+														</div>
+													</Table.Cell>
 													<Table.Cell>{stock.shares_number}</Table.Cell>
 													<Table.Cell>{stock.cost ? stock.cost.toFixed(2) + '€' : 'N/A'}</Table.Cell>
-													<Table.Cell>{stock.prum.toFixed(2)}€</Table.Cell>
+													<Table.Cell>{stock.prum ? stock.prum.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.today_price ? stock.today_price.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.market_value ? stock.market_value.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell class={stock.gain_loss && stock.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
@@ -341,7 +348,7 @@
 														{stock.gain_loss_percentage ? stock.gain_loss_percentage.toFixed(2) + '%' : 'N/A'}
 													</Table.Cell>
 													<Table.Cell>{stock.current_repartition}%</Table.Cell>
-													<Table.Cell>{stock.target_repartition}%</Table.Cell>
+													<Table.Cell>{stock.target_repartition ? stock.target_repartition + '%' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.arbitration_threshold}%</Table.Cell>
 													<Table.Cell>{stock.threshold_to_alert}%</Table.Cell>
 													<Table.Cell class="text-right">
@@ -414,10 +421,12 @@
 					bind:open={showStockDialog}
 					stock={editingStock}
 					prefilledSymbol={prefilledSymbol}
+					prefilledName={prefilledName}
 					onClose={() => {
 						showStockDialog = false;
 						editingStock = null;
 						prefilledSymbol = null;
+						prefilledName = null;
 					}}
 					onSubmit={handleStockSubmit}
 				/>

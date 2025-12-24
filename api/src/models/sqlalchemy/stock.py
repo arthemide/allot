@@ -11,11 +11,12 @@ class StockTable(Base):
     fund_id = Column(
         Integer, ForeignKey("funds.id", ondelete="CASCADE"), nullable=False
     )
+    name = Column(String(255), nullable=False)
     symbol = Column(String(20), nullable=False)
-    shares_number = Column(Integer, nullable=False)
-    prum = Column(Float, nullable=False)
+    shares_number = Column(Float, nullable=False)
+    cost = Column(Float, nullable=False)
     current_repartition = Column(Float, nullable=False)
-    target_repartition = Column(Float, nullable=False)
+    target_repartition = Column(Float, nullable=True)
     arbitration_threshold = Column(Float, nullable=False)
     threshold_to_alert = Column(Float, nullable=False)
 

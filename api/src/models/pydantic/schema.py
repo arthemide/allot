@@ -1,35 +1,35 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
 
 class StockSchema(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
+    name: str | None
     symbol: str
-    shares_number: int
-    cost: Optional[float] = None
-    today_price: Optional[float] = None
-    prum: float
-    market_value: Optional[float] = None
-    gain_loss: Optional[float] = None
-    gain_loss_percentage: Optional[float] = None
+    shares_number: float
+    cost: float
+    prum: float | None = None
+    today_price: float | None = None
+    market_value: float | None = None
+    gain_loss: float | None = None
+    gain_loss_percentage: float | None = None
     current_repartition: float
-    target_repartition: float
+    target_repartition: float | None = None
     arbitration_threshold: float
     threshold_to_alert: float
 
 
 class FundSchema(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     fund_name: str
     stocks: list[StockSchema]
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    total_cost: Optional[float] = None
-    total_market_value: Optional[float] = None
-    total_gain_loss: Optional[float] = None
-    average_gain_loss_percentage: Optional[float] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    total_cost: float | None = None
+    total_market_value: float | None = None
+    total_gain_loss: float | None = None
+    average_gain_loss_percentage: float | None = None
 
 
 class FundSchemaCreate(BaseModel):
@@ -37,7 +37,7 @@ class FundSchemaCreate(BaseModel):
 
 
 class FundSchemaUpdate(BaseModel):
-    fund_name: Optional[str] = None
+    fund_name: str | None = None
     stocks: list[StockSchema] | None = None
 
 
@@ -45,7 +45,7 @@ class StockSearchResult(BaseModel):
     symbol: str
     name: str
     exchange: str
-    price: Optional[float] = None
+    price: float | None = None
     type: str
 
 

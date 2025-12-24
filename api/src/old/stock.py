@@ -1,5 +1,3 @@
-from typing import Optional
-
 import yfinance as yf
 from loguru import logger
 
@@ -17,8 +15,8 @@ class Stock:
         target_repartition: float,
         arbitration_threshold: float,
         threshold_to_alert: float,
-        amount_to_move: Optional[float] = None,
-        shares_to_move: Optional[float] = None,
+        amount_to_move: float | None = None,
+        shares_to_move: float | None = None,
     ):
         """
         Initializes a Stock object.
@@ -83,19 +81,34 @@ class Stock:
             raise ValueError("The repartition must be between 0 and 100")
         return True
 
-    # get a stock price from yf
-    @staticmethod
-    def get_stock_price(symbol: str, period: str = "1d") -> float:
-        logger.debug(f"Getting stock price of {symbol}")
+    def _get_history_metadata(symbol: str) -> dict | None:
+        logger.debug(f"Getting history metadata of {symbol}")
         stock_data = yf.Ticker(symbol)
-        stock_history = stock_data.history(period=period)
-        if stock_history.empty:
-            raise UserWarning(f"{symbol}: No data found, symbol may be delisted")
+        history_metadata = stock_data.get_history_metadata()
+        if history_metadata is None:
+            logger.error(f"{symbol}: No data found, symbol may be delisted")
+            return None
+        return history_metadata
 
-        current_price = stock_history["Close"].iloc[0]
-        logger.debug(
-            f"Current price of '{symbol}' on period {period} is {current_price}"
-        )
+    @staticmethod
+    def get_long_name(symbol: str) -> str | None:
+        logger.debug(f"Getting stock price of {symbol}")
+        history_metadata = Stock._get_history_metadata(symbol)
+        if history_metadata is None:
+            return None
+
+        long_name = history_metadata.get("longName")
+        return long_name
+
+    @staticmethod
+    def get_stock_price(symbol: str) -> float | None:
+        logger.debug(f"Getting stock price of {symbol}")
+        history_metadata = Stock._get_history_metadata(symbol)
+        if history_metadata is None:
+            return None
+
+        current_price = history_metadata.get("regularMarketPrice")
+        logger.debug(f"Current price of '{symbol}' is {current_price}")
         return round(current_price, 2)
 
     def define_shares_to_move(self) -> float:
@@ -138,18 +151,19 @@ class Stock:
             results = []
 
             for i, quote in enumerate(search_results.quotes[:max_results]):
-                history_metadata = yf.Ticker(
-                    quote.get("symbol", "")
-                ).get_history_metadata()
+                history_metadata = Stock._get_history_metadata(quote.get("symbol", ""))
                 price = (
-                    history_metadata["regularMarketPrice"]
-                    if history_metadata is not None
+                    history_metadata.get("regularMarketPrice")
+                    if history_metadata
                     else 0.0
                 )
+                longName = history_metadata.get("longName") if history_metadata else None
+                shortName = history_metadata.get("shortName") if history_metadata else None
+                name = longName or shortName or "N/A"
                 results.append(
                     {
                         "symbol": quote.get("symbol", ""),
-                        "name": quote.get("shortname") or quote.get("longname", ""),
+                        "name": name,
                         "exchange": quote.get("exchange", ""),
                         "type": quote.get("quoteType", ""),
                         "price": price,
@@ -166,15 +180,3 @@ class Stock:
     # TODO: implement the method
     # def get_stock_price_evolution_percentage(self):
     #     pass
-
-
-if __name__ == "__main__":  # pragma: no cover
-    setup_logging()
-    logger.info("Starting the stock script")
-
-    # Example: Search for symbols
-    results = Stock.search_symbol("Afer")
-    for result in results:
-        print(f"{result['symbol']:15} {result['name']:50} [{result['exchange']}]")
-
-    logger.info("Ending the stock script")

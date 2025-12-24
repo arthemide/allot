@@ -1,3 +1,5 @@
 api-logs/
 
 .env
+
+.vscode/
