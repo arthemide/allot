@@ -16,6 +16,7 @@
 	let selectedConfig: FundConfig | null = $state(null);
 	let loading: boolean = $state(true);
 	let saving: boolean = $state(false);
+	let expandedStockId: string | null = $state(null);
 	let error: string = $state('');
 
 	// Form states
@@ -315,21 +316,15 @@
 												<Table.Head class="w-[100px]">Name/Symbol</Table.Head>
                                                 <Table.Head>Shares</Table.Head>
                                                 <Table.Head>Cost</Table.Head>
-                                                <Table.Head>PRUM</Table.Head>
                                                 <Table.Head>Today Price</Table.Head>
 												<Table.Head>Market Value</Table.Head>
 												<Table.Head>Gain/Loss</Table.Head>
-												<Table.Head>Gain/Loss %</Table.Head>
-												<Table.Head>Current %</Table.Head>
-												<Table.Head>Target %</Table.Head>
-												<Table.Head>Arb. Threshold</Table.Head>
-												<Table.Head>Alert Threshold</Table.Head>
 												<Table.Head class="text-right">Actions</Table.Head>
                                             </Table.Row>
                                         </Table.Header>
 										<Table.Body>
 											{#each selectedConfig.stocks as stock}
-												<Table.Row>
+												<Table.Row class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick={() => expandedStockId = expandedStockId === stock.id ? null : stock.id}>
 													<Table.Cell class="font-medium">
 														<div class="flex flex-col">
 															<span>{stock.name}</span>
@@ -338,25 +333,17 @@
 													</Table.Cell>
 													<Table.Cell>{stock.shares_number}</Table.Cell>
 													<Table.Cell>{stock.cost ? stock.cost.toFixed(2) + '€' : 'N/A'}</Table.Cell>
-													<Table.Cell>{stock.prum ? stock.prum.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.today_price ? stock.today_price.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell>{stock.market_value ? stock.market_value.toFixed(2) + '€' : 'N/A'}</Table.Cell>
 													<Table.Cell class={stock.gain_loss && stock.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
 														{stock.gain_loss ? stock.gain_loss.toFixed(2) + '€' : 'N/A'}
 													</Table.Cell>
-													<Table.Cell class={stock.gain_loss_percentage && stock.gain_loss_percentage >= 0 ? 'text-green-600' : 'text-red-600'}>
-														{stock.gain_loss_percentage ? stock.gain_loss_percentage.toFixed(2) + '%' : 'N/A'}
-													</Table.Cell>
-													<Table.Cell>{stock.current_repartition}%</Table.Cell>
-													<Table.Cell>{stock.target_repartition ? stock.target_repartition + '%' : 'N/A'}</Table.Cell>
-													<Table.Cell>{stock.arbitration_threshold}%</Table.Cell>
-													<Table.Cell>{stock.threshold_to_alert}%</Table.Cell>
 													<Table.Cell class="text-right">
 														<div class="flex justify-end gap-2">
 															<Button
 																size="sm"
 																variant="outline"
-																onclick={() => openEditStockDialog(stock)}
+																onclick={(e) => { e.stopPropagation(); openEditStockDialog(stock); }}
 																disabled={saving}
 															>
 																<Pencil />
@@ -364,7 +351,7 @@
 															<Button
 																size="sm"
 																variant="destructive"
-																onclick={() => deleteStock(stock.id!)}
+																onclick={(e) => { e.stopPropagation(); deleteStock(stock.id!); }}
 																disabled={saving}
 															>
 																<Trash2 />
@@ -372,6 +359,40 @@
 														</div>
 													</Table.Cell>
 												</Table.Row>
+												{#if expandedStockId === stock.id}
+												<Table.Row class="bg-slate-50 dark:bg-slate-800">
+													<Table.Cell colspan="7" class="p-4">
+														<div class="grid grid-cols-3 gap-4 text-sm">
+															<div>
+																<span class="font-semibold">PRUM:</span>
+																<span class="ml-2">{stock.prum ? stock.prum.toFixed(2) + '€' : 'N/A'}</span>
+															</div>
+															<div>
+																<span class="font-semibold">Gain/Loss %:</span>
+																<span class="ml-2 {stock.gain_loss_percentage && stock.gain_loss_percentage >= 0 ? 'text-green-600' : 'text-red-600'}">
+																	{stock.gain_loss_percentage ? stock.gain_loss_percentage.toFixed(2) + '%' : 'N/A'}
+																</span>
+															</div>
+															<div>
+																<span class="font-semibold">Current Repartition:</span>
+																<span class="ml-2">{stock.current_repartition}%</span>
+															</div>
+															<div>
+																<span class="font-semibold">Target Repartition:</span>
+																<span class="ml-2">{stock.target_repartition ? stock.target_repartition + '%' : 'N/A'}</span>
+															</div>
+															<div>
+																<span class="font-semibold">Arbitration Threshold:</span>
+																<span class="ml-2">{stock.arbitration_threshold}%</span>
+															</div>
+															<div>
+																<span class="font-semibold">Alert Threshold:</span>
+																<span class="ml-2">{stock.threshold_to_alert}%</span>
+															</div>
+														</div>
+													</Table.Cell>
+												</Table.Row>
+												{/if}
 											{/each}
 										</Table.Body>
 									</Table.Root>

@@ -2,14 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import ExternalLink from "@lucide/svelte/icons/external-link";
 	import Plus from "@lucide/svelte/icons/plus";
-
-	interface SearchResult {
-		symbol: string;
-		name: string;
-		exchange: string;
-		type: string;
-		price?: number;
-	}
+	import { useStockSearch, type SearchResult } from '$lib/hooks/useStockSearch.svelte';
 
 	type Props = {
 		onAddStock?: (symbol: string, name: string) => void;
@@ -17,44 +10,11 @@
 
 	let { onAddStock }: Props = $props();
 
+	const stockSearch = useStockSearch();
 	let query = $state('');
-	let results: SearchResult[] = $state([]);
-	let loading = $state(false);
-	let error = $state('');
-
-	async function searchStocks() {
-		if (!query.trim()) {
-			results = [];
-			return;
-		}
-
-		loading = true;
-		error = '';
-
-		try {
-			const response = await fetch(
-				`http://localhost:8000/stocks/search?q=${encodeURIComponent(query)}`
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch search results');
-			}
-
-			const data = await response.json();
-			results = data.results || [];
-			console.log("Fetched results:", results)
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'An error occurred';
-			results = [];
-		} finally {
-			loading = false;
-		}
-	}
 
 	function handleInput() {
-		// Debounce search
-		clearTimeout(timeoutId);
-		timeoutId = setTimeout(searchStocks, 300);
+		stockSearch.debouncedSearch(query);
 	}
 
 	function openStockDetails(symbol: string) {
@@ -67,7 +27,7 @@
 			onAddStock(stock.symbol, stock.name);
 			// Clear search after adding
 			query = '';
-			results = [];
+			stockSearch.clearResults();
 		}
 	}
 
@@ -77,7 +37,7 @@
 		
 		if (searchContainer && !searchContainer.contains(target)) {
 			query = '';
-			results = [];
+			stockSearch.clearResults();
 		}
 	}
 
@@ -89,7 +49,6 @@
 		};
 	});
 
-	let timeoutId: ReturnType<typeof setTimeout>;
 </script>
 
 <div class="search-container">
@@ -97,26 +56,26 @@
 		<input
 			type="text"
 			bind:value={query}
-			on:input={handleInput}
+			oninput={handleInput}
 			placeholder="Search for stocks (e.g., AAPL, Tesla, Bitcoin)..."
 			class="search-input"
 		/>
-		{#if loading}
+		{#if stockSearch.state.loading}
 			<div class="spinner"></div>
-		{:else if results.length === 0 && query && !loading}
+		{:else if stockSearch.state.results.length === 0 && query && !stockSearch.state.loading}
 			<div class="no-results">No results found for "{query}"</div>
 		{/if}
 	</div>
 
-	{#if error}
+	{#if stockSearch.state.error}
 		<div class="error-message">
-			{error}
+			{stockSearch.state.error}
 		</div>
 	{/if}
 
-	{#if results.length > 0}
+	{#if stockSearch.state.results.length > 0}
 		<div class="results-list">
-			{#each results as result}
+			{#each stockSearch.state.results as result}
 				<div class="result-item">
 					<div class="result-symbol">{result.symbol}</div>
 					<div class="result-info">

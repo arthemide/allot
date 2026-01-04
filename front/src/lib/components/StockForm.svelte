@@ -3,6 +3,8 @@
 	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import StockAutocomplete from '$lib/components/StockAutocomplete.svelte';
+	import { useStockSearch, type SearchResult } from '$lib/hooks/useStockSearch.svelte';
 	import type { Stock, StockFormData } from '$lib/types/config';
 
 	type Props = {
@@ -27,6 +29,10 @@
 	});
 
 	let errors: Partial<Record<keyof StockFormData, string>> = $state({});
+	let selectedName = $state<string | null>(null);
+	
+	// Use the stock search hook
+	const stockSearch = useStockSearch();
 
 	// Initialize form when stock or prefilledSymbol changes
 	$effect(() => {
@@ -40,6 +46,7 @@
 				arbitration_threshold: stock.arbitration_threshold.toString(),
 				threshold_to_alert: stock.threshold_to_alert.toString()
 			};
+			selectedName = stock.name;
 		} else if (open) {
 			// Only reset when dialog opens, not on every effect run
 			formData = {
@@ -51,9 +58,25 @@
 				arbitration_threshold: '5',
 				threshold_to_alert: '10'
 			};
+			selectedName = prefilledName;
 			errors = {};
 		}
 	});
+
+	function handleSymbolInput() {
+		// Clear selected name when user types
+		if (selectedName && formData.symbol !== stockSearch.state.results.find(r => r.name === selectedName)?.symbol) {
+			selectedName = null;
+		}
+		// Debounced search
+		stockSearch.debouncedSearch(formData.symbol);
+	}
+
+	function selectStock(result: SearchResult) {
+		formData.symbol = result.symbol;
+		selectedName = result.name;
+		stockSearch.clearResults();
+	}
 
 	function resetForm() {
 		formData = {
@@ -66,6 +89,8 @@
 			threshold_to_alert: '10'
 		};
 		errors = {};
+		stockSearch.clearResults();
+		selectedName = null;
 	}
 
 	function validateForm(): boolean {
@@ -127,7 +152,7 @@
 		if (!validateForm()) return;
 
 		const stockData: Omit<Stock, 'id'> = {
-			name: prefilledName,
+			name: selectedName || prefilledName,
 			symbol: formData.symbol.trim().toUpperCase(),
 			shares_number: Number(formData.shares_number),
 			cost: Number(formData.cost),
@@ -155,17 +180,34 @@
 		</DialogHeader>
 
 	<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-3 sm:space-y-4">
-		<div class="space-y-2">
+		<div class="space-y-2 relative">
 			<Label for="symbol">Stock Symbol *</Label>
 			<Input
 				id="symbol"
 				bind:value={formData.symbol}
+				oninput={handleSymbolInput}
+				onfocus={() => { if (stockSearch.state.results.length > 0) stockSearch.setShowResults(true); }}
 				placeholder="e.g., AAPL, GOOGL"
 				class={errors.symbol ? 'border-red-500' : ''}
+				autocomplete="off"
 			/>
+			{#if stockSearch.state.loading}
+				<div class="absolute right-3 top-8">
+					<div class="animate-spin h-4 w-4 border-2 border-slate-300 border-t-blue-600 rounded-full"></div>
+				</div>
+			{/if}
+			{#if selectedName}
+				<p class="text-sm text-slate-600">{selectedName}</p>
+			{/if}
 			{#if errors.symbol}
 				<p class="text-sm text-red-500">{errors.symbol}</p>
 			{/if}
+			
+			<StockAutocomplete 
+				results={stockSearch.state.results}
+				show={stockSearch.state.showResults}
+				onSelect={selectStock}
+			/>
 		</div>
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -174,9 +216,9 @@
 				<Input
 					id="shares_number"
 					type="number"
-					step="0.01"
+					step="0.00000001"
 					bind:value={formData.shares_number}
-					placeholder="10"
+					placeholder="10.2"
 					class={errors.shares_number ? 'border-red-500' : ''}
 				/>
 				{#if errors.shares_number}
@@ -189,7 +231,7 @@
 				<Input
 					id="cost"
 					type="number"
-					step="0.01"
+					step="0.00000001"
 					bind:value={formData.cost}
 					placeholder="150.25"
 					class={errors.cost ? 'border-red-500' : ''}

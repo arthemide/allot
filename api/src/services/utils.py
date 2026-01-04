@@ -25,7 +25,7 @@ def fund_table_to_pydantic(fund: FundTable) -> FundSchema:
             market_value = stock.shares_number * today_price
             gain_loss = round((market_value - cost), 2)
             gain_loss_percentage = (
-                round((gain_loss * 100) / market_value, 2) if cost != 0 else 0.0
+                round((gain_loss * 100) / cost, 2) if cost != 0 else 0.0
             )
 
         # Accumulate totals
