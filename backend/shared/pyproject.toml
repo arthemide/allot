@@ -1,0 +1,21 @@
+[project]
+name = "stock-alerting-shared"
+version = "0.1.0"
+description = "Shared database models and repositories for stock-alerting project"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+    "psycopg2-binary>=2.9.0",
+    "pydantic>=2.8.2",
+    "python-dotenv>=1.0.1",
+    "loguru>=0.7.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["shared*"]

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Identifiant unique du service -->
+    <key>Label</key>
+    <string>com.user.dca-bot</string>
+    
+    <!-- Programme à exécuter -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/uv</string>
+        <string>run</string>
+        <string>python</string>
+        <string>-m</string>
+        <string>dca.main</string>
+    </array>
+    
+    <!-- Répertoire de travail -->
+    <key>WorkingDirectory</key>
+    <!-- ⚠️ MODIFIER CE CHEMIN -->
+    <string>/Users/gireg.roussel/Desktop/perso/stock-alerting/bot</string>
+    
+    <!-- Variables d'environnement -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+    </dict>
+    
+    <!-- Lancer au démarrage de la session utilisateur -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Garder le processus actif (relancer si crash) -->
+    <key>KeepAlive</key>
+    <dict>
+        <!-- Relancer si le processus se termine anormalement -->
+        <key>SuccessfulExit</key>
+        <false/>
+        <!-- Ne pas relancer trop rapidement (attendre 10 secondes) -->
+        <key>Crashed</key>
+        <true/>
+    </dict>
+    
+    <!-- Délai avant relance en cas de crash (en secondes) -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    
+    <!-- Logs (stdout et stderr redirigés vers le même fichier) -->
+    <key>StandardOutPath</key>
+    <!-- ⚠️ MODIFIER CE CHEMIN -->
+    <string>/Users/gireg.roussel/Desktop/perso/stock-alerting/bot/dca/logs/launchd-dca-bot.log</string>
+    
+    <key>StandardErrorPath</key>
+    <!-- ⚠️ MODIFIER CE CHEMIN -->
+    <string>/Users/gireg.roussel/Desktop/perso/stock-alerting/bot/dca/logs/launchd-dca-bot.log</string>
+    
+    <!-- Politesse du processus (0 = priorité normale) -->
+    <key>Nice</key>
+    <integer>0</integer>
+</dict>
+</plist>

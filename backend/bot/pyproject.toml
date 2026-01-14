@@ -1,0 +1,41 @@
+[project]
+name = "stock-alerting-bot"
+version = "0.1.0"
+description = "DCA Bot for Binance - Dollar Cost Averaging automation"
+authors = [
+    {name = "Gireg Roussel", email = "giregroussel@free.fr"}
+]
+readme = "dca/README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dca = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.1",
+    "APScheduler>=3.10.4",
+    "pytz>=2023.3",
+    "pydantic>=2.12.5",
+    "loguru>=0.7.3",
+    # Database dependencies
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    # Local shared package
+    "stock-alerting-shared @ file:///${PROJECT_ROOT}/../shared",
+    "pytest>=9.0.2",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dca"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

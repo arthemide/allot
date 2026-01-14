@@ -22,9 +22,9 @@ services:
     container_name: api
     image: "api"
     build:
-      context: ./api
+      context: ./backend/api
       dockerfile: Dockerfile
-    env_file: "./api/.env"
+    env_file: "./backend/api/.env"
     environment:
       POSTGRESQL_CONNECTION_STRING: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_NAME}
       TZ: Europe/Paris
