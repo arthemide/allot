@@ -1,8 +1,8 @@
+from shared.db.models.fund import FundTable
 from src.models.pydantic.schema import (
     FundSchema,
     StockSchema,
 )
-from shared.db.models.fund import FundTable
 from src.old.stock import Stock
 
 

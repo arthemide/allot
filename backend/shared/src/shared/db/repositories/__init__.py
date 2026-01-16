@@ -1,5 +1,5 @@
-from .fund import FundRepository
 from .asset import AssetRepository
+from .fund import FundRepository
 from .transaction import TransactionRepository
 
 # Backward compatibility alias

@@ -2,9 +2,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
 
 from shared.db.config import SessionLocal
-from src.models.pydantic.schema import StockSchema
-from shared.db.models.fund import FundTable
 from shared.db.models.asset import AssetTable as StockTable
+from shared.db.models.fund import FundTable
+from src.models.pydantic.schema import StockSchema
 
 
 class StockRepository:

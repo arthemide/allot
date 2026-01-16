@@ -2,9 +2,9 @@
 Tests for TransactionRepository - focusing on PRUM calculation.
 Keep it simple: test critical paths without overengineering.
 """
-import pytest
-from decimal import Decimal
+
 from datetime import datetime
+from decimal import Decimal
 
 from shared.db.models.asset import AssetTable
 from shared.db.models.transaction import AssetTransactionTable
@@ -14,15 +14,15 @@ from shared.db.repositories.transaction import TransactionRepository
 class TestPRUMCalculation:
     """Test PRUM (average purchase price) calculation logic."""
 
-    def test_prum_with_no_transactions_returns_base_prum(self, test_session, sample_asset):
+    def test_prum_with_no_transactions_returns_base_prum(
+        self, test_session, sample_asset
+    ):
         """PRUM with only historical data should return base_prum."""
         # Given: asset with base_prum=2000, shares_number=1.0, no transactions
 
         # When
         prum = TransactionRepository.calculate_prum(
-            "ETHUSDC",
-            asset_type="crypto",
-            session=test_session
+            "ETHUSDC", asset_type="crypto", session=test_session
         )
 
         # Then: should return base historical PRUM
@@ -38,16 +38,14 @@ class TestPRUMCalculation:
             quantity=Decimal("1.0"),
             price=Decimal("3000.0"),
             total_cost=Decimal("3000.0"),
-            order_id="test_order_1"
+            order_id="test_order_1",
         )
         test_session.add(transaction)
         test_session.commit()
 
         # When
         prum = TransactionRepository.calculate_prum(
-            "ETHUSDC",
-            asset_type="crypto",
-            session=test_session
+            "ETHUSDC", asset_type="crypto", session=test_session
         )
 
         # Then: (1*2000 + 1*3000) / 2 = 2500
@@ -66,7 +64,7 @@ class TestPRUMCalculation:
                 quantity=Decimal("0.5"),
                 price=Decimal("3000.0"),
                 total_cost=Decimal("1500.0"),
-                order_id="test_order_1"
+                order_id="test_order_1",
             ),
             AssetTransactionTable(
                 asset_id=sample_asset.id,
@@ -75,17 +73,15 @@ class TestPRUMCalculation:
                 quantity=Decimal("0.5"),
                 price=Decimal("3200.0"),
                 total_cost=Decimal("1600.0"),
-                order_id="test_order_2"
-            )
+                order_id="test_order_2",
+            ),
         ]
         test_session.add_all(transactions)
         test_session.commit()
 
         # When
         prum = TransactionRepository.calculate_prum(
-            "ETHUSDC",
-            asset_type="crypto",
-            session=test_session
+            "ETHUSDC", asset_type="crypto", session=test_session
         )
 
         # Then: (1*2000 + 1500 + 1600) / (1 + 0.5 + 0.5) = 5100 / 2 = 2550
@@ -105,7 +101,7 @@ class TestPRUMCalculation:
             target_repartition=0.0,
             arbitration_threshold=0.0,
             threshold_to_alert=0.0,
-            fund_id=None
+            fund_id=None,
         )
         test_session.add(asset)
         test_session.commit()
@@ -119,7 +115,7 @@ class TestPRUMCalculation:
                 quantity=Decimal("0.1"),
                 price=Decimal("50000.0"),
                 total_cost=Decimal("5000.0"),
-                order_id="test_order_1"
+                order_id="test_order_1",
             ),
             AssetTransactionTable(
                 asset_id=asset.id,
@@ -128,17 +124,15 @@ class TestPRUMCalculation:
                 quantity=Decimal("0.1"),
                 price=Decimal("52000.0"),
                 total_cost=Decimal("5200.0"),
-                order_id="test_order_2"
-            )
+                order_id="test_order_2",
+            ),
         ]
         test_session.add_all(transactions)
         test_session.commit()
 
         # When
         prum = TransactionRepository.calculate_prum(
-            "BTCUSDC",
-            asset_type="crypto",
-            session=test_session
+            "BTCUSDC", asset_type="crypto", session=test_session
         )
 
         # Then: (5000 + 5200) / (0.1 + 0.1) = 10200 / 0.2 = 51000
@@ -148,9 +142,7 @@ class TestPRUMCalculation:
         """PRUM should return None if asset doesn't exist."""
         # When
         prum = TransactionRepository.calculate_prum(
-            "NONEXISTENT",
-            asset_type="crypto",
-            session=test_session
+            "NONEXISTENT", asset_type="crypto", session=test_session
         )
 
         # Then
@@ -172,13 +164,15 @@ class TestAddTransaction:
             total_cost=Decimal("1550.0"),
             order_id="test_order",
             timestamp=datetime.now(),
-            session=test_session
+            session=test_session,
         )
 
         # Then
-        transactions = test_session.query(AssetTransactionTable).filter_by(
-            asset_id=sample_asset.id
-        ).all()
+        transactions = (
+            test_session.query(AssetTransactionTable)
+            .filter_by(asset_id=sample_asset.id)
+            .all()
+        )
 
         assert len(transactions) == 1
         assert transactions[0].quantity == Decimal("0.5")
@@ -192,10 +186,7 @@ class TestGetOrCreateAsset:
         """Should retrieve existing asset."""
         # When
         asset = TransactionRepository.get_or_create_asset(
-            symbol="ETHUSDC",
-            name="Ethereum",
-            asset_type="crypto",
-            session=test_session
+            symbol="ETHUSDC", name="Ethereum", asset_type="crypto", session=test_session
         )
 
         # Then
@@ -211,7 +202,7 @@ class TestGetOrCreateAsset:
             asset_type="crypto",
             base_prum=Decimal("45000.0"),
             historical_quantity=0.5,
-            session=test_session
+            session=test_session,
         )
 
         # Then

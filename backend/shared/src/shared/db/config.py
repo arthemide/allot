@@ -15,9 +15,9 @@ if not POSTGRESQL_CONNECTION_STRING:
 # Create engine with connection pooling
 engine = create_engine(
     POSTGRESQL_CONNECTION_STRING,
-    pool_size=5,          # Connections in pool
-    max_overflow=10,      # Extra connections allowed
-    pool_pre_ping=True    # Verify connections before use
+    pool_size=5,  # Connections in pool
+    max_overflow=10,  # Extra connections allowed
+    pool_pre_ping=True,  # Verify connections before use
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

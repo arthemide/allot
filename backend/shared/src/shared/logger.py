@@ -1,9 +1,11 @@
 """
 Logging module configured for the DCA bot.
 """
+
 import sys
 
 from loguru import logger
+
 
 def setup_logging():  # pragma: no cover
     """Configure loguru logger with console and file output."""

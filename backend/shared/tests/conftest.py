@@ -2,16 +2,16 @@
 Pytest configuration and fixtures for shared package tests.
 Uses in-memory SQLite for fast tests.
 """
-import pytest
+
 from decimal import Decimal
-from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from shared.db.config import Base
-from shared.db.models.fund import FundTable
 from shared.db.models.asset import AssetTable
-from shared.db.models.transaction import AssetTransactionTable
+from shared.db.models.fund import FundTable
 
 
 @pytest.fixture(scope="session")
@@ -51,7 +51,7 @@ def sample_asset(test_session):
         target_repartition=0.0,
         arbitration_threshold=0.0,
         threshold_to_alert=0.0,
-        fund_id=None
+        fund_id=None,
     )
     test_session.add(asset)
     test_session.commit()

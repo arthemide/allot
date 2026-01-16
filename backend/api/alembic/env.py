@@ -3,17 +3,16 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config, pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Add the project root to Python path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from shared.db.config import Base  # noqa: E402
+from shared.db.models.asset import AssetTable  # noqa: F401
 
 # Import all models to ensure they're registered with Base.metadata
 from shared.db.models.fund import FundTable  # noqa: F401
-from shared.db.models.asset import AssetTable  # noqa: F401
 from shared.db.models.transaction import AssetTransactionTable  # noqa: F401
 
 # this is the Alembic Config object, which provides

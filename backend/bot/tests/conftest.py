@@ -2,15 +2,19 @@
 Simple pytest fixtures for bot tests.
 Keep it simple - mock external dependencies.
 """
+
 import os
-import pytest
 from decimal import Decimal
 
+import pytest
+
 from dca.models import Kline
+
 
 @pytest.fixture(scope="session", autouse=True)
 def set_env():
     os.environ["BINANCE_API_KEY"] = ""
+
 
 @pytest.fixture
 def mock_binance_client(mocker):
@@ -40,5 +44,5 @@ def create_kline(open_price: float, close_price: float) -> Kline:
         low=Decimal(str(min(open_price, close_price))),
         close=Decimal(str(close_price)),
         volume=Decimal("100"),
-        close_time=1
+        close_time=1,
     )

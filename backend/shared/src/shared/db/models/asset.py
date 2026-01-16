@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Numeric, Text, Index
+from sqlalchemy import Column, Float, ForeignKey, Index, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
 from shared.db.config import Base
@@ -9,6 +9,7 @@ class AssetTable(Base):
     Unified asset table for stocks, crypto, and other asset types.
     Previously known as StockTable, extended to support multiple asset types.
     """
+
     __tablename__ = "stocks"  # Keep existing table name for backward compatibility
 
     id = Column(Integer, primary_key=True, index=True)
@@ -19,7 +20,9 @@ class AssetTable(Base):
     # Asset identification
     name = Column(String(255), nullable=False)
     symbol = Column(String(20), nullable=False)
-    asset_type = Column(String(20), nullable=False, default='stock')  # 'stock', 'crypto', 'bond', etc.
+    asset_type = Column(
+        String(20), nullable=False, default="stock"
+    )  # 'stock', 'crypto', 'bond', etc.
 
     # Quantity
     # For stocks: manually maintained current quantity
@@ -34,7 +37,9 @@ class AssetTable(Base):
     threshold_to_alert = Column(Float, nullable=False)
 
     # NEW: Historical tracking fields for assets with purchase history
-    base_prum = Column(Numeric(20, 10), nullable=True)  # Historical average purchase price (for PRUM calculation)
+    base_prum = Column(
+        Numeric(20, 10), nullable=True
+    )  # Historical average purchase price (for PRUM calculation)
 
     # Relationships
     fund = relationship("FundTable", back_populates="assets")
@@ -54,6 +59,4 @@ class AssetTable(Base):
         self.shares_number = value
 
     # Create index on symbol and asset_type for fast lookups
-    __table_args__ = (
-        Index('idx_symbol_asset_type', 'symbol', 'asset_type'),
-    )
+    __table_args__ = (Index("idx_symbol_asset_type", "symbol", "asset_type"),)

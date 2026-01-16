@@ -3,9 +3,10 @@ Purchase tracker for DCA bot - PostgreSQL version.
 Maintains purchase history in PostgreSQL to calculate average price (PRUM).
 """
 
-from decimal import Decimal
 from datetime import datetime
-from typing import Optional, List
+from decimal import Decimal
+from typing import List, Optional
+
 from loguru import logger
 
 # Import from shared package
@@ -28,7 +29,7 @@ class PurchaseTracker:
         fund_id: Optional[int] = None,
         base_prum: Optional[float] = None,
         base_quantity: float = 0.0,
-        file_path: str = None  # Ignored, kept for backward compatibility
+        file_path: str = None,  # Ignored, kept for backward compatibility
     ):
         """
         Initialize purchase tracker.
@@ -56,12 +57,14 @@ class PurchaseTracker:
             self.asset = TransactionRepository.get_or_create_asset(
                 symbol=self.symbol,
                 name=self.asset_name,
-                asset_type='crypto',
+                asset_type="crypto",
                 fund_id=self.fund_id,
                 base_prum=self.base_prum,
-                historical_quantity=self.base_quantity
+                historical_quantity=self.base_quantity,
             )
-            logger.info(f"Initialized purchase tracker for {self.symbol} (asset_id={self.asset.id})")
+            logger.info(
+                f"Initialized purchase tracker for {self.symbol} (asset_id={self.asset.id})"
+            )
         except Exception as e:
             logger.error(f"Error initializing asset: {e}")
             raise
@@ -72,7 +75,7 @@ class PurchaseTracker:
         price: Decimal,
         total_cost: Decimal,
         order_id: Optional[str] = None,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
     ):
         """
         Record a new purchase.
@@ -89,20 +92,22 @@ class PurchaseTracker:
             dt_timestamp = None
             if timestamp:
                 # Handle both formats: with and without 'Z' suffix
-                timestamp_clean = timestamp.replace('Z', '+00:00')
+                timestamp_clean = timestamp.replace("Z", "+00:00")
                 dt_timestamp = datetime.fromisoformat(timestamp_clean)
 
             transaction = TransactionRepository.add_transaction(
                 asset_id=self.asset.id,
-                transaction_type='buy',
+                transaction_type="buy",
                 quantity=quantity,
                 price=price,
                 total_cost=total_cost,
                 order_id=order_id,
-                timestamp=dt_timestamp
+                timestamp=dt_timestamp,
             )
 
-            logger.info(f"Recorded purchase: {quantity} @ {price} = {total_cost} (id={transaction.id})")
+            logger.info(
+                f"Recorded purchase: {quantity} @ {price} = {total_cost} (id={transaction.id})"
+            )
         except Exception as e:
             logger.error(f"Error recording purchase: {e}")
             raise
@@ -115,7 +120,9 @@ class PurchaseTracker:
             Average purchase price or None if no purchases
         """
         try:
-            prum = TransactionRepository.calculate_prum(self.symbol, asset_type='crypto')
+            prum = TransactionRepository.calculate_prum(
+                self.symbol, asset_type="crypto"
+            )
 
             if prum:
                 logger.info(f"PRUM calculated: {prum}")
@@ -135,9 +142,11 @@ class PurchaseTracker:
             Dictionary with statistics
         """
         try:
-            stats = TransactionRepository.get_asset_statistics(self.symbol, asset_type='crypto')
+            stats = TransactionRepository.get_asset_statistics(
+                self.symbol, asset_type="crypto"
+            )
             # Add last_updated for backward compatibility
-            stats['last_updated'] = datetime.utcnow().isoformat()
+            stats["last_updated"] = datetime.utcnow().isoformat()
             return stats
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")
@@ -155,19 +164,17 @@ class PurchaseTracker:
         """
         try:
             transactions = TransactionRepository.get_recent_transactions(
-                self.symbol,
-                asset_type='crypto',
-                limit=limit
+                self.symbol, asset_type="crypto", limit=limit
             )
 
             # Convert to dict format for backward compatibility
             return [
                 {
-                    'timestamp': t.timestamp.isoformat(),
-                    'quantity': str(t.quantity),
-                    'price': str(t.price),
-                    'total_cost': str(t.total_cost),
-                    'order_id': t.order_id
+                    "timestamp": t.timestamp.isoformat(),
+                    "quantity": str(t.quantity),
+                    "price": str(t.price),
+                    "total_cost": str(t.total_cost),
+                    "order_id": t.order_id,
                 }
                 for t in transactions
             ]

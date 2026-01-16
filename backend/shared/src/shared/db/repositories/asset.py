@@ -24,22 +24,19 @@ class AssetRepository:
         return asset
 
     @staticmethod
-    def get_by_symbol(symbol: str, asset_type: str = 'stock') -> Optional[AssetTable]:
+    def get_by_symbol(symbol: str, asset_type: str = "stock") -> Optional[AssetTable]:
         """Get asset by symbol and type"""
         with SessionLocal() as session:
             stmt = (
                 select(AssetTable)
                 .options(selectinload(AssetTable.transactions))
-                .where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
-                )
+                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
             )
             asset = session.scalars(stmt).one_or_none()
         return asset
 
     @staticmethod
-    def get_all_by_type(asset_type: str = 'stock') -> List[AssetTable]:
+    def get_all_by_type(asset_type: str = "stock") -> List[AssetTable]:
         """Get all assets of a specific type"""
         with SessionLocal() as session:
             stmt = (
@@ -139,7 +136,9 @@ class AssetRepository:
         return fund
 
     @staticmethod
-    def update_in_fund(fund_id: int, asset_id: int, asset_data: dict) -> Optional[FundTable]:
+    def update_in_fund(
+        fund_id: int, asset_id: int, asset_data: dict
+    ) -> Optional[FundTable]:
         """
         Update an asset in a fund.
         This is a convenience method that maintains backward compatibility with StockRepository.update()
@@ -173,8 +172,7 @@ class AssetRepository:
         This is a convenience method that maintains backward compatibility with StockRepository.remove()
         """
         stmt = delete(AssetTable).where(
-            AssetTable.fund_id == fund_id,
-            AssetTable.id == asset_id
+            AssetTable.fund_id == fund_id, AssetTable.id == asset_id
         )
         with SessionLocal() as session:
             with session.begin():

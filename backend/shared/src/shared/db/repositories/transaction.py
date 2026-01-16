@@ -1,10 +1,10 @@
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import List, Optional
 
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from shared.db.config import SessionLocal
 from shared.db.models.asset import AssetTable
@@ -18,11 +18,11 @@ class TransactionRepository:
     def get_or_create_asset(
         symbol: str,
         name: str,
-        asset_type: str = 'crypto',
+        asset_type: str = "crypto",
         fund_id: Optional[int] = None,
         base_prum: Optional[Decimal] = None,
-        historical_quantity: Decimal = Decimal('0'),
-        session = None,
+        historical_quantity: Decimal = Decimal("0"),
+        session=None,
     ) -> AssetTable:
         """
         Get existing asset or create new one.
@@ -47,8 +47,7 @@ class TransactionRepository:
         try:
             # Try to find existing asset
             stmt = select(AssetTable).where(
-                AssetTable.symbol == symbol,
-                AssetTable.asset_type == asset_type
+                AssetTable.symbol == symbol, AssetTable.asset_type == asset_type
             )
             asset = session.scalars(stmt).one_or_none()
 
@@ -62,13 +61,15 @@ class TransactionRepository:
                 name=name,
                 asset_type=asset_type,
                 fund_id=fund_id,
-                shares_number=float(historical_quantity) if historical_quantity else 0.0,
+                shares_number=float(historical_quantity)
+                if historical_quantity
+                else 0.0,
                 cost=0.0,  # Will be calculated from transactions
                 current_repartition=0.0,
                 target_repartition=None,
                 arbitration_threshold=0.0,
                 threshold_to_alert=0.0,
-                base_prum=base_prum
+                base_prum=base_prum,
             )
             session.add(asset)
             session.commit()
@@ -81,7 +82,9 @@ class TransactionRepository:
                 .where(AssetTable.id == asset.id)
             ).one()
 
-            logger.info(f"Created new asset: {symbol} (id={asset.id}, type={asset_type})")
+            logger.info(
+                f"Created new asset: {symbol} (id={asset.id}, type={asset_type})"
+            )
             return asset
         finally:
             if not use_existing_session:
@@ -90,15 +93,15 @@ class TransactionRepository:
     @staticmethod
     def add_transaction(
         symbol: Optional[str] = None,
-        asset_type: str = 'crypto',
+        asset_type: str = "crypto",
         asset_id: Optional[int] = None,
-        transaction_type: str = 'buy',
-        quantity: Decimal = Decimal('0'),
-        price: Decimal = Decimal('0'),
-        total_cost: Decimal = Decimal('0'),
+        transaction_type: str = "buy",
+        quantity: Decimal = Decimal("0"),
+        price: Decimal = Decimal("0"),
+        total_cost: Decimal = Decimal("0"),
         order_id: Optional[str] = None,
         timestamp: Optional[datetime] = None,
-        session = None,
+        session=None,
     ) -> AssetTransactionTable:
         """
         Record a new transaction.
@@ -126,8 +129,7 @@ class TransactionRepository:
             # Look up asset_id if symbol provided
             if asset_id is None and symbol:
                 stmt = select(AssetTable).where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
+                    AssetTable.symbol == symbol, AssetTable.asset_type == asset_type
                 )
                 asset = session.scalars(stmt).one_or_none()
                 if asset:
@@ -145,7 +147,7 @@ class TransactionRepository:
                     quantity=quantity,
                     price=price,
                     total_cost=total_cost,
-                    order_id=order_id
+                    order_id=order_id,
                 )
                 session.add(transaction)
                 session.flush()
@@ -159,7 +161,7 @@ class TransactionRepository:
                         quantity=quantity,
                         price=price,
                         total_cost=total_cost,
-                        order_id=order_id
+                        order_id=order_id,
                     )
                     session.add(transaction)
                     session.flush()
@@ -175,7 +177,9 @@ class TransactionRepository:
                 session.close()
 
     @staticmethod
-    def calculate_prum(symbol: str, asset_type: str = 'crypto', session = None) -> Optional[Decimal]:
+    def calculate_prum(
+        symbol: str, asset_type: str = "crypto", session=None
+    ) -> Optional[Decimal]:
         """
         Calculate weighted average purchase price (PRUM) for an asset.
 
@@ -198,10 +202,7 @@ class TransactionRepository:
             stmt = (
                 select(AssetTable)
                 .options(selectinload(AssetTable.transactions))
-                .where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
-                )
+                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
             )
             asset = session.scalars(stmt).one_or_none()
 
@@ -209,8 +210,8 @@ class TransactionRepository:
                 logger.warning(f"Asset not found: {symbol} (type={asset_type})")
                 return None
 
-            total_qty = Decimal('0')
-            total_cost = Decimal('0')
+            total_qty = Decimal("0")
+            total_cost = Decimal("0")
 
             # Include base historical data (shares_number represents historical quantity)
             if asset.base_prum and asset.shares_number and asset.shares_number > 0:
@@ -224,7 +225,7 @@ class TransactionRepository:
 
             # Add all buy transactions
             for transaction in asset.transactions:
-                if transaction.transaction_type == 'buy':
+                if transaction.transaction_type == "buy":
                     total_qty += transaction.quantity
                     total_cost += transaction.total_cost
                     logger.debug(
@@ -237,7 +238,9 @@ class TransactionRepository:
                 return None
 
             prum = total_cost / total_qty
-            logger.info(f"PRUM calculated for {symbol}: {prum} (total_cost={total_cost}, total_qty={total_qty})")
+            logger.info(
+                f"PRUM calculated for {symbol}: {prum} (total_cost={total_cost}, total_qty={total_qty})"
+            )
             return prum
         finally:
             if not use_existing_session:
@@ -245,9 +248,7 @@ class TransactionRepository:
 
     @staticmethod
     def get_recent_transactions(
-        symbol: str,
-        asset_type: str = 'crypto',
-        limit: int = 10
+        symbol: str, asset_type: str = "crypto", limit: int = 10
     ) -> List[AssetTransactionTable]:
         """
         Get recent transactions for an asset.
@@ -264,10 +265,7 @@ class TransactionRepository:
             stmt = (
                 select(AssetTransactionTable)
                 .join(AssetTable)
-                .where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
-                )
+                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
                 .order_by(AssetTransactionTable.timestamp.desc())
                 .limit(limit)
             )
@@ -275,7 +273,7 @@ class TransactionRepository:
             return list(transactions)
 
     @staticmethod
-    def get_asset_statistics(symbol: str, asset_type: str = 'crypto') -> dict:
+    def get_asset_statistics(symbol: str, asset_type: str = "crypto") -> dict:
         """
         Get purchase statistics for an asset.
 
@@ -290,10 +288,7 @@ class TransactionRepository:
             stmt = (
                 select(AssetTable)
                 .options(selectinload(AssetTable.transactions))
-                .where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
-                )
+                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
             )
             asset = session.scalars(stmt).one_or_none()
 
@@ -303,26 +298,30 @@ class TransactionRepository:
             prum = TransactionRepository.calculate_prum(symbol, asset_type)
 
             # Calculate statistics for transactions only (excluding base)
-            transactions = [t for t in asset.transactions if t.transaction_type == 'buy']
+            transactions = [
+                t for t in asset.transactions if t.transaction_type == "buy"
+            ]
             transaction_count = len(transactions)
             transaction_total_cost = sum(t.total_cost for t in transactions)
             transaction_total_qty = sum(t.quantity for t in transactions)
 
             return {
-                'prum': str(prum) if prum else None,
-                'historical_quantity': str(asset.shares_number),
-                'base_prum': str(asset.base_prum) if asset.base_prum else None,
-                'transaction_count': transaction_count,
-                'transaction_total_quantity': str(transaction_total_qty),
-                'transaction_total_cost': str(transaction_total_cost),
-                'symbol': asset.symbol,
-                'name': asset.name,
-                'asset_type': asset.asset_type,
-                'asset_id': asset.id,
+                "prum": str(prum) if prum else None,
+                "historical_quantity": str(asset.shares_number),
+                "base_prum": str(asset.base_prum) if asset.base_prum else None,
+                "transaction_count": transaction_count,
+                "transaction_total_quantity": str(transaction_total_qty),
+                "transaction_total_cost": str(transaction_total_cost),
+                "symbol": asset.symbol,
+                "name": asset.name,
+                "asset_type": asset.asset_type,
+                "asset_id": asset.id,
             }
 
     @staticmethod
-    def get_asset_by_symbol(symbol: str, asset_type: str = 'crypto') -> Optional[AssetTable]:
+    def get_asset_by_symbol(
+        symbol: str, asset_type: str = "crypto"
+    ) -> Optional[AssetTable]:
         """
         Get asset by symbol and type.
 
@@ -337,10 +336,7 @@ class TransactionRepository:
             stmt = (
                 select(AssetTable)
                 .options(selectinload(AssetTable.transactions))
-                .where(
-                    AssetTable.symbol == symbol,
-                    AssetTable.asset_type == asset_type
-                )
+                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
             )
             asset = session.scalars(stmt).one_or_none()
             return asset

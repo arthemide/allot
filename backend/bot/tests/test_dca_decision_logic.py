@@ -2,7 +2,7 @@
 Simple tests for DCA decision logic - the most critical part.
 Keep it simple: test the buy/skip decision without complex setup.
 """
-import pytest
+
 from decimal import Decimal
 
 from dca.dca_executor import DCAExecutor
@@ -20,10 +20,7 @@ class TestDCADecisionLogic:
         # Setup mock config
         mock_config = mocker.Mock()
         mock_config.dca = mocker.Mock(
-            symbol="ETHUSDC",
-            base_asset="ETH",
-            base_prum=None,
-            base_quantity=0.0
+            symbol="ETHUSDC", base_asset="ETH", base_prum=None, base_quantity=0.0
         )
 
         # Setup mock client
@@ -54,10 +51,7 @@ class TestDCADecisionLogic:
         # Setup mock config
         mock_config = mocker.Mock()
         mock_config.dca = mocker.Mock(
-            symbol="ETHUSDC",
-            base_asset="ETH",
-            base_prum=None,
-            base_quantity=0.0
+            symbol="ETHUSDC", base_asset="ETH", base_prum=None, base_quantity=0.0
         )
 
         # Setup mock client
@@ -87,10 +81,7 @@ class TestDCADecisionLogic:
         # Setup mock config
         mock_config = mocker.Mock()
         mock_config.dca = mocker.Mock(
-            symbol="ETHUSDC",
-            base_asset="ETH",
-            base_prum=None,
-            base_quantity=0.0
+            symbol="ETHUSDC", base_asset="ETH", base_prum=None, base_quantity=0.0
         )
 
         # Setup mock client
@@ -111,4 +102,7 @@ class TestDCADecisionLogic:
 
         # Then: Should buy (first purchase)
         assert should_execute is True
-        assert "first purchase" in reason.lower() or "no existing position" in reason.lower()
+        assert (
+            "first purchase" in reason.lower()
+            or "no existing position" in reason.lower()
+        )

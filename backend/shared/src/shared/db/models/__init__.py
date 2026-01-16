@@ -1,5 +1,5 @@
-from .fund import FundTable
 from .asset import AssetTable
+from .fund import FundTable
 from .transaction import AssetTransactionTable
 
 # Backward compatibility alias

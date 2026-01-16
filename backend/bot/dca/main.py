@@ -1,4 +1,3 @@
-
 """
 Main entry point for Binance DCA bot.
 
@@ -16,21 +15,25 @@ Usage:
     python -m dca.main --test
 """
 
-import sys
 import argparse
-from .config import get_config
-from shared.src.logger import setup_logging
+import sys
+
 from loguru import logger
+
+from shared.src.logger import setup_logging
+
+from .config import get_config
 from .scheduler import DCAScheduler
 
 setup_logging()
+
 
 def parse_arguments():
     """
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description='DCA (Dollar Cost Averaging) Bot for Binance',
+        description="DCA (Dollar Cost Averaging) Bot for Binance",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -45,27 +48,27 @@ Examples:
 
   # Test mode (display config without executing)
   python -m dca_bot.main --test
-        """
+        """,
     )
-    
+
     parser.add_argument(
-        '--now',
-        action='store_true',
-        help='Execute DCA purchase immediately at startup, then start scheduler'
+        "--now",
+        action="store_true",
+        help="Execute DCA purchase immediately at startup, then start scheduler",
     )
-    
+
     parser.add_argument(
-        '--once',
-        action='store_true',
-        help='Execute single DCA purchase then exit (no scheduler)'
+        "--once",
+        action="store_true",
+        help="Execute single DCA purchase then exit (no scheduler)",
     )
-    
+
     parser.add_argument(
-        '--test',
-        action='store_true',
-        help='Test mode: display configuration without executing purchase'
+        "--test",
+        action="store_true",
+        help="Test mode: display configuration without executing purchase",
     )
-    
+
     return parser.parse_args()
 
 
@@ -85,39 +88,45 @@ def test_mode():
     try:
         client = BinanceClient(config.binance)
         logger.info("Testing Binance API connection...")
-        
+
         account_info = client.get_account_info()
-        logger.info(f"✅ Connection successful! Account type: {account_info.get('accountType')}")
-        
+        logger.info(
+            f"✅ Connection successful! Account type: {account_info.get('accountType')}"
+        )
+
         # Display main balances
-        balances = account_info.get('balances', [])
+        balances = account_info.get("balances", [])
         logger.info("Main balances:")
-        
+
         for balance in balances:
-            free = float(balance['free'])
-            locked = float(balance['locked'])
-            
+            free = float(balance["free"])
+            locked = float(balance["locked"])
+
             if free > 0 or locked > 0:
                 logger.info(f"  {balance['asset']}: free={free}, locked={locked}")
-        
+
         # Test configured symbol
         symbol = config.dca.symbol
         logger.info(f"Testing symbol {symbol}...")
-        
+
         symbol_info = client.get_symbol_info(symbol)
-        logger.info(f"✅ Valid symbol: {symbol_info.get('symbol')}, status={symbol_info.get('status')}")
-        
+        logger.info(
+            f"✅ Valid symbol: {symbol_info.get('symbol')}, status={symbol_info.get('status')}"
+        )
+
         price = client.get_symbol_price(symbol)
         logger.info(f"Current price: {price} {config.dca.quote_asset}")
-        
+
         # Calculate estimated quantity
         estimated_qty = config.dca.amount_usdc / float(price)
-        logger.info(f"Estimated quantity for {config.dca.amount_usdc} USDC: ~{estimated_qty:.6f} {config.dca.base_asset}")
-        
+        logger.info(
+            f"Estimated quantity for {config.dca.amount_usdc} USDC: ~{estimated_qty:.6f} {config.dca.base_asset}"
+        )
+
     except Exception as e:
         logger.error(f"❌ Error during test: {e}", exc_info=True)
         return False
-    
+
     logger.info("✅ Tests completed successfully")
     return True
 
@@ -139,18 +148,18 @@ def main():
         # Create scheduler
         config = get_config()
         scheduler = DCAScheduler(config)
-        
+
         # Single execution mode
         if args.once:
             logger.info("Single execution mode (--once)")
             scheduler.run_once()
             logger.info("✅ Execution completed")
             sys.exit(0)
-        
+
         # Scheduler mode
         logger.info("Automatic scheduler mode")
         scheduler.start(run_immediately=args.now)
-        
+
     except KeyboardInterrupt:
         logger.info("🛑 Stop requested by user (Ctrl+C)")
         sys.exit(0)
@@ -159,5 +168,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

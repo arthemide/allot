@@ -2,8 +2,10 @@
 Simple tests for DCA executor decision logic.
 Focus on the critical buy/skip decisions without overengineering.
 """
-import pytest
+
 from decimal import Decimal
+
+import pytest
 
 from dca.dca_executor import DCAExecutor
 from tests.conftest import create_kline
@@ -19,7 +21,7 @@ def dca_config(mocker):
         quote_asset="USDC",
         amount_usdc=30.0,
         base_prum=None,
-        base_quantity=0.0
+        base_quantity=0.0,
     )
     return config
 
@@ -127,4 +129,7 @@ class TestDCADecisionLogic:
 
         # Then: Should buy (first purchase)
         assert should_execute is True
-        assert "first purchase" in reason.lower() or "no existing position" in reason.lower()
+        assert (
+            "first purchase" in reason.lower()
+            or "no existing position" in reason.lower()
+        )

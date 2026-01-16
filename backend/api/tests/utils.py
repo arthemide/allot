@@ -2,9 +2,9 @@ import json
 from logging import Handler, Logger, basicConfig, getLogger
 from queue import Queue
 
-from api.tests.server import Server
 from loguru import logger
 
+from api.tests.server import Server
 from src.old.fund import Fund
 
 # Default sleep time for tests

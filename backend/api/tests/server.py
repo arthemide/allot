@@ -5,11 +5,10 @@ from time import sleep
 
 sys.path.append(Path(__file__).parent.absolute().as_posix())
 
-from fund import Fund
-from utils import check_and_update_config
-
 from config import CONFIG_FILE_PATH, SLEEP_TIME
+from fund import Fund
 from logger import setup_logging
+from utils import check_and_update_config
 
 
 class Server:
