@@ -18,7 +18,7 @@ Usage:
 
 import sys
 import argparse
-from .config import config
+from .config import get_config
 from shared.src.logger import setup_logging
 from loguru import logger
 from .scheduler import DCAScheduler
@@ -74,12 +74,13 @@ def test_mode():
     Test mode: display configuration and verify connection.
     """
     from .binance_client import BinanceClient
-    
+
+    config = get_config()
     logger.info("TEST MODE - No purchase will be executed")
-    
+
     # Display configuration
     logger.info(str(config))
-    
+
     # Test Binance connection
     try:
         client = BinanceClient(config.binance)
@@ -126,16 +127,17 @@ def main():
     Main function.
     """
     args = parse_arguments()
-    
+
     logger.info("🚀 Starting Binance DCA Bot")
-    
+
     try:
         # Test mode
         if args.test:
             success = test_mode()
             sys.exit(0 if success else 1)
-        
+
         # Create scheduler
+        config = get_config()
         scheduler = DCAScheduler(config)
         
         # Single execution mode

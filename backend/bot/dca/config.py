@@ -78,10 +78,7 @@ class Config:
         # Logging configuration
         self.log_level = "INFO"
         self.log_file = "logs/dca_bot.log"
-        
-        # Purchase tracking file (stores bot purchase history)
-        self.purchase_history_file = "dca/data/purchase_history.json"
-        
+                
         # Retry configuration
         self.max_retries = 3
         
@@ -122,5 +119,13 @@ class Config:
 """
 
 
-# Global configuration instance
-config = Config()
+# Global configuration instance (lazy-loaded)
+_config: Optional[Config] = None
+
+
+def get_config() -> Config:
+    """Get global config instance (lazy initialization for testing)."""
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config

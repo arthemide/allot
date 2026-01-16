@@ -10,7 +10,7 @@ Tests:
 
 from decimal import Decimal
 from .purchase_tracker import PurchaseTracker
-from .config import config
+from .config import get_config
 from .binance_client import BinanceClient
 from loguru import logger
 
@@ -141,7 +141,7 @@ def test_klines(client: BinanceClient, symbol: str = "ETHUSDC"):
         return False
 
 
-def test_prum_calculation(client: BinanceClient, symbol: str = "ETHUSDC", base_asset: str = "ETH"):
+def test_prum_calculation(client: BinanceClient, config, symbol: str = "ETHUSDC", base_asset: str = "ETH"):
     """Test PRUM (average purchase price) calculation."""
     print("\n" + "="*60)
     print(f"TEST 7: PRUM Calculation ({symbol})")
@@ -151,7 +151,7 @@ def test_prum_calculation(client: BinanceClient, symbol: str = "ETHUSDC", base_a
         balance = client.get_asset_balance(base_asset)
         total_balance = balance.total
         print(f"   Current {base_asset} balance: {total_balance}")
-        
+
         # Initialize Purchase Tracker (now uses PostgreSQL)
         tracker = PurchaseTracker(
             symbol=config.dca.symbol,
@@ -159,7 +159,6 @@ def test_prum_calculation(client: BinanceClient, symbol: str = "ETHUSDC", base_a
             fund_id=None,
             base_prum=config.dca.base_prum,
             base_quantity=config.dca.base_quantity,
-            file_path=config.purchase_history_file  # Ignored, for backward compat
         )
         
         # Get tracker statistics
@@ -247,16 +246,17 @@ def main():
     print("BINANCE API DEBUG TESTS")
     print("="*60)
     print("This script will test API connectivity without making any trades.")
-    
+
     # Load configuration
     try:
+        config = get_config()
         print(f"\n✅ Configuration loaded")
         print(f"   Symbol: {config.dca.symbol}")
         print(f"   Amount: {config.dca.amount_usdc} USDC")
     except Exception as e:
         print(f"\n❌ Failed to load configuration: {e}")
         return
-    
+
     # Initialize client
     try:
         client = BinanceClient(config.binance)
@@ -264,7 +264,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Failed to initialize client: {e}")
         return
-    
+
     # Run tests
     results = []
     results.append(("Account Info", test_account_info(client)))
@@ -275,7 +275,7 @@ def main():
     results.append(("Price", test_price(client, config.dca.symbol)))
     results.append(("Klines", test_klines(client, config.dca.symbol)))
     results.append(("Order History", test_order_history(client, config.dca.symbol)))
-    results.append(("PRUM Calculation", test_prum_calculation(client, config.dca.symbol, config.dca.base_asset)))
+    results.append(("PRUM Calculation", test_prum_calculation(client, config, config.dca.symbol, config.dca.base_asset)))
     
     # Summary
     print("\n" + "="*60)

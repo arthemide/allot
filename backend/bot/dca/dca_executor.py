@@ -39,7 +39,6 @@ class DCAExecutor:
             fund_id=None,  # No fund for crypto assets
             base_prum=config.dca.base_prum,
             base_quantity=config.dca.base_quantity,
-            file_path=config.purchase_history_file  # Ignored, for backward compat
         )
     
     def should_execute_purchase(self) -> Tuple[bool, str]:
