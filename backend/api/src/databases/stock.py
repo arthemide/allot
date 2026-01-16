@@ -29,7 +29,7 @@ class StockRepository:
             # Return the fund with stocks loaded
             fund = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == fund_id)
             ).one_or_none()
         return fund
@@ -65,7 +65,7 @@ class StockRepository:
             # Return the fund with stocks loaded
             fund = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == fund_id)
             ).one_or_none()
         return fund
@@ -85,7 +85,7 @@ class StockRepository:
             # Return the fund with stocks loaded
             fund = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == fund_id)
             ).one_or_none()
         return fund

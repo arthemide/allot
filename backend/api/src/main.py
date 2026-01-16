@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shared.src.logger import setup_logging
+from shared.logger import setup_logging
 from src.routes import router
 
 setup_logging()

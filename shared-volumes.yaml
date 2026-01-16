@@ -5,7 +5,7 @@
 services:
   api:
     volumes:
-      - ./api/src:/app/src
+      - ./backend/api/src:/app/src
     # Override command to enable hot-reload
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
   

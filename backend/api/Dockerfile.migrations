@@ -16,19 +16,23 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Copy shared package first (dependency)
+# Copy workspace root pyproject.toml to maintain workspace structure
+COPY pyproject.toml /app/
+
+# Copy shared package (workspace member)
 COPY shared /app/shared
 
-# Copy API files
-COPY api/pyproject.toml .
-COPY api/uv.lock .
+# Copy API files and lock
+COPY api/pyproject.toml /app/api/
+COPY uv.lock /app/
 
-# Install dependencies (including shared package)
-RUN uv sync --frozen --only-group migration && \
-    uv pip install -e /app/shared
+# Install dependencies using workspace
+RUN cd /app/api && uv sync --frozen --only-group migration
 
-# Copy Alembic configuration and migrations
-COPY api/alembic.ini .
-COPY api/alembic alembic
+# Copy Alembic configuration and migrations to /app/api
+COPY api/alembic.ini /app/api/
+COPY api/alembic /app/api/alembic
+
+WORKDIR /app/api
 
 CMD ["uv", "run", "alembic"]

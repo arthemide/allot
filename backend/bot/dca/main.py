@@ -20,7 +20,7 @@ import sys
 
 from loguru import logger
 
-from shared.src.logger import setup_logging
+from shared.logger import setup_logging
 
 from .config import get_config
 from .scheduler import DCAScheduler

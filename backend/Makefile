@@ -7,15 +7,15 @@ help:
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "API"
-	grep -E '^\.PHONY: (api-install|api-test|api-dev|api-docker-build|api-docker-run) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
-	echo ""
-	echo "BOT"
-	grep -E '^\.PHONY: (bot-install|bot-test|dca-test|dca-debug|dca-once|dca-now|dca-start|dca-bot-logs) .*?## .*$$' $(MAKEFILE_LIST) \
+	grep -E '^\.PHONY: (api-install|api-test|api-dev) .*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "DATABASE"
 	grep -E '^\.PHONY: (db-migrate|db-revision|db-downgrade) .*?## .*$$' $(MAKEFILE_LIST) \
+		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
+	echo ""
+	echo "BOT"
+	grep -E '^\.PHONY: (bot-install|bot-test|dca-test|dca-debug|dca-once|dca-now|dca-start|dca-bot-logs) .*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "macOS SERVICE"
@@ -60,13 +60,23 @@ api-test:
 api-dev:
 	uv run uvicorn src.main:app --reload --app-dir api
 
-.PHONY: api-docker-build ## 🐳 Build API Docker image
-api-docker-build:
-	docker build -t stock-alerting:latest api/
 
-.PHONY: api-docker-run ## 🐳 Run API Docker container
-api-docker-run:
-	docker run -v "$${PWD}/api/config.json:/app/config.json:ro" stock-alerting:latest
+# =============================================================================
+# Database commands
+# =============================================================================
+
+.PHONY: db-migrate ## 🗄️  Run database migrations
+db-migrate:
+	cd shared && uv run alembic upgrade head
+
+.PHONY: db-revision ## 📝 Create new migration revision
+db-revision:
+	@read -p "Revision message: " msg && \
+	cd shared && uv run alembic revision --autogenerate -m "$$msg"
+
+.PHONY: db-downgrade ## ⬇️  Downgrade database by one revision
+db-downgrade:
+	cd shared && uv run alembic downgrade -1
 
 # =============================================================================
 # Bot commands
@@ -103,23 +113,6 @@ dca-start:
 .PHONY: dca-bot-logs ## 📋 View DCA bot logs
 dca-bot-logs:
 	tail -f bot/dca/logs/launchd-dca-bot.log
-
-# =============================================================================
-# Database commands
-# =============================================================================
-
-.PHONY: db-migrate ## 🗄️  Run database migrations
-db-migrate:
-	cd shared && uv run alembic upgrade head
-
-.PHONY: db-revision ## 📝 Create new migration revision
-db-revision:
-	@read -p "Revision message: " msg && \
-	cd shared && uv run alembic revision --autogenerate -m "$$msg"
-
-.PHONY: db-downgrade ## ⬇️  Downgrade database by one revision
-db-downgrade:
-	cd shared && uv run alembic downgrade -1
 
 # =============================================================================
 # macOS Service commands

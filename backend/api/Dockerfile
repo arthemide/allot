@@ -9,16 +9,17 @@ ENV PYSETUP_PATH="/app"
 WORKDIR $PYSETUP_PATH
 
 # Copy shared package first (dependency)
-COPY ./shared /app/shared
+COPY shared /app/shared
 
 # Copy API files
-COPY ./api/pyproject.toml ./api/uv.lock ./
+COPY api/pyproject.toml ./
+COPY uv.lock ./
 
 # Install dependencies (including shared package)
 RUN uv sync --frozen --no-dev && \
     uv pip install -e /app/shared
 
-COPY ./api/src/ $PYSETUP_PATH/src/
+COPY api/src/ $PYSETUP_PATH/src/
 
 ###############################################
 # Production Image
@@ -36,7 +37,5 @@ COPY --from=builder $PYSETUP_PATH/src ./src
 
 ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"
 
-# Mount the config.json file to the container
-VOLUME ./config.json
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

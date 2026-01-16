@@ -14,7 +14,7 @@ class FundRepository:
         with SessionLocal() as session:
             stmt = (
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .order_by(FundTable.created_at.desc())
             )
             records = session.scalars(stmt).all()
@@ -26,7 +26,7 @@ class FundRepository:
         with SessionLocal() as session:
             stmt = (
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == id)
             )
             record = session.scalars(stmt).one_or_none()
@@ -45,7 +45,7 @@ class FundRepository:
             # Fetch the fund with stocks loaded before session closes
             fund_with_stocks = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == fund_table.id)
             ).one()
 
@@ -64,7 +64,7 @@ class FundRepository:
             # Fetch and return the updated fund with stocks
             fund = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.stocks))
+                .options(selectinload(FundTable.assets))
                 .where(FundTable.id == fund_id)
             ).one_or_none()
         return fund
