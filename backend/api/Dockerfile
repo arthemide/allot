@@ -7,12 +7,18 @@ ENV PYSETUP_PATH="/app"
 
 # Copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
-COPY ./pyproject.toml ./uv.lock ./
 
-# Install dependencies
-RUN uv sync --frozen --no-dev
+# Copy shared package first (dependency)
+COPY ./shared /app/shared
 
-COPY ./src/ $PYSETUP_PATH/src/
+# Copy API files
+COPY ./api/pyproject.toml ./api/uv.lock ./
+
+# Install dependencies (including shared package)
+RUN uv sync --frozen --no-dev && \
+    uv pip install -e /app/shared
+
+COPY ./api/src/ $PYSETUP_PATH/src/
 
 ###############################################
 # Production Image
@@ -23,8 +29,9 @@ ENV PYSETUP_PATH="/app"
 
 WORKDIR $PYSETUP_PATH
 
-# Copy the virtual environment from builder
+# Copy the virtual environment and shared package from builder
 COPY --from=builder $PYSETUP_PATH/.venv $PYSETUP_PATH/.venv
+COPY --from=builder $PYSETUP_PATH/shared $PYSETUP_PATH/shared
 COPY --from=builder $PYSETUP_PATH/src ./src
 
 ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"

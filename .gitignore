@@ -160,3 +160,5 @@ cython_debug/
 
 api-logs/
 **/logs
+
+.claude

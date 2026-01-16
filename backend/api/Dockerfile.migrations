@@ -14,17 +14,21 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /migrations
+WORKDIR /app
 
-COPY pyproject.toml .
-COPY uv.lock .
+# Copy shared package first (dependency)
+COPY shared /app/shared
 
-RUN uv sync --frozen --only-group migration
+# Copy API files
+COPY api/pyproject.toml .
+COPY api/uv.lock .
+
+# Install dependencies (including shared package)
+RUN uv sync --frozen --only-group migration && \
+    uv pip install -e /app/shared
 
 # Copy Alembic configuration and migrations
-COPY alembic.ini .
-COPY alembic alembic
-COPY src/config.py src/config.py
-COPY src/models src/models
+COPY api/alembic.ini .
+COPY api/alembic alembic
 
 CMD ["uv", "run", "alembic"]
