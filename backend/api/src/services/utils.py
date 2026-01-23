@@ -3,7 +3,7 @@ from src.models.pydantic.schema import (
     FundSchema,
     StockSchema,
 )
-from src.old.stock import Stock
+from src.services.yfinance_utils import get_stock_price
 
 
 def fund_table_to_pydantic(fund: FundTable) -> FundSchema:
@@ -17,7 +17,7 @@ def fund_table_to_pydantic(fund: FundTable) -> FundSchema:
     for stock in fund.stocks:
         cost = stock.cost
         prum = stock.cost / stock.shares_number
-        today_price = Stock.get_stock_price(stock.symbol)
+        today_price = get_stock_price(stock.symbol)
         market_value = 0.0
         gain_loss = 0.0
         gain_loss_percentage = 0.0

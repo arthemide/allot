@@ -1,9 +1,10 @@
 ---
 id: TASK-2
 title: Extract yfinance utilities from old code
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
+updated_date: '2026-01-23 19:05'
 labels:
   - refactoring
   - api
@@ -37,14 +38,27 @@ Extract these functions:
 - migration.py (line 3)
 
 **Add tests** in `tests/services/test_yfinance_utils.py` to cover all 4 functions.
-
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 New yfinance_utils.py created with 4 functions
-- [ ] #2 All imports updated in 4 files
-- [ ] #3 Tests pass after refactoring
-- [ ] #4 Stock search endpoint works correctly
-- [ ] #5 src/old/ folder deleted
+- [x] #1 New yfinance_utils.py created with 4 functions
+- [x] #2 All imports updated in 4 files
+- [x] #3 Tests pass after refactoring
+- [x] #4 Stock search endpoint works correctly
+- [x] #5 src/old/ folder deleted
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Terminé le 23/01/2026:
+
+- Créé api/src/services/yfinance_utils.py avec get_stock_price(), get_long_name(), search_symbol()
+
+- Mis à jour imports dans routes/stocks.py, services/stock.py, services/utils.py, migration.py
+
+- Supprimé api/src/old/ (classes Fund et Stock legacy)
+
+- Supprimé tests legacy: test_fund.py, test_stock.py, test_utils.py, test_server.py, server.py, utils.py
+<!-- SECTION:NOTES:END -->

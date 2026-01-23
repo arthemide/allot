@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from src.models.pydantic.schema import StockSearchResponse, StockSearchResult
-from src.old.stock import Stock
+from src.services.yfinance_utils import search_symbol
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -27,7 +27,7 @@ async def search_stocks(
     logger.info(f"Searching for stocks with query: {q}")
 
     try:
-        results = Stock.search_symbol(q, max_results=max_results)
+        results = search_symbol(q, max_results=max_results)
 
         search_results = [StockSearchResult(**result) for result in results]
 

@@ -4,8 +4,8 @@ from src.models.pydantic.schema import (
     FundSchema,
     StockSchema,
 )
-from src.old.stock import Stock
 from src.services.utils import fund_table_to_pydantic
+from src.services.yfinance_utils import get_long_name
 
 
 class StockService:
@@ -16,7 +16,7 @@ class StockService:
         if not fund:
             return None
         if stock.name is None:
-            stock.name = Stock.get_long_name(stock.symbol)
+            stock.name = get_long_name(stock.symbol)
         fund = StockRepository.add(fund_id, stock)
         return fund_table_to_pydantic(fund) if fund else None
 
