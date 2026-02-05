@@ -1,6 +1,6 @@
 services:
   db:
-    container_name: db
+    container_name: stock-alerting-db
     image: "postgres:17.1"
     restart: always
     environment:
@@ -11,7 +11,7 @@ services:
     ports:
       - "8400:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - stock_alerting_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -19,7 +19,7 @@ services:
       retries: 5
 
   api:
-    container_name: api
+    container_name: stock-alerting-api
     image: "api"
     build:
       context: ./backend
@@ -43,7 +43,7 @@ services:
       start_period: 40s
 
   front:
-    container_name: front
+    container_name: stock-alerting-front
     image: "front"
     build:
       context: ./front
@@ -54,7 +54,7 @@ services:
       - api
 
   dca-bot:
-    container_name: dca-bot
+    container_name: stock-alerting-dca-bot
     image: "dca-bot"
     build:
       context: ./backend
@@ -72,7 +72,7 @@ services:
       - dca
 
 volumes:
-  stock_front_node_modules:
-    name: stock_front_node_modules
-  postgres_data:
-    name: stock_postgres_data
+  stock_alerting_front_node_modules:
+    name: stock_alerting_front_node_modules
+  stock_alerting_postgres_data:
+    name: stock_alerting_postgres_data

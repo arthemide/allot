@@ -1,6 +1,6 @@
 services:
   migration:
-    container_name: migration
+    container_name: stock-alerting-migration
     build:
       context: ./backend
       dockerfile: api/Dockerfile.migrations

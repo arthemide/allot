@@ -45,6 +45,100 @@ class DCAScheduler:
 
         except Exception as e:
             logger.error(f"❌ Critical error in DCA job: {e}", exc_info=True)
+            get_notifier().notify_crash(str(e))
+
+    def _check_and_handle_misfires(self):
+        """
+        Check if there were any missed executions and handle them.
+        This is called on startup to detect if the bot was down during a scheduled execution.
+        Also logs the last purchase info for reference.
+        """
+        dca_config = self.config.dca
+        now = datetime.now()
+
+        # Log last purchase info
+        last_purchase = self._get_last_purchase_info()
+        if last_purchase:
+            logger.info(f"📊 Last purchase: {last_purchase}")
+
+        # Get the days this month we should have executed
+        days = [int(d.strip()) for d in dca_config.days_of_month.split(",")]
+
+        for day in days:
+            # Check if this day has already passed this month
+            if day < now.day:
+                # Calculate the scheduled time for this day
+                scheduled_time = now.replace(
+                    day=day,
+                    hour=dca_config.execution_hour,
+                    minute=dca_config.execution_minute,
+                    second=0,
+                    microsecond=0
+                )
+
+                # Check if it's within the grace period
+                time_since_missed = now - scheduled_time
+                grace_seconds = 86400 * dca_config.grace_period_days
+                if time_since_missed.total_seconds() < grace_seconds:
+                    # Check if a purchase was already made around this scheduled time
+                    if self._was_purchase_made_around(scheduled_time):
+                        logger.info(f"✅ Purchase already made around {scheduled_time.strftime('%Y-%m-%d')} - no misfire")
+                        continue
+
+                    logger.warning(
+                        f"⚠️ Detected missed execution from {scheduled_time.strftime('%Y-%m-%d %H:%M:%S')} "
+                        f"({time_since_missed.days} days ago)"
+                    )
+                    get_notifier().notify_misfire(
+                        scheduled_time.strftime("%Y-%m-%d %H:%M:%S"),
+                        will_retry=True
+                    )
+                    logger.info("▶️ Executing missed DCA purchase now...")
+                    self._dca_job()
+                    break  # Only execute once per startup
+
+    def _get_last_purchase_info(self) -> str | None:
+        """Get info about the last purchase for logging."""
+        try:
+            recent = self.dca_executor.tracker.get_recent_purchases(limit=1)
+            if not recent:
+                return None
+
+            last = recent[0]
+            timestamp_str = last.get("timestamp")
+            if not timestamp_str:
+                return None
+
+            timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            if timestamp.tzinfo:
+                timestamp = timestamp.replace(tzinfo=None)
+
+            days_ago = (datetime.now() - timestamp).days
+            return f"{timestamp.strftime('%Y-%m-%d %H:%M')} ({days_ago} days ago)"
+        except Exception as e:
+            logger.debug(f"Could not get last purchase info: {e}")
+            return None
+
+    def _was_purchase_made_around(self, scheduled_time: datetime) -> bool:
+        """Check if a purchase was made within 1 day of the scheduled time."""
+        try:
+            recent = self.dca_executor.tracker.get_recent_purchases(limit=5)
+            for purchase in recent:
+                timestamp_str = purchase.get("timestamp")
+                if not timestamp_str:
+                    continue
+
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                if timestamp.tzinfo:
+                    timestamp = timestamp.replace(tzinfo=None)
+
+                # Check if purchase was within 1 day of scheduled time
+                diff = abs((timestamp - scheduled_time).total_seconds())
+                if diff < 86400:  # 1 day
+                    return True
+            return False
+        except Exception:
+            return False
 
     def setup_schedule(self):
         """
@@ -70,6 +164,7 @@ class DCAScheduler:
             )
             raise ValueError("DCA_DAYS_OF_MONTH must be specified for scheduling")
 
+        grace_seconds = 86400 * dca_config.grace_period_days
         self.scheduler.add_job(
             self._dca_job,
             trigger=trigger,
@@ -77,13 +172,12 @@ class DCAScheduler:
             name="DCA Purchase Job",
             replace_existing=True,
             max_instances=1,  # Prevent concurrent executions
-            misfire_grace_time=86400
-            * 7,  # Allow 7 days grace period for missed executions
+            misfire_grace_time=grace_seconds,
         )
 
         logger.info("✅ Scheduler configured successfully")
         logger.info(
-            "ℹ️  Misfire grace period: 7 days (missed executions will run on next startup within 7 days)"
+            f"ℹ️  Misfire grace period: {dca_config.grace_period_days} days (missed executions will run on next startup)"
         )
 
     def start(self, run_immediately: bool = False):
@@ -98,6 +192,9 @@ class DCAScheduler:
 
         # Configure the schedule
         self.setup_schedule()
+
+        # Check for missed executions (misfires)
+        self._check_and_handle_misfires()
 
         # Execute immediately if requested
         if run_immediately:
@@ -126,6 +223,10 @@ class DCAScheduler:
         except (KeyboardInterrupt, SystemExit):
             logger.info("🛑 Scheduler stop requested")
             self.shutdown()
+        except Exception as e:
+            logger.error(f"💥 Scheduler crashed: {e}", exc_info=True)
+            get_notifier().notify_crash(str(e))
+            raise
 
     def shutdown(self):
         """

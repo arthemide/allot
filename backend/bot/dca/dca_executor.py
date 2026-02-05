@@ -273,20 +273,20 @@ class DCAExecutor:
             )
 
             # 5. Extract and log order details
-            order_id = order_result.get("orderId")
-            status = order_result.get("status")
-            executed_qty = Decimal(order_result.get("executedQty", "0"))
+            order_id = order_result.order_id
+            status = order_result.status
+            executed_qty = order_result.executed_qty
 
             # Calculate fees and average price
-            fills = order_result.get("fills", [])
+            fills = order_result.fills
             total_fees = Decimal("0")
             total_cost = Decimal("0")
             total_qty = Decimal("0")
 
             for fill in fills:
-                qty = Decimal(fill["qty"])
-                price = Decimal(fill["price"])
-                commission = Decimal(fill["commission"])
+                qty = fill.qty
+                price = fill.price
+                commission = fill.commission
 
                 total_qty += qty
                 total_cost += qty * price

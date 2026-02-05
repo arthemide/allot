@@ -54,6 +54,10 @@ class DCAConfig(BaseModel):
     # Execution minute
     execution_minute: int = 2
 
+    # Grace period for missed executions (in days)
+    # Missed executions within this period will be retried on startup
+    grace_period_days: int = 7
+
 
 class Config:
     """Main bot configuration class"""

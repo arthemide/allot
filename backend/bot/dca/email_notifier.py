@@ -118,6 +118,40 @@ The DCA bot is now running.
         body += "\nThis is an automated notification from your DCA bot."
         self.send_email(subject, body)
 
+    def notify_crash(self, error_message: str):
+        """Notify bot crash."""
+        subject = "💥 Bot Crashed"
+        body = f"""DCA Bot Crashed
+
+The DCA bot encountered a critical error and stopped running.
+
+Error: {error_message}
+
+The bot will automatically restart if managed by launchd/systemd.
+Please check the logs for more details.
+
+This is an automated notification from your DCA bot.
+"""
+        self.send_email(subject, body)
+
+    def notify_misfire(self, missed_time: str, will_retry: bool = True):
+        """Notify missed execution."""
+        subject = "⏰ Missed Execution Detected"
+        retry_info = (
+            "The bot will attempt to execute the purchase now."
+            if will_retry
+            else "The execution window has expired."
+        )
+        body = f"""DCA Scheduled Execution Missed
+
+The scheduled execution at {missed_time} was missed because the bot was not running.
+
+{retry_info}
+
+This is an automated notification from your DCA bot.
+"""
+        self.send_email(subject, body)
+
 
 # Global instance
 _notifier: Optional[EmailNotifier] = None
