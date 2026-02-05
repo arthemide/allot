@@ -15,11 +15,11 @@ help:
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "BOT"
-	grep -E '^\.PHONY: (bot-install|bot-test|dca-test|dca-debug|dca-once|dca-now|dca-start|dca-bot-logs) .*?## .*$$' $(MAKEFILE_LIST) \
+	grep -E '^\.PHONY: (bot-install|bot-test|dca-test|dca-debug|dca-once|dca-now|dca-start) .*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
-	echo "macOS SERVICE"
-	grep -E '^\.PHONY: (dca-bot-install|dca-bot-uninstall|dca-bot-status) .*?## .*$$' $(MAKEFILE_LIST) \
+	echo "TERMINAL AUTO-START"
+	grep -E '^\.PHONY: (dca-autostart-install|dca-autostart-uninstall) .*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	
 # =============================================================================
@@ -110,22 +110,31 @@ dca-now:
 dca-start:
 	cd bot && uv run python -m dca.main
 
-.PHONY: dca-bot-logs ## 📋 View DCA bot logs
-dca-bot-logs:
-	tail -f bot/dca/logs/launchd-dca-bot.log
-
 # =============================================================================
-# macOS Service commands
+# Terminal auto-start commands
 # =============================================================================
 
-.PHONY: dca-bot-install ## 🍎 Install macOS service (starts automatically)
-dca-bot-install:
-	./scripts/install-macos-service.sh
+BACKEND_DIR := $(shell pwd)
 
-.PHONY: dca-bot-uninstall ## 🗑️  Uninstall macOS service
-dca-bot-uninstall:
-	./scripts/uninstall-macos-service.sh
+.PHONY: dca-autostart-install ## 🚀 Add DCA bot auto-start to terminal (zshrc)
+dca-autostart-install:
+	@if grep -q "make dca-start" ~/.zshrc 2>/dev/null; then \
+		echo "⚠️  Auto-start already configured in ~/.zshrc"; \
+	else \
+		echo "" >> ~/.zshrc; \
+		echo "# DCA Bot auto-start" >> ~/.zshrc; \
+		echo "echo '🤖 DCA Bot starting... Logs: $(BACKEND_DIR)/logs/app.log'" >> ~/.zshrc; \
+		echo "nohup make -C $(BACKEND_DIR) dca-start >> $(BACKEND_DIR)/logs/app.log 2>&1 &" >> ~/.zshrc; \
+		echo "✅ Added DCA bot auto-start to ~/.zshrc"; \
+		echo "   Restart your terminal or run: source ~/.zshrc"; \
+	fi
 
-.PHONY: dca-bot-status ## 📊 View macOS service status
-dca-bot-status:
-	@launchctl list | grep dca-bot || echo "Service not active"
+.PHONY: dca-autostart-uninstall ## 🗑️  Remove DCA bot auto-start from terminal
+dca-autostart-uninstall:
+	@if grep -q "make dca-start" ~/.zshrc 2>/dev/null; then \
+		sed -i '' '/# DCA Bot auto-start/d' ~/.zshrc; \
+		sed -i '' '/make dca-start/d' ~/.zshrc; \
+		echo "✅ Removed DCA bot auto-start from ~/.zshrc"; \
+	else \
+		echo "⚠️  No auto-start configuration found in ~/.zshrc"; \
+	fi
