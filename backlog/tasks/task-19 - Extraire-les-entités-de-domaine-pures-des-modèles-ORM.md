@@ -4,12 +4,13 @@ title: Extraire les entités de domaine pures des modèles ORM
 status: To Do
 assignee: []
 created_date: '2026-01-23 09:45'
+updated_date: '2026-01-23 18:59'
 labels:
   - ddd
   - architecture
   - refactoring
 dependencies: []
-priority: high
+priority: medium
 ---
 
 ## Description
@@ -39,3 +40,9 @@ backend/domain/
 - [ ] #4 Tests unitaires pour logique métier
 - [ ] #5 Mappers ORM ↔ Domain créés
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+À faire APRÈS les tâches de consolidation (tests, nettoyage du code legacy)
+<!-- SECTION:NOTES:END -->

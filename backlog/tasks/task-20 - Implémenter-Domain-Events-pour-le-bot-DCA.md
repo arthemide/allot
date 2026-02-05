@@ -4,12 +4,13 @@ title: Implémenter Domain Events pour le bot DCA
 status: To Do
 assignee: []
 created_date: '2026-01-23 09:45'
+updated_date: '2026-01-23 18:59'
 labels:
   - ddd
   - architecture
   - event-driven
 dependencies: []
-priority: medium
+priority: low
 ---
 
 ## Description

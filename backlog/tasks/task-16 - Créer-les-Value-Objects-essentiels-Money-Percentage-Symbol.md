@@ -9,7 +9,7 @@ labels:
   - architecture
   - refactoring
 dependencies: []
-priority: high
+priority: medium
 ---
 
 ## Description
