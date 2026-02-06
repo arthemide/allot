@@ -6,7 +6,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from shared.db.config import SessionLocal
+from shared.db.config import SessionLocal, with_db_retry
 from shared.db.models.asset import AssetTable
 from shared.db.models.transaction import AssetTransactionTable
 
@@ -15,6 +15,7 @@ class TransactionRepository:
     """Repository for managing asset transactions and calculating PRUM"""
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_or_create_asset(
         symbol: str,
         name: str,
@@ -91,6 +92,7 @@ class TransactionRepository:
                 session.close()
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def add_transaction(
         symbol: Optional[str] = None,
         asset_type: str = "crypto",
@@ -177,6 +179,7 @@ class TransactionRepository:
                 session.close()
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def calculate_prum(
         symbol: str, asset_type: str = "crypto", session=None
     ) -> Optional[Decimal]:
@@ -247,6 +250,7 @@ class TransactionRepository:
                 session.close()
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_recent_transactions(
         symbol: str, asset_type: str = "crypto", limit: int = 10
     ) -> List[AssetTransactionTable]:
@@ -273,6 +277,7 @@ class TransactionRepository:
             return list(transactions)
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_asset_statistics(symbol: str, asset_type: str = "crypto") -> dict:
         """
         Get purchase statistics for an asset.
@@ -319,6 +324,7 @@ class TransactionRepository:
             }
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_asset_by_symbol(
         symbol: str, asset_type: str = "crypto"
     ) -> Optional[AssetTable]:

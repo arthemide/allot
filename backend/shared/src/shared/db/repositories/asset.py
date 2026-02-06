@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
 
-from shared.db.config import SessionLocal
+from shared.db.config import SessionLocal, with_db_retry
 from shared.db.models.asset import AssetTable
 from shared.db.models.fund import FundTable
 
@@ -12,6 +12,7 @@ class AssetRepository:
     """Repository for asset CRUD operations"""
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_by_id(asset_id: int) -> Optional[AssetTable]:
         """Get asset by ID"""
         with SessionLocal() as session:
@@ -24,6 +25,7 @@ class AssetRepository:
         return asset
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_by_symbol(symbol: str, asset_type: str = "stock") -> Optional[AssetTable]:
         """Get asset by symbol and type"""
         with SessionLocal() as session:
@@ -36,6 +38,7 @@ class AssetRepository:
         return asset
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_all_by_type(asset_type: str = "stock") -> List[AssetTable]:
         """Get all assets of a specific type"""
         with SessionLocal() as session:
@@ -48,6 +51,7 @@ class AssetRepository:
         return list(assets)
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def create(
         fund_id: Optional[int],
         name: str,
@@ -90,6 +94,7 @@ class AssetRepository:
         return asset
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def update(asset_id: int, **kwargs) -> Optional[AssetTable]:
         """Update asset fields"""
         stmt = update(AssetTable).where(AssetTable.id == asset_id).values(**kwargs)
@@ -108,6 +113,7 @@ class AssetRepository:
         return asset
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def delete(asset_id: int) -> bool:
         """Delete an asset (cascade deletes transactions)"""
         stmt = delete(AssetTable).where(AssetTable.id == asset_id)
@@ -117,6 +123,7 @@ class AssetRepository:
         return result.rowcount > 0
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def add_to_fund(fund_id: int, asset_data: dict) -> Optional[FundTable]:
         """
         Add an asset to a fund.
@@ -136,6 +143,7 @@ class AssetRepository:
         return fund
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def update_in_fund(
         fund_id: int, asset_id: int, asset_data: dict
     ) -> Optional[FundTable]:
@@ -166,6 +174,7 @@ class AssetRepository:
         return fund
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def remove_from_fund(fund_id: int, asset_id: int) -> Optional[FundTable]:
         """
         Remove an asset from a fund.

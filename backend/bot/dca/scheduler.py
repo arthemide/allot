@@ -8,6 +8,7 @@ from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
+from shared.db.config import check_db_health
 
 from .config import Config
 from .dca_executor import create_dca_executor
@@ -36,6 +37,15 @@ class DCAScheduler:
         """
         try:
             logger.info("🔔 DCA scheduled job triggered")
+
+            # Health check DB before purchase
+            is_healthy, msg = check_db_health()
+            if not is_healthy:
+                logger.error(f"❌ DB health check failed: {msg}")
+                get_notifier().notify_error("Database Error", msg)
+                return
+
+            logger.info(f"✅ {msg}")
             success = self.dca_executor.run()
 
             if success:

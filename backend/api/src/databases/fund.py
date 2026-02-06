@@ -3,12 +3,13 @@ from typing import List
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
 
-from shared.db.config import SessionLocal
+from shared.db.config import SessionLocal, with_db_retry
 from shared.db.models.fund import FundTable
 
 
 class FundRepository:
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_all() -> List[FundTable]:
         """Get all funds with their stocks"""
         with SessionLocal() as session:
@@ -21,6 +22,7 @@ class FundRepository:
         return records
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def get_by_id(id: str) -> FundTable | None:
         """Get a fund by ID with its stocks"""
         with SessionLocal() as session:
@@ -33,6 +35,7 @@ class FundRepository:
         return record
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def create(fund_name: str) -> FundTable:
         """Create a new fund with stocks"""
         with SessionLocal() as session:
@@ -52,6 +55,7 @@ class FundRepository:
         return fund_with_stocks
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def update(fund_id: str, name: str | None = None) -> FundTable | None:
         """Update fund details"""
         stmt = update(FundTable).where(FundTable.id == fund_id).values(name=name)
@@ -70,6 +74,7 @@ class FundRepository:
         return fund
 
     @staticmethod
+    @with_db_retry(max_retries=3)
     def delete(fund_id: str) -> bool:
         """Delete a fund (cascade deletes stocks)"""
         stmt = delete(FundTable).where(FundTable.id == fund_id)
