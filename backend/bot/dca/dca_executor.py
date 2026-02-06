@@ -47,8 +47,8 @@ class DCAExecutor:
         Determine if purchase should be executed based on momentum and PRUM.
 
         LOGIC:
-        - If last 2 periods are POSITIVE (close > open)
-          AND current price > PRUM
+        - If last N periods are POSITIVE (close > open)
+          AND current price > PRUM + buffer
           => SKIP purchase (avoid buying in euphoria)
         - Otherwise => EXECUTE purchase
 
@@ -56,40 +56,38 @@ class DCAExecutor:
             Tuple (should_execute, reason)
         """
         symbol = self.dca_config.symbol
+        num_periods = self.dca_config.momentum_periods
+        prum_buffer = self.dca_config.prum_buffer
+        kline_interval = self.dca_config.kline_interval
 
         try:
             # 1. Get current price
             current_price = self.client.get_symbol_price(symbol)
             logger.info(f"Current price {symbol}: {current_price}")
 
-            # 2. Get last 3 klines (2 weeks interval)
-            # We need 3 to have the 2 previous COMPLETED periods
-            # Note: For 2-week DCA, we use weekly data to have more granularity
-            klines = self.client.get_klines(symbol, interval="1w", limit=3)
+            # 2. Get klines for momentum analysis
+            # We need num_periods + 1 to have the previous COMPLETED periods
+            klines_needed = num_periods + 1
+            klines = self.client.get_klines(symbol, interval=kline_interval, limit=klines_needed)
 
-            if len(klines) < 3:
+            if len(klines) < klines_needed:
                 logger.warning(
-                    f"Not enough historical data (got {len(klines)} klines, need 3)"
+                    f"Not enough historical data (got {len(klines)} klines, need {klines_needed})"
                 )
                 return True, "Insufficient historical data - executing by default"
 
-            # Get the 2 previous COMPLETED periods (index -3 and -2)
-            # Index -1 is the current incomplete period
-            period_1 = klines[-3]  # Oldest of the 2 periods
-            period_2 = klines[-2]  # Most recent completed period
+            # Get the N previous COMPLETED periods (excluding current incomplete period)
+            completed_periods = klines[-(num_periods + 1):-1]
 
-            # Check if both periods are positive (close > open)
-            period_1_positive = period_1.close > period_1.open
-            period_2_positive = period_2.close > period_2.open
-
-            logger.info(
-                f"Period -2 (oldest): open={period_1.open}, close={period_1.close}, positive={period_1_positive}"
-            )
-            logger.info(
-                f"Period -1 (recent): open={period_2.open}, close={period_2.close}, positive={period_2_positive}"
-            )
-
-            both_periods_positive = period_1_positive and period_2_positive
+            # Check if all periods are positive (close > open)
+            all_periods_positive = True
+            for i, period in enumerate(completed_periods):
+                is_positive = period.close > period.open
+                logger.info(
+                    f"Period -{num_periods - i}: open={period.open}, close={period.close}, positive={is_positive}"
+                )
+                if not is_positive:
+                    all_periods_positive = False
 
             # 3. Calculate PRUM (average purchase price) using tracker
             prum = self.tracker.calculate_prum()
@@ -101,25 +99,28 @@ class DCAExecutor:
             logger.info(f"PRUM (average purchase price): {prum}")
 
             # 4. Apply decision logic
-            price_above_prum = current_price > prum * Decimal(
-                "1.03"
-            )  # Adding 3% buffer to avoid frequent skips
+            prum_threshold = prum * Decimal(str(1 + prum_buffer))
+            price_above_prum = current_price > prum_threshold
 
             logger.info(
-                f"Decision factors: both_periods_positive={both_periods_positive}, price_above_prum={price_above_prum}"
+                f"Decision factors: all_periods_positive={all_periods_positive}, "
+                f"price_above_prum={price_above_prum} (threshold: {prum_threshold}, buffer: {prum_buffer * 100:.0f}%)"
             )
 
-            if both_periods_positive and price_above_prum:
-                reason = f"Purchase skipped: bullish momentum (2 positive periods) + price above PRUM ({current_price} > {prum})"
+            if all_periods_positive and price_above_prum:
+                reason = (
+                    f"Purchase skipped: bullish momentum ({num_periods} positive periods) "
+                    f"+ price above PRUM+{prum_buffer * 100:.0f}% ({current_price} > {prum_threshold})"
+                )
                 logger.warning(f"🚫 SKIP PURCHASE - {reason}")
                 return False, reason
 
             # Otherwise, execute purchase
-            if not both_periods_positive:
-                reason = "Execute: at least one negative period (non-bullish momentum)"
+            if not all_periods_positive:
+                reason = f"Execute: not all {num_periods} periods positive (non-bullish momentum)"
             elif not price_above_prum:
                 reason = (
-                    f"Execute: price below or equal to PRUM ({current_price} <= {prum})"
+                    f"Execute: price below PRUM+{prum_buffer * 100:.0f}% ({current_price} <= {prum_threshold})"
                 )
             else:
                 reason = "Execute: purchase conditions met"

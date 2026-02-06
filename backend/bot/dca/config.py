@@ -58,6 +58,16 @@ class DCAConfig(BaseModel):
     # Missed executions within this period will be retried on startup
     grace_period_days: int = 7
 
+    # Strategy parameters
+    # Buffer above PRUM to avoid frequent skips (0.03 = 3%)
+    prum_buffer: float = 0.03
+
+    # Number of historical periods to analyze for momentum
+    momentum_periods: int = 2
+
+    # Kline interval for momentum analysis
+    kline_interval: str = "1w"
+
 
 class Config:
     """Main bot configuration class"""
@@ -81,6 +91,10 @@ class Config:
             days_of_month=self._get_env("DCA_DAYS_OF_MONTH", "1,15"),
             execution_hour=int(self._get_env("DCA_EXECUTION_HOUR", "10")),
             execution_minute=int(self._get_env("DCA_EXECUTION_MINUTE", "2")),
+            # Strategy parameters
+            prum_buffer=float(self._get_env("DCA_PRUM_BUFFER", "0.03")),
+            momentum_periods=int(self._get_env("DCA_MOMENTUM_PERIODS", "2")),
+            kline_interval=self._get_env("DCA_KLINE_INTERVAL", "1w"),
         )
 
         # Logging configuration
@@ -115,6 +129,19 @@ class Config:
         if not self.binance.api_key or not self.binance.api_secret:
             raise ValueError(
                 "Binance API keys are required (BINANCE_API_KEY and BINANCE_API_SECRET)"
+            )
+
+        # Validate strategy parameters
+        if not (0 <= self.dca.prum_buffer <= 0.5):
+            raise ValueError("DCA_PRUM_BUFFER must be between 0 and 0.5 (0-50%)")
+
+        if not (1 <= self.dca.momentum_periods <= 10):
+            raise ValueError("DCA_MOMENTUM_PERIODS must be between 1 and 10")
+
+        valid_intervals = ["1d", "3d", "1w", "1M"]
+        if self.dca.kline_interval not in valid_intervals:
+            raise ValueError(
+                f"DCA_KLINE_INTERVAL must be one of {valid_intervals}"
             )
 
     def __str__(self) -> str:
