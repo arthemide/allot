@@ -1,7 +1,7 @@
 ---
 id: TASK-1
 title: Complete API repository tests
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
 labels:

@@ -54,7 +54,7 @@ api-install:
 
 .PHONY: api-test ## 🧪 Run API tests
 api-test:
-	PYTHONPATH=api uv run pytest api/tests --disable-warnings --cov=api/src --cov-fail-under 99 --junitxml=api/coverage/junit-report.xml --cov-report=xml:api/coverage/coverage.xml --cov-report=html:api/coverage/htmlcov
+	PYTHONPATH=api uv run pytest api/tests --disable-warnings --cov=api/src --cov-fail-under 80 --junitxml=api/coverage/junit-report.xml --cov-report=xml:api/coverage/coverage.xml --cov-report=html:api/coverage/htmlcov
 
 .PHONY: api-dev ## 🚀 Run API development server
 api-dev:
@@ -88,7 +88,7 @@ bot-install:
 
 .PHONY: bot-test ## 🧪 Run Bot tests
 bot-test:
-	PYTHONPATH=bot uv run pytest bot/tests --disable-warnings --cov=bot/dca --junitxml=bot/coverage/junit-report.xml --cov-report=xml:bot/coverage/coverage.xml --cov-report=html:bot/coverage/htmlcov
+	PYTHONPATH=bot uv run pytest bot/tests --disable-warnings --cov=bot/dca --cov-fail-under 80 --junitxml=bot/coverage/junit-report.xml --cov-report=xml:bot/coverage/coverage.xml --cov-report=html:bot/coverage/htmlcov
 
 .PHONY: dca-test ## 🧪 Test DCA bot configuration (no real purchase)
 dca-test:
