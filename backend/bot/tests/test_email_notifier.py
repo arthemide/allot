@@ -84,9 +84,7 @@ class TestNotificationMethods:
         mock_send = mocker.patch.object(notifier, "send_email")
 
         # When
-        notifier.notify_purchase_success(
-            "ETHUSDC", 0.01, 3000.0, 30.0, "momentum buy"
-        )
+        notifier.notify_purchase_success("ETHUSDC", 0.01, 3000.0, 30.0, "momentum buy")
 
         # Then
         mock_send.assert_called_once()

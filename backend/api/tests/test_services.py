@@ -102,9 +102,7 @@ class TestFundService:
         # Then
         assert result == []
 
-    def test_get_by_id_returns_fund(
-        self, mock_repos, mock_yfinance, mock_fund_table
-    ):
+    def test_get_by_id_returns_fund(self, mock_repos, mock_yfinance, mock_fund_table):
         """
         Given: Fund exists with given ID
         When: Getting fund by ID
@@ -138,9 +136,7 @@ class TestFundService:
         # Then
         assert result is None
 
-    def test_create_returns_new_fund(
-        self, mock_repos, mock_yfinance, mock_fund_table
-    ):
+    def test_create_returns_new_fund(self, mock_repos, mock_yfinance, mock_fund_table):
         """
         Given: Valid fund name
         When: Creating a new fund
@@ -228,9 +224,7 @@ class TestFundService:
         assert add_call[0][1]["symbol"] == "TSLA"
         assert result is not None
 
-    def test_update_name_only(
-        self, mock_repos, mock_yfinance, mock_fund_table
-    ):
+    def test_update_name_only(self, mock_repos, mock_yfinance, mock_fund_table):
         """
         Given: Update with only fund name (no stocks)
         When: Updating fund
@@ -365,9 +359,7 @@ class TestStockService:
         assert result is None
         mock_repos["stock"].add.assert_not_called()
 
-    def test_update_stock(
-        self, mock_repos, mock_yfinance, mock_fund_table
-    ):
+    def test_update_stock(self, mock_repos, mock_yfinance, mock_fund_table):
         """
         Given: Fund and stock exist
         When: Updating stock
@@ -419,9 +411,7 @@ class TestStockService:
         # Then
         assert result is None
 
-    def test_remove_stock(
-        self, mock_repos, mock_yfinance, mock_fund_table
-    ):
+    def test_remove_stock(self, mock_repos, mock_yfinance, mock_fund_table):
         """
         Given: Fund with stock
         When: Removing stock

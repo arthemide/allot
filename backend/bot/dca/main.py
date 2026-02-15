@@ -20,10 +20,10 @@ import sys
 
 from loguru import logger
 
-from .dca_executor import create_dca_executor
 from shared.logger import setup_logging
 
 from .config import get_config
+from .dca_executor import create_dca_executor
 from .scheduler import DCAScheduler
 
 setup_logging()
@@ -129,7 +129,9 @@ def test_mode():
         recent = executor.tracker.get_recent_purchases(limit=1)
         if recent:
             last = recent[0]
-            logger.info(f"Last purchase: {last.get('timestamp')} - {last.get('quantity')} {config.dca.base_asset}")
+            logger.info(
+                f"Last purchase: {last.get('timestamp')} - {last.get('quantity')} {config.dca.base_asset}"
+            )
         else:
             logger.info("No previous purchases found")
 

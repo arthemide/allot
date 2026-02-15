@@ -5,7 +5,6 @@ Tests for AssetRepository — CRUD operations on assets and fund-asset relations
 from shared.db.repositories.asset import AssetRepository
 from shared.db.repositories.fund import FundRepository
 
-
 ASSET_DEFAULTS = dict(
     name="Ethereum",
     symbol="ETHUSDC",

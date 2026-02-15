@@ -32,7 +32,9 @@ def mock_dca_config(mocker):
 class TestDCADecisionLogic:
     """Tests for DCA buy/skip decision logic."""
 
-    def test_should_skip_when_bullish_and_price_above_prum(self, mocker, mock_dca_config):
+    def test_should_skip_when_bullish_and_price_above_prum(
+        self, mocker, mock_dca_config
+    ):
         """
         Should skip purchase when all periods are bullish and price exceeds PRUM.
 

@@ -90,9 +90,7 @@ def search_symbol(query: str, max_results: int = 10) -> list[dict]:
         for quote in search_results.quotes[:max_results]:
             history_metadata = _get_history_metadata(quote.get("symbol", ""))
             price = (
-                history_metadata.get("regularMarketPrice")
-                if history_metadata
-                else 0.0
+                history_metadata.get("regularMarketPrice") if history_metadata else 0.0
             )
             long_name = history_metadata.get("longName") if history_metadata else None
             short_name = history_metadata.get("shortName") if history_metadata else None

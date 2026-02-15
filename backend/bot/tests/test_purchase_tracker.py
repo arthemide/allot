@@ -138,7 +138,9 @@ class TestAddPurchase:
         assert call_kwargs["total_cost"] == Decimal("30.0")
         assert call_kwargs["order_id"] == "12345"
 
-    def test_should_accept_purchase_without_timestamp(self, mock_transaction_repo, mocker):
+    def test_should_accept_purchase_without_timestamp(
+        self, mock_transaction_repo, mocker
+    ):
         """
         Should accept purchase without timestamp, defaulting to now.
 
@@ -293,7 +295,9 @@ class TestGetStatistics:
 class TestGetRecentPurchases:
     """Tests for recent purchases retrieval."""
 
-    def test_should_return_recent_purchases_as_list(self, mock_transaction_repo, mocker):
+    def test_should_return_recent_purchases_as_list(
+        self, mock_transaction_repo, mocker
+    ):
         """
         Should return recent purchases as list of dictionaries.
 
@@ -318,7 +322,10 @@ class TestGetRecentPurchases:
         mock_tx2.total_cost = Decimal("58.0")
         mock_tx2.order_id = "122"
 
-        mock_transaction_repo.get_recent_transactions.return_value = [mock_tx1, mock_tx2]
+        mock_transaction_repo.get_recent_transactions.return_value = [
+            mock_tx1,
+            mock_tx2,
+        ]
 
         # When
         result = tracker.get_recent_purchases(limit=5)
@@ -340,7 +347,9 @@ class TestGetRecentPurchases:
         """
         # Given
         tracker = PurchaseTracker(symbol="ETHUSDC", asset_name="Ethereum")
-        mock_transaction_repo.get_recent_transactions.side_effect = Exception("DB error")
+        mock_transaction_repo.get_recent_transactions.side_effect = Exception(
+            "DB error"
+        )
 
         # When
         result = tracker.get_recent_purchases()

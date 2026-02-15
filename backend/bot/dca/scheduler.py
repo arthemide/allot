@@ -8,6 +8,7 @@ from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
+
 from shared.db.config import check_db_health
 
 from .config import Config
@@ -83,7 +84,7 @@ class DCAScheduler:
                     hour=dca_config.execution_hour,
                     minute=dca_config.execution_minute,
                     second=0,
-                    microsecond=0
+                    microsecond=0,
                 )
 
                 # Check if it's within the grace period
@@ -92,7 +93,9 @@ class DCAScheduler:
                 if time_since_missed.total_seconds() < grace_seconds:
                     # Check if a purchase was already made around this scheduled time
                     if self._was_purchase_made_around(scheduled_time):
-                        logger.info(f"✅ Purchase already made around {scheduled_time.strftime('%Y-%m-%d')} - no misfire")
+                        logger.info(
+                            f"✅ Purchase already made around {scheduled_time.strftime('%Y-%m-%d')} - no misfire"
+                        )
                         continue
 
                     logger.warning(
@@ -100,8 +103,7 @@ class DCAScheduler:
                         f"({time_since_missed.days} days ago)"
                     )
                     get_notifier().notify_misfire(
-                        scheduled_time.strftime("%Y-%m-%d %H:%M:%S"),
-                        will_retry=True
+                        scheduled_time.strftime("%Y-%m-%d %H:%M:%S"), will_retry=True
                     )
                     logger.info("▶️ Executing missed DCA purchase now...")
                     self._dca_job()

@@ -68,7 +68,9 @@ class DCAExecutor:
             # 2. Get klines for momentum analysis
             # We need num_periods + 1 to have the previous COMPLETED periods
             klines_needed = num_periods + 1
-            klines = self.client.get_klines(symbol, interval=kline_interval, limit=klines_needed)
+            klines = self.client.get_klines(
+                symbol, interval=kline_interval, limit=klines_needed
+            )
 
             if len(klines) < klines_needed:
                 logger.warning(
@@ -77,7 +79,7 @@ class DCAExecutor:
                 return True, "Insufficient historical data - executing by default"
 
             # Get the N previous COMPLETED periods (excluding current incomplete period)
-            completed_periods = klines[-(num_periods + 1):-1]
+            completed_periods = klines[-(num_periods + 1) : -1]
 
             # Check if all periods are positive (close > open)
             all_periods_positive = True
@@ -119,9 +121,7 @@ class DCAExecutor:
             if not all_periods_positive:
                 reason = f"Execute: not all {num_periods} periods positive (non-bullish momentum)"
             elif not price_above_prum:
-                reason = (
-                    f"Execute: price below PRUM+{prum_buffer * 100:.0f}% ({current_price} <= {prum_threshold})"
-                )
+                reason = f"Execute: price below PRUM+{prum_buffer * 100:.0f}% ({current_price} <= {prum_threshold})"
             else:
                 reason = "Execute: purchase conditions met"
 

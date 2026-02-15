@@ -105,8 +105,8 @@ class TestRequest:
         Then: BinanceAPIError raised with network error info
         """
         # Given
-        client.session.request.side_effect = (
-            requests.exceptions.ConnectionError("timeout")
+        client.session.request.side_effect = requests.exceptions.ConnectionError(
+            "timeout"
         )
 
         # When / Then
@@ -290,7 +290,9 @@ class TestCreateMarketOrder:
         Then: Returns MarketOrder with correct fields
         """
         # Given
-        mocker.patch.object(client, "_request", return_value=self._make_order_response())
+        mocker.patch.object(
+            client, "_request", return_value=self._make_order_response()
+        )
 
         # When
         order = client.create_market_order("ETHUSDC", "BUY", quote_order_qty="30")
@@ -310,7 +312,9 @@ class TestCreateMarketOrder:
         Then: Returns MarketOrder with correct fields
         """
         # Given
-        mocker.patch.object(client, "_request", return_value=self._make_order_response())
+        mocker.patch.object(
+            client, "_request", return_value=self._make_order_response()
+        )
 
         # When
         order = client.create_market_order("ETHUSDC", "BUY", quantity="0.01")

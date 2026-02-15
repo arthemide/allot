@@ -216,9 +216,7 @@ class TestAddTransaction:
         setup_session.close()
 
         try:
-            mocker.patch(
-                "shared.db.repositories.transaction.SessionLocal", TestSession
-            )
+            mocker.patch("shared.db.repositories.transaction.SessionLocal", TestSession)
             # When: no session parameter = uses own session (the buggy code path)
             transaction = TransactionRepository.add_transaction(
                 asset_id=asset_id,

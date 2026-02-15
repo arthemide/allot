@@ -44,9 +44,7 @@ class TestDCAJob:
         Then: dca_executor.run() is called
         """
         # Given
-        mocker.patch(
-            "dca.scheduler.check_db_health", return_value=(True, "DB healthy")
-        )
+        mocker.patch("dca.scheduler.check_db_health", return_value=(True, "DB healthy"))
 
         # When
         dca_scheduler._dca_job()
@@ -84,9 +82,7 @@ class TestDCAJob:
         Then: Crash notification sent
         """
         # Given
-        mocker.patch(
-            "dca.scheduler.check_db_health", side_effect=RuntimeError("boom")
-        )
+        mocker.patch("dca.scheduler.check_db_health", side_effect=RuntimeError("boom"))
         mock_notifier = mocker.patch("dca.scheduler.get_notifier")
 
         # When
@@ -145,8 +141,8 @@ class TestGetLastPurchaseInfo:
         Then: Returns None
         """
         # Given
-        dca_scheduler.dca_executor.tracker.get_recent_purchases.side_effect = (
-            Exception("DB error")
+        dca_scheduler.dca_executor.tracker.get_recent_purchases.side_effect = Exception(
+            "DB error"
         )
 
         # When
@@ -246,8 +242,8 @@ class TestWasPurchaseMadeAround:
         """
         # Given
         scheduled = datetime(2026, 2, 10, 10, 0, 0)
-        dca_scheduler.dca_executor.tracker.get_recent_purchases.side_effect = (
-            Exception("DB error")
+        dca_scheduler.dca_executor.tracker.get_recent_purchases.side_effect = Exception(
+            "DB error"
         )
 
         # When
@@ -260,9 +256,7 @@ class TestWasPurchaseMadeAround:
 class TestCheckAndHandleMisfires:
     """Tests for _check_and_handle_misfires method."""
 
-    def test_should_execute_missed_job_within_grace_period(
-        self, mocker, dca_scheduler
-    ):
+    def test_should_execute_missed_job_within_grace_period(self, mocker, dca_scheduler):
         """
         Should execute missed DCA job when within grace period.
 
@@ -275,17 +269,15 @@ class TestCheckAndHandleMisfires:
             "dca.scheduler.datetime",
             wraps=datetime,
         )
-        mocker.patch(
-            "dca.scheduler.datetime"
-        ).now.return_value = datetime(2026, 2, 5, 12, 0, 0)
+        mocker.patch("dca.scheduler.datetime").now.return_value = datetime(
+            2026, 2, 5, 12, 0, 0
+        )
 
         mock_notifier = mocker.patch("dca.scheduler.get_notifier")
 
         dca_scheduler.dca_executor.tracker.get_recent_purchases.return_value = []
         mocker.patch.object(dca_scheduler, "_dca_job")
-        mocker.patch.object(
-            dca_scheduler, "_get_last_purchase_info", return_value=None
-        )
+        mocker.patch.object(dca_scheduler, "_get_last_purchase_info", return_value=None)
         mocker.patch.object(
             dca_scheduler, "_was_purchase_made_around", return_value=False
         )
@@ -306,9 +298,9 @@ class TestCheckAndHandleMisfires:
         Then: _dca_job is NOT called
         """
         # Given
-        mocker.patch(
-            "dca.scheduler.datetime"
-        ).now.return_value = datetime(2026, 2, 5, 12, 0, 0)
+        mocker.patch("dca.scheduler.datetime").now.return_value = datetime(
+            2026, 2, 5, 12, 0, 0
+        )
 
         mocker.patch.object(dca_scheduler, "_dca_job")
         mocker.patch.object(

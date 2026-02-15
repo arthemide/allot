@@ -419,9 +419,7 @@ class TestExecuteDCAPurchase:
             "should_execute_purchase",
             return_value=(True, "Execute: conditions met"),
         )
-        mocker.patch.object(
-            executor, "check_and_ensure_balance", return_value=True
-        )
+        mocker.patch.object(executor, "check_and_ensure_balance", return_value=True)
 
         mock_binance_client.get_symbol_price.return_value = Decimal("3000.0")
 
@@ -500,9 +498,7 @@ class TestExecuteDCAPurchase:
             "should_execute_purchase",
             return_value=(True, "Execute"),
         )
-        mocker.patch.object(
-            executor, "check_and_ensure_balance", return_value=False
-        )
+        mocker.patch.object(executor, "check_and_ensure_balance", return_value=False)
 
         # When
         result = executor.execute_dca_purchase()
@@ -534,9 +530,7 @@ class TestExecuteDCAPurchase:
             "should_execute_purchase",
             return_value=(True, "Execute"),
         )
-        mocker.patch.object(
-            executor, "check_and_ensure_balance", return_value=True
-        )
+        mocker.patch.object(executor, "check_and_ensure_balance", return_value=True)
         mock_binance_client.get_symbol_price.return_value = Decimal("3000.0")
         mock_binance_client.create_market_order.side_effect = BinanceAPIError(
             "Order failed"
@@ -569,9 +563,7 @@ class TestRun:
         executor = DCAExecutor(mock_binance_client, dca_config)
 
         mock_order = mocker.Mock()
-        mocker.patch.object(
-            executor, "execute_dca_purchase", return_value=mock_order
-        )
+        mocker.patch.object(executor, "execute_dca_purchase", return_value=mock_order)
 
         # When
         result = executor.run()

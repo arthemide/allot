@@ -90,9 +90,7 @@ class TestRetryWithBackoff:
         # Given
         mock_sleep = mocker.patch("dca.retry.time.sleep")
 
-        @retry_with_backoff(
-            max_retries=3, initial_delay=1.0, backoff_factor=2.0
-        )
+        @retry_with_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0)
         def always_fails():
             raise Exception("fail")
 
@@ -134,6 +132,7 @@ class TestRetryWithBackoff:
         When: Inspecting the decorated function
         Then: __name__ is still "my_func"
         """
+
         # Given
         @retry_with_backoff()
         def my_func():

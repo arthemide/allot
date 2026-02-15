@@ -140,9 +140,7 @@ class Config:
 
         valid_intervals = ["1d", "3d", "1w", "1M"]
         if self.dca.kline_interval not in valid_intervals:
-            raise ValueError(
-                f"DCA_KLINE_INTERVAL must be one of {valid_intervals}"
-            )
+            raise ValueError(f"DCA_KLINE_INTERVAL must be one of {valid_intervals}")
 
     def __str__(self) -> str:
         """String representation of configuration (without secrets)"""

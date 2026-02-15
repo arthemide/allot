@@ -33,7 +33,9 @@ class TestFundRepository:
         # Then
         assert result == []
 
-    def test_should_return_funds_with_stocks(self, mock_session_local, fund_with_stocks):
+    def test_should_return_funds_with_stocks(
+        self, mock_session_local, fund_with_stocks
+    ):
         """
         Should return all funds with their stocks loaded.
 
@@ -126,7 +128,9 @@ class TestFundRepository:
         assert result is not None
         assert result.name == "Updated Name"
 
-    def test_should_return_none_when_updating_non_existent_fund(self, mock_session_local):
+    def test_should_return_none_when_updating_non_existent_fund(
+        self, mock_session_local
+    ):
         """
         Should return None when updating non-existent fund.
 
@@ -301,7 +305,9 @@ class TestStockRepository:
         # Then
         assert result is None
 
-    def test_should_remove_stock(self, mock_session_local, sample_fund, sample_stock, test_session):
+    def test_should_remove_stock(
+        self, mock_session_local, sample_fund, sample_stock, test_session
+    ):
         """
         Should remove stock from fund and return fund.
 

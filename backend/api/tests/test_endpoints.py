@@ -129,9 +129,7 @@ class TestFundEndpoints:
         When: GET /funds/999
         Then: Returns 404
         """
-        mocker.patch(
-            "src.routes.funds.FundService.get_by_id", return_value=None
-        )
+        mocker.patch("src.routes.funds.FundService.get_by_id", return_value=None)
 
         response = client.get("/funds/999")
 
@@ -144,13 +142,9 @@ class TestFundEndpoints:
         When: POST /funds
         Then: Returns 201 with created fund
         """
-        mocker.patch(
-            "src.routes.funds.FundService.create", return_value=SAMPLE_FUND
-        )
+        mocker.patch("src.routes.funds.FundService.create", return_value=SAMPLE_FUND)
 
-        response = client.post(
-            "/funds", json={"fund_name": "Test Fund"}
-        )
+        response = client.post("/funds", json={"fund_name": "Test Fund"})
 
         assert response.status_code == 201
         data = response.json()
@@ -174,13 +168,9 @@ class TestFundEndpoints:
         Then: Returns 200 with updated fund
         """
         updated = make_fund_schema(name="Updated Name")
-        mocker.patch(
-            "src.routes.funds.FundService.update", return_value=updated
-        )
+        mocker.patch("src.routes.funds.FundService.update", return_value=updated)
 
-        response = client.put(
-            "/funds/1", json={"fund_name": "Updated Name"}
-        )
+        response = client.put("/funds/1", json={"fund_name": "Updated Name"})
 
         assert response.status_code == 200
         assert response.json()["fund_name"] == "Updated Name"
@@ -191,13 +181,9 @@ class TestFundEndpoints:
         When: PUT /funds/999
         Then: Returns 404
         """
-        mocker.patch(
-            "src.routes.funds.FundService.update", return_value=None
-        )
+        mocker.patch("src.routes.funds.FundService.update", return_value=None)
 
-        response = client.put(
-            "/funds/999", json={"fund_name": "X"}
-        )
+        response = client.put("/funds/999", json={"fund_name": "X"})
 
         assert response.status_code == 404
         assert response.json()["detail"] == "Fund not found"
@@ -208,9 +194,7 @@ class TestFundEndpoints:
         When: DELETE /funds/1
         Then: Returns 200 with success
         """
-        mocker.patch(
-            "src.routes.funds.FundService.delete", return_value=True
-        )
+        mocker.patch("src.routes.funds.FundService.delete", return_value=True)
 
         response = client.delete("/funds/1")
 
@@ -222,9 +206,7 @@ class TestFundEndpoints:
         When: DELETE /funds/999
         Then: Returns 200 with False
         """
-        mocker.patch(
-            "src.routes.funds.FundService.delete", return_value=False
-        )
+        mocker.patch("src.routes.funds.FundService.delete", return_value=False)
 
         response = client.delete("/funds/999")
 
@@ -272,9 +254,7 @@ class TestStockEndpoints:
         When: POST /funds/999/stocks
         Then: Returns 404
         """
-        mocker.patch(
-            "src.routes.funds.StockService.add", return_value=None
-        )
+        mocker.patch("src.routes.funds.StockService.add", return_value=None)
 
         stock_data = {
             "name": "Apple",
@@ -297,9 +277,7 @@ class TestStockEndpoints:
         When: POST /funds/1/stocks
         Then: Returns 422 validation error
         """
-        response = client.post(
-            "/funds/1/stocks", json={"symbol": "AAPL"}
-        )
+        response = client.post("/funds/1/stocks", json={"symbol": "AAPL"})
 
         assert response.status_code == 422
 
@@ -335,9 +313,7 @@ class TestStockEndpoints:
         When: PUT /funds/1/stocks/999
         Then: Returns 404
         """
-        mocker.patch(
-            "src.routes.funds.StockService.update", return_value=None
-        )
+        mocker.patch("src.routes.funds.StockService.update", return_value=None)
 
         stock_data = {
             "name": "Test",
@@ -376,9 +352,7 @@ class TestStockEndpoints:
         When: DELETE /funds/1/stocks/999
         Then: Returns 404
         """
-        mocker.patch(
-            "src.routes.funds.StockService.remove", return_value=None
-        )
+        mocker.patch("src.routes.funds.StockService.remove", return_value=None)
 
         response = client.delete("/funds/1/stocks/999")
 
@@ -426,9 +400,7 @@ class TestStockSearchEndpoint:
         When: GET /stocks/search?q=XXXXX
         Then: Returns 200 with empty results
         """
-        mocker.patch(
-            "src.routes.stocks.search_symbol", return_value=[]
-        )
+        mocker.patch("src.routes.stocks.search_symbol", return_value=[])
 
         response = client.get("/stocks/search?q=XXXXX")
 
