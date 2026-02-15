@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
 from src.models.pydantic.schema import (
     FundSchema,
@@ -24,10 +24,13 @@ def get_all_funds():
 @router.get("/{fund_id}", response_model=FundSchema)
 def get_fund(fund_id: str):
     """Get a single fund by ID"""
-    return FundService.get_by_id(fund_id)
+    fund = FundService.get_by_id(fund_id)
+    if fund is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fund not found")
+    return fund
 
 
-@router.post("", response_model=FundSchema, status_code=201)
+@router.post("", response_model=FundSchema, status_code=status.HTTP_201_CREATED)
 def create_fund(fund: FundSchemaCreate):
     """Create a new fund"""
     return FundService.create(fund.fund_name)
@@ -36,7 +39,10 @@ def create_fund(fund: FundSchemaCreate):
 @router.put("/{fund_id}", response_model=FundSchema)
 def update_fund(fund_id: str, updates: FundSchemaUpdate):
     """Update an existing fund"""
-    return FundService.update(fund_id, updates)
+    fund = FundService.update(fund_id, updates)
+    if fund is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fund not found")
+    return fund
 
 
 @router.delete("/{fund_id}")
@@ -48,16 +54,25 @@ def delete_fund(fund_id: str):
 @router.post("/{fund_id}/stocks", response_model=FundSchema)
 def add_stock(fund_id: str, stock: StockSchema):
     """Add a stock to a fund"""
-    return StockService.add(fund_id, stock)
+    result = StockService.add(fund_id, stock)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fund not found")
+    return result
 
 
 @router.put("/{fund_id}/stocks/{stock_id}", response_model=FundSchema)
 def update_stock(fund_id: str, stock_id: str, stock: StockSchema):
     """Update a stock in a fund"""
-    return StockService.update(fund_id, stock_id, stock)
+    result = StockService.update(fund_id, stock_id, stock)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fund or stock not found")
+    return result
 
 
 @router.delete("/{fund_id}/stocks/{stock_id}", response_model=FundSchema)
 def remove_stock(fund_id: str, stock_id: str):
     """Remove a stock from a fund"""
-    return StockService.remove(fund_id, stock_id)
+    result = StockService.remove(fund_id, stock_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fund or stock not found")
+    return result

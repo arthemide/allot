@@ -41,8 +41,9 @@ check:
 
 .PHONY: tests ## 🧪 Run all tests
 tests:
-	PYTHONPATH=bot uv run pytest bot/tests --disable-warnings --cov=bot/dca --cov-report=term-missing
-	PYTHONPATH=shared/src uv run pytest shared/tests --disable-warnings --cov=shared/src/shared --cov-report=term-missing
+	$(MAKE) api-test
+	$(MAKE) db-test
+	$(MAKE) bot-test
 
 # =============================================================================
 # API commands

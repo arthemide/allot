@@ -67,3 +67,16 @@ def sample_fund(test_session):
     test_session.commit()
     test_session.refresh(fund)
     return fund
+
+
+@pytest.fixture
+def mock_session_local(mocker):
+    """Patch SessionLocal with a fresh in-memory database per test."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    TestSession = sessionmaker(bind=engine)
+    mocker.patch("shared.db.repositories.fund.SessionLocal", TestSession)
+    mocker.patch("shared.db.repositories.asset.SessionLocal", TestSession)
+    mocker.patch("shared.db.repositories.transaction.SessionLocal", TestSession)
+    yield TestSession
+    engine.dispose()

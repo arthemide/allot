@@ -1,7 +1,7 @@
 ---
 id: TASK-7
 title: Add API endpoint tests
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-16 10:16'
 labels:

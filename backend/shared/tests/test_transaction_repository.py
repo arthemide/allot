@@ -179,7 +179,7 @@ class TestAddTransaction:
         assert transactions[0].price == Decimal("3100.0")
 
     def test_add_transaction_returns_accessible_attributes_with_own_session(
-        self, test_engine
+        self, test_engine, mocker
     ):
         """
         Returned transaction must have accessible attributes after session closes.
@@ -190,8 +190,6 @@ class TestAddTransaction:
 
         Regression test for: sqlalche.me/e/20/bhk3
         """
-        from unittest.mock import patch
-
         from sqlalchemy.orm import sessionmaker
 
         TestSession = sessionmaker(bind=test_engine)
@@ -218,19 +216,19 @@ class TestAddTransaction:
         setup_session.close()
 
         try:
-            with patch(
+            mocker.patch(
                 "shared.db.repositories.transaction.SessionLocal", TestSession
-            ):
-                # When: no session parameter = uses own session (the buggy code path)
-                transaction = TransactionRepository.add_transaction(
-                    asset_id=asset_id,
-                    transaction_type="buy",
-                    quantity=Decimal("0.01"),
-                    price=Decimal("3000.0"),
-                    total_cost=Decimal("30.0"),
-                    order_id="regression_test_order",
-                    timestamp=datetime.now(),
-                )
+            )
+            # When: no session parameter = uses own session (the buggy code path)
+            transaction = TransactionRepository.add_transaction(
+                asset_id=asset_id,
+                transaction_type="buy",
+                quantity=Decimal("0.01"),
+                price=Decimal("3000.0"),
+                total_cost=Decimal("30.0"),
+                order_id="regression_test_order",
+                timestamp=datetime.now(),
+            )
 
             # Then: accessing attributes must NOT raise DetachedInstanceError
             assert transaction.id is not None
@@ -307,3 +305,185 @@ class TestGetOrCreateAsset:
         assert asset.asset_type == "crypto"
         assert asset.base_prum == Decimal("45000.0")
         assert asset.shares_number == 0.5
+
+
+class TestGetRecentTransactions:
+    """Test fetching recent transactions."""
+
+    def _create_asset_with_transactions(self, session_factory):
+        """Helper to create an asset with transactions via the patched session."""
+        session = session_factory()
+        asset = AssetTable(
+            symbol="RECENT_TEST",
+            name="Recent Test",
+            asset_type="crypto",
+            shares_number=0.0,
+            cost=0.0,
+            base_prum=None,
+            current_repartition=0.0,
+            target_repartition=0.0,
+            arbitration_threshold=0.0,
+            threshold_to_alert=0.0,
+            fund_id=None,
+        )
+        session.add(asset)
+        session.flush()
+        transactions = [
+            AssetTransactionTable(
+                asset_id=asset.id,
+                transaction_type="buy",
+                timestamp=datetime(2026, 1, 1),
+                quantity=Decimal("0.5"),
+                price=Decimal("3000.0"),
+                total_cost=Decimal("1500.0"),
+                order_id="order_1",
+            ),
+            AssetTransactionTable(
+                asset_id=asset.id,
+                transaction_type="buy",
+                timestamp=datetime(2026, 2, 1),
+                quantity=Decimal("0.3"),
+                price=Decimal("3200.0"),
+                total_cost=Decimal("960.0"),
+                order_id="order_2",
+            ),
+        ]
+        session.add_all(transactions)
+        session.commit()
+        session.close()
+        return asset
+
+    def test_returns_recent_transactions(self, mock_session_local):
+        """
+        Given: Asset with transactions
+        When: get_recent_transactions(symbol)
+        Then: Returns transactions
+        """
+        self._create_asset_with_transactions(mock_session_local)
+
+        result = TransactionRepository.get_recent_transactions(
+            "RECENT_TEST", asset_type="crypto", limit=10
+        )
+
+        assert len(result) == 2
+
+    def test_returns_empty_for_unknown_symbol(self, mock_session_local):
+        """
+        Given: No asset with given symbol
+        When: get_recent_transactions(symbol)
+        Then: Returns empty list
+        """
+        result = TransactionRepository.get_recent_transactions(
+            "NONEXISTENT", asset_type="crypto"
+        )
+        assert result == []
+
+
+class TestGetAssetStatistics:
+    """Test asset statistics calculation."""
+
+    def test_returns_statistics(self, mock_session_local):
+        """
+        Given: Asset with transactions
+        When: get_asset_statistics(symbol)
+        Then: Returns dict with prum, counts, totals
+        """
+        # Given: create asset + transaction via patched session
+        session = mock_session_local()
+        asset = AssetTable(
+            symbol="STATS_TEST",
+            name="Stats Test",
+            asset_type="crypto",
+            shares_number=1.0,
+            cost=2000.0,
+            base_prum=Decimal("2000.0"),
+            current_repartition=0.0,
+            target_repartition=0.0,
+            arbitration_threshold=0.0,
+            threshold_to_alert=0.0,
+            fund_id=None,
+        )
+        session.add(asset)
+        session.flush()
+        transaction = AssetTransactionTable(
+            asset_id=asset.id,
+            transaction_type="buy",
+            timestamp=datetime(2026, 1, 15),
+            quantity=Decimal("1.0"),
+            price=Decimal("3000.0"),
+            total_cost=Decimal("3000.0"),
+            order_id="stats_order",
+        )
+        session.add(transaction)
+        session.commit()
+        asset_id = asset.id
+        session.close()
+
+        # When
+        stats = TransactionRepository.get_asset_statistics(
+            "STATS_TEST", asset_type="crypto"
+        )
+
+        # Then
+        assert stats["symbol"] == "STATS_TEST"
+        assert stats["transaction_count"] == 1
+        assert stats["prum"] is not None
+        assert stats["asset_id"] == asset_id
+
+    def test_returns_empty_for_unknown(self, mock_session_local):
+        """
+        Given: No asset with given symbol
+        When: get_asset_statistics(symbol)
+        Then: Returns empty dict
+        """
+        stats = TransactionRepository.get_asset_statistics(
+            "NONEXISTENT", asset_type="crypto"
+        )
+        assert stats == {}
+
+
+class TestGetAssetBySymbol:
+    """Test asset lookup by symbol."""
+
+    def test_returns_asset(self, mock_session_local):
+        """
+        Given: Asset exists
+        When: get_asset_by_symbol(symbol)
+        Then: Returns the asset
+        """
+        # Given
+        session = mock_session_local()
+        asset = AssetTable(
+            symbol="LOOKUP_TEST",
+            name="Lookup Test",
+            asset_type="crypto",
+            shares_number=0.0,
+            cost=0.0,
+            base_prum=None,
+            current_repartition=0.0,
+            target_repartition=0.0,
+            arbitration_threshold=0.0,
+            threshold_to_alert=0.0,
+            fund_id=None,
+        )
+        session.add(asset)
+        session.commit()
+        session.close()
+
+        # When
+        result = TransactionRepository.get_asset_by_symbol(
+            "LOOKUP_TEST", asset_type="crypto"
+        )
+        assert result is not None
+        assert result.symbol == "LOOKUP_TEST"
+
+    def test_returns_none_for_unknown(self, mock_session_local):
+        """
+        Given: No asset with given symbol
+        When: get_asset_by_symbol(symbol)
+        Then: Returns None
+        """
+        result = TransactionRepository.get_asset_by_symbol(
+            "NONEXISTENT", asset_type="crypto"
+        )
+        assert result is None

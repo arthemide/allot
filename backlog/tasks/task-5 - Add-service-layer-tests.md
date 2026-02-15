@@ -1,7 +1,7 @@
 ---
 id: TASK-5
 title: Add service layer tests
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
 labels:
