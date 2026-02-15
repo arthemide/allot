@@ -178,6 +178,102 @@ class TestAddTransaction:
         assert transactions[0].quantity == Decimal("0.5")
         assert transactions[0].price == Decimal("3100.0")
 
+    def test_add_transaction_returns_accessible_attributes_with_own_session(
+        self, test_engine
+    ):
+        """
+        Returned transaction must have accessible attributes after session closes.
+
+        Given: An asset exists in the database
+        When: add_transaction is called WITHOUT an external session (own session path)
+        Then: The returned object's id, quantity, price are accessible (no DetachedInstanceError)
+
+        Regression test for: sqlalche.me/e/20/bhk3
+        """
+        from unittest.mock import patch
+
+        from sqlalchemy.orm import sessionmaker
+
+        TestSession = sessionmaker(bind=test_engine)
+
+        # Given: create a dedicated asset (committed directly, not via test_session)
+        setup_session = TestSession()
+        asset = AssetTable(
+            symbol="REGR_DETACHED",
+            name="Regression Test",
+            asset_type="crypto",
+            shares_number=0.0,
+            cost=0.0,
+            base_prum=None,
+            current_repartition=0.0,
+            target_repartition=0.0,
+            arbitration_threshold=0.0,
+            threshold_to_alert=0.0,
+            fund_id=None,
+        )
+        setup_session.add(asset)
+        setup_session.commit()
+        setup_session.refresh(asset)
+        asset_id = asset.id
+        setup_session.close()
+
+        try:
+            with patch(
+                "shared.db.repositories.transaction.SessionLocal", TestSession
+            ):
+                # When: no session parameter = uses own session (the buggy code path)
+                transaction = TransactionRepository.add_transaction(
+                    asset_id=asset_id,
+                    transaction_type="buy",
+                    quantity=Decimal("0.01"),
+                    price=Decimal("3000.0"),
+                    total_cost=Decimal("30.0"),
+                    order_id="regression_test_order",
+                    timestamp=datetime.now(),
+                )
+
+            # Then: accessing attributes must NOT raise DetachedInstanceError
+            assert transaction.id is not None
+            assert transaction.quantity == Decimal("0.01")
+            assert transaction.price == Decimal("3000.0")
+            assert transaction.total_cost == Decimal("30.0")
+            assert transaction.order_id == "regression_test_order"
+        finally:
+            # Clean up committed data to avoid leaking to other tests
+            cleanup = TestSession()
+            cleanup.query(AssetTransactionTable).filter_by(asset_id=asset_id).delete()
+            cleanup.query(AssetTable).filter_by(id=asset_id).delete()
+            cleanup.commit()
+            cleanup.close()
+
+    def test_add_transaction_returns_accessible_attributes_with_provided_session(
+        self, test_session, sample_asset
+    ):
+        """
+        Returned transaction must have accessible attributes with provided session.
+
+        Given: An asset exists in the database
+        When: add_transaction is called WITH an external session
+        Then: The returned object's id, quantity, price are accessible
+        """
+        # When
+        transaction = TransactionRepository.add_transaction(
+            asset_id=sample_asset.id,
+            transaction_type="buy",
+            quantity=Decimal("0.02"),
+            price=Decimal("2900.0"),
+            total_cost=Decimal("58.0"),
+            order_id="test_accessible_attrs",
+            timestamp=datetime.now(),
+            session=test_session,
+        )
+
+        # Then
+        assert transaction.id is not None
+        assert transaction.quantity == Decimal("0.02")
+        assert transaction.price == Decimal("2900.0")
+        assert transaction.order_id == "test_accessible_attrs"
+
 
 class TestGetOrCreateAsset:
     """Test asset creation and retrieval."""

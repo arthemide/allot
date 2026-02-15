@@ -166,8 +166,8 @@ class TransactionRepository:
                         order_id=order_id,
                     )
                     session.add(transaction)
-                    session.flush()
-                    session.refresh(transaction)
+                # Refresh after commit to load attributes while session is still open
+                session.refresh(transaction)
 
             logger.info(
                 f"Recorded transaction: asset_id={asset_id}, type={transaction_type}, "

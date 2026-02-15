@@ -11,7 +11,7 @@ help:
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "DATABASE"
-	grep -E '^\.PHONY: (db-migrate|db-revision|db-downgrade) .*?## .*$$' $(MAKEFILE_LIST) \
+	grep -E '^\.PHONY: (db-migrate|db-revision|db-downgrade|db-test) .*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "BOT"
@@ -77,6 +77,9 @@ db-revision:
 .PHONY: db-downgrade ## ⬇️  Downgrade database by one revision
 db-downgrade:
 	cd shared && uv run alembic downgrade -1
+
+db-test:
+	PYTHONPATH=bot uv run pytest shared/tests --disable-warnings --cov=shared/src --cov-fail-under 80 --junitxml=bot/coverage/junit-report.xml --cov-report=xml:bot/coverage/coverage.xml --cov-report=html:bot/coverage/htmlcov
 
 # =============================================================================
 # Bot commands
