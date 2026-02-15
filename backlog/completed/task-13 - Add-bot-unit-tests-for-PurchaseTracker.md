@@ -4,11 +4,13 @@ title: Add bot unit tests for PurchaseTracker
 status: Done
 assignee: []
 created_date: '2026-01-16 10:16'
+updated_date: '2026-02-15 21:49'
 labels:
   - testing
   - bot
 dependencies: []
 priority: medium
+ordinal: 4000
 ---
 
 ## Description
@@ -36,6 +38,7 @@ Create unit tests for the PurchaseTracker in the bot module.
 
 ## Implementation Notes
 
+<!-- SECTION:NOTES:BEGIN -->
 ### Implémenté (2026-02-05)
 
 **Fichier créé:** `backend/bot/tests/test_purchase_tracker.py`
@@ -46,3 +49,4 @@ Create unit tests for the PurchaseTracker in the bot module.
 - `TestCalculatePrum`: retour valeur, None si pas d'achats, graceful degradation
 - `TestGetStatistics`: succès, empty dict on error
 - `TestGetRecentPurchases`: liste de dicts, empty on error, respect du limit
+<!-- SECTION:NOTES:END -->

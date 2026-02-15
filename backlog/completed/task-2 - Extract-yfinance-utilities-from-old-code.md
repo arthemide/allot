@@ -4,12 +4,13 @@ title: Extract yfinance utilities from old code
 status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
-updated_date: '2026-01-23 19:05'
+updated_date: '2026-02-15 21:49'
 labels:
   - refactoring
   - api
 dependencies: []
 priority: high
+ordinal: 2000
 ---
 
 ## Description

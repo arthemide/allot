@@ -4,12 +4,14 @@ title: Rendre les paramètres de stratégie configurables via env vars
 status: Done
 assignee: []
 created_date: '2026-02-02 13:43'
+updated_date: '2026-02-15 21:49'
 labels:
   - configuration
   - strategy
   - backend
 dependencies: []
 priority: medium
+ordinal: 1000
 ---
 
 ## Description
@@ -25,6 +27,7 @@ Les rendre configurables via variables d'environnement avec des valeurs par déf
 
 ## Implementation Notes
 
+<!-- SECTION:NOTES:BEGIN -->
 ### Implémenté (2026-02-05)
 
 **Nouvelles variables d'environnement:**
@@ -36,3 +39,4 @@ Les rendre configurables via variables d'environnement avec des valeurs par déf
 - `config.py`: Ajout des paramètres dans DCAConfig + validation
 - `dca_executor.py`: Utilisation des paramètres config au lieu de valeurs hardcodées
 - `.env.template`: Documentation des nouvelles variables
+<!-- SECTION:NOTES:END -->

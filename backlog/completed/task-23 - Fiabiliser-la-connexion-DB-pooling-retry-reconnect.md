@@ -1,15 +1,17 @@
 ---
 id: TASK-23
-title: Fiabiliser la connexion DB (pooling, retry, reconnect)
+title: 'Fiabiliser la connexion DB (pooling, retry, reconnect)'
 status: Done
 assignee: []
 created_date: '2026-02-02 13:43'
+updated_date: '2026-02-15 21:50'
 labels:
   - database
   - reliability
   - backend
 dependencies: []
 priority: high
+ordinal: 7000
 ---
 
 ## Description
@@ -26,6 +28,7 @@ Actuellement le bot suppose que la DB PostgreSQL est toujours disponible. Améli
 
 ## Implementation Notes
 
+<!-- SECTION:NOTES:BEGIN -->
 ### Implémenté (2026-02-05)
 
 **shared/db/config.py :**
@@ -40,3 +43,4 @@ Actuellement le bot suppose que la DB PostgreSQL est toujours disponible. Améli
 **bot/dca/scheduler.py :**
 - ✅ Health check DB avant chaque cycle d'achat
 - ✅ Notification d'erreur si DB indisponible
+<!-- SECTION:NOTES:END -->

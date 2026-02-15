@@ -4,11 +4,13 @@ title: Add API endpoint tests
 status: Done
 assignee: []
 created_date: '2026-01-16 10:16'
+updated_date: '2026-02-15 21:49'
 labels:
   - testing
   - api
 dependencies: []
 priority: medium
+ordinal: 3000
 ---
 
 ## Description

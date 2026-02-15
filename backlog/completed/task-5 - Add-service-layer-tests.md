@@ -4,11 +4,13 @@ title: Add service layer tests
 status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
+updated_date: '2026-02-15 21:50'
 labels:
   - testing
   - api
 dependencies: []
 priority: high
+ordinal: 6000
 ---
 
 ## Description
