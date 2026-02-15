@@ -24,11 +24,11 @@ jobs:
     - name: Set up cache
       uses: actions/cache@v4
       with:
-        path: api/.venv
-        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+        path: backend/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('backend/uv.lock') }}
 
     - name: Install dependencies
-      working-directory: api
+      working-directory: backend
       run: uv sync
       if: steps.cache.outputs.cache-hit != 'true'
 
@@ -50,16 +50,16 @@ jobs:
     - name: Set up cache
       uses: actions/cache@v4
       with:
-        path: api/.venv
-        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+        path: backend/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('backend/uv.lock') }}
 
     - name: Install dependencies
-      working-directory: api
+      working-directory: backend
       run: uv sync
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Check code
-      working-directory: api
+      working-directory: backend
       run: make check
 
   tests:
@@ -80,14 +80,14 @@ jobs:
     - name: Set up cache
       uses: actions/cache@v4
       with:
-        path: api/.venv
-        key: venv-${{ runner.os }}-${{ hashFiles('api/uv.lock') }}
+        path: backend/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('backend/uv.lock') }}
 
     - name: Install dependencies
-      working-directory: api
+      working-directory: backend
       run: uv sync
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Run tests
-      working-directory: api
+      working-directory: backend
       run: make tests
