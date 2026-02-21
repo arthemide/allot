@@ -165,32 +165,9 @@ CLAUDE.md
 
 !/memory/agents/README.md
 !/memory/sessions/README.md
-!bin/claude-flow
-!v3/@claude-flow/
 # Binaries
 # Build outputs
 
-# Claude-Flow specific
-# Dependencies
-# Development
-# Dot folders to ignore (except .claude, .claude-plugin, .git, .github, .githooks)
-# Environment
-# Exclude @claude-flow module directories from ignore patterns
-# IDE
-# Logs
-# MCP/Swarm
-# OS
-# Python
-# Removed Windows wrapper files
-# SPARC/Roo files (not used)
-# SQLite Database Files
-# Temp files
-# Temporary files
-# Test artifacts
-# Test outputs
-# Testing
-# memory/
-# sessions/
 *$py.class
 *.db
 *.db-journal
@@ -219,7 +196,6 @@ CLAUDE.md
 .Python
 .agentic-flow/
 .cache/
-.claude-flow/
 .claude/settings.local.json
 **/settings.local.json
 .deno/
@@ -243,18 +219,12 @@ CLAUDE.md
 /coordination/
 /memory/
 /memory/agents/*
-/memory/claude-flow-data.json
 /memory/sessions/*
 Thumbs.db
 __pycache__/
 analyzing
 api-project/
-bin/claude-flow-*
 build/
-claude-flow
-claude-flow-mcp-wrapper
-claude-flow.config.json
-claude-flow.db
 coordination/memory_bank/*
 coordination/orchestration/*
 coordination/subtasks/*
@@ -287,30 +257,6 @@ ui_*.log
 yarn-debug.log*
 yarn-error.log*
 
-# Claude Flow generated files
-.claude/settings.local.json
-.mcp.json
-claude-flow.config.json
-.swarm/
-.hive-mind/
-.claude-flow/
-/memory/
-/coordination/
-/memory/claude-flow-data.json
-/memory/sessions/*
-!/memory/sessions/README.md
-/memory/agents/*
-!/memory/agents/README.md
-/coordination/memory_bank/*
-/coordination/subtasks/*
-/coordination/orchestration/*
-*.db
-*.db-journal
-*.db-wal
-*.sqlite
-*.sqlite-journal
-*.sqlite-wal
-claude-flow
 # Removed Windows wrapper files per user request
 hive-mind-prompt-*.txt
 
