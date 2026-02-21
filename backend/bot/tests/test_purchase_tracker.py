@@ -56,7 +56,6 @@ class TestPurchaseTrackerInit:
         mock_transaction_repo.get_or_create_asset.assert_called_once_with(
             symbol="ETHUSDC",
             name="Ethereum",
-            asset_type="crypto",
             fund_id=None,
             base_prum=Decimal("2500.0"),
             historical_quantity=Decimal("1.5"),
@@ -204,9 +203,7 @@ class TestCalculatePrum:
 
         # Then
         assert result == Decimal("2750.50")
-        mock_transaction_repo.calculate_prum.assert_called_once_with(
-            "ETHUSDC", asset_type="crypto"
-        )
+        mock_transaction_repo.calculate_prum.assert_called_once_with("ETHUSDC")
 
     def test_should_return_none_when_no_purchases(self, mock_transaction_repo):
         """
@@ -374,5 +371,5 @@ class TestGetRecentPurchases:
 
         # Then
         mock_transaction_repo.get_recent_transactions.assert_called_with(
-            "ETHUSDC", asset_type="crypto", limit=3
+            "ETHUSDC", limit=3
         )

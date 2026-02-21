@@ -17,7 +17,11 @@
 
 <ModeWatcher />
 
-<div class="fixed top-4 right-4 z-50">
+<nav class="flex items-center justify-between border-b px-6 py-3">
+	<div class="flex gap-6 text-sm font-medium">
+		<a href="/" class="hover:text-foreground/80 transition-colors">Portfolio</a>
+		<a href="/bot" class="hover:text-foreground/80 transition-colors">Bot</a>
+	</div>
 	<Button onclick={toggleMode} variant="outline" size="icon">
 		<SunIcon
 			class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 !transition-all dark:scale-0 dark:-rotate-90"
@@ -27,6 +31,6 @@
 		/>
 		<span class="sr-only">Toggle theme</span>
 	</Button>
-</div>
+</nav>
 
 {@render children()}

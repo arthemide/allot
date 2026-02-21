@@ -17,7 +17,6 @@ Update docstrings in key files to improve code documentation.
 
 **Files needing better docstrings:**
 - `/workspace/projects/stock-alerting/backend/shared/src/shared/db/models/asset.py`
-  - Document asset_type field values
   - Explain base_prum and historical tracking
   - Document backward compatibility properties
 - `/workspace/projects/stock-alerting/backend/shared/src/shared/db/repositories/transaction.py`
@@ -29,7 +28,6 @@ Update docstrings in key files to improve code documentation.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 asset.py docstrings improved with asset_type values
 - [ ] #2 transaction.py has PRUM formula documented
 - [ ] #3 utils.py transformation logic documented
 - [ ] #4 Usage examples added where appropriate

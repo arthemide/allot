@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
@@ -26,29 +26,16 @@ class AssetRepository:
 
     @staticmethod
     @with_db_retry(max_retries=3)
-    def get_by_symbol(symbol: str, asset_type: str = "stock") -> Optional[AssetTable]:
-        """Get asset by symbol and type"""
+    def get_by_symbol(symbol: str) -> Optional[AssetTable]:
+        """Get asset by symbol"""
         with SessionLocal() as session:
             stmt = (
                 select(AssetTable)
                 .options(selectinload(AssetTable.transactions))
-                .where(AssetTable.symbol == symbol, AssetTable.asset_type == asset_type)
+                .where(AssetTable.symbol == symbol)
             )
-            asset = session.scalars(stmt).one_or_none()
+            asset = session.scalars(stmt).first()
         return asset
-
-    @staticmethod
-    @with_db_retry(max_retries=3)
-    def get_all_by_type(asset_type: str = "stock") -> List[AssetTable]:
-        """Get all assets of a specific type"""
-        with SessionLocal() as session:
-            stmt = (
-                select(AssetTable)
-                .where(AssetTable.asset_type == asset_type)
-                .order_by(AssetTable.symbol)
-            )
-            assets = session.scalars(stmt).all()
-        return list(assets)
 
     @staticmethod
     @with_db_retry(max_retries=3)
@@ -56,7 +43,6 @@ class AssetRepository:
         fund_id: Optional[int],
         name: str,
         symbol: str,
-        asset_type: str,
         shares_number: float,
         cost: float,
         current_repartition: float,
@@ -71,7 +57,6 @@ class AssetRepository:
                 fund_id=fund_id,
                 name=name,
                 symbol=symbol,
-                asset_type=asset_type,
                 shares_number=shares_number,
                 cost=cost,
                 current_repartition=current_repartition,

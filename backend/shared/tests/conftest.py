@@ -43,7 +43,6 @@ def sample_asset(test_session):
     asset = AssetTable(
         symbol="ETHUSDC",
         name="Ethereum",
-        asset_type="crypto",
         shares_number=1.0,  # Historical quantity
         cost=2000.0,  # Historical cost
         base_prum=Decimal("2000.0"),  # Historical PRUM

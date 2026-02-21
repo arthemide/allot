@@ -21,9 +21,7 @@ class TestPRUMCalculation:
         # Given: asset with base_prum=2000, shares_number=1.0, no transactions
 
         # When
-        prum = TransactionRepository.calculate_prum(
-            "ETHUSDC", asset_type="crypto", session=test_session
-        )
+        prum = TransactionRepository.calculate_prum("ETHUSDC", session=test_session)
 
         # Then: should return base historical PRUM
         assert prum == Decimal("2000.0")
@@ -44,9 +42,7 @@ class TestPRUMCalculation:
         test_session.commit()
 
         # When
-        prum = TransactionRepository.calculate_prum(
-            "ETHUSDC", asset_type="crypto", session=test_session
-        )
+        prum = TransactionRepository.calculate_prum("ETHUSDC", session=test_session)
 
         # Then: (1*2000 + 1*3000) / 2 = 2500
         assert prum == Decimal("2500.0")
@@ -80,9 +76,7 @@ class TestPRUMCalculation:
         test_session.commit()
 
         # When
-        prum = TransactionRepository.calculate_prum(
-            "ETHUSDC", asset_type="crypto", session=test_session
-        )
+        prum = TransactionRepository.calculate_prum("ETHUSDC", session=test_session)
 
         # Then: (1*2000 + 1500 + 1600) / (1 + 0.5 + 0.5) = 5100 / 2 = 2550
         assert prum == Decimal("2550.0")
@@ -93,7 +87,6 @@ class TestPRUMCalculation:
         asset = AssetTable(
             symbol="BTCUSDC",
             name="Bitcoin",
-            asset_type="crypto",
             shares_number=0.0,
             cost=0.0,
             base_prum=None,  # No historical data
@@ -131,9 +124,7 @@ class TestPRUMCalculation:
         test_session.commit()
 
         # When
-        prum = TransactionRepository.calculate_prum(
-            "BTCUSDC", asset_type="crypto", session=test_session
-        )
+        prum = TransactionRepository.calculate_prum("BTCUSDC", session=test_session)
 
         # Then: (5000 + 5200) / (0.1 + 0.1) = 10200 / 0.2 = 51000
         assert prum == Decimal("51000.0")
@@ -141,9 +132,7 @@ class TestPRUMCalculation:
     def test_prum_returns_none_for_nonexistent_asset(self, test_session):
         """PRUM should return None if asset doesn't exist."""
         # When
-        prum = TransactionRepository.calculate_prum(
-            "NONEXISTENT", asset_type="crypto", session=test_session
-        )
+        prum = TransactionRepository.calculate_prum("NONEXISTENT", session=test_session)
 
         # Then
         assert prum is None
@@ -157,7 +146,6 @@ class TestAddTransaction:
         # When
         TransactionRepository.add_transaction(
             symbol="ETHUSDC",
-            asset_type="crypto",
             transaction_type="buy",
             quantity=Decimal("0.5"),
             price=Decimal("3100.0"),
@@ -199,7 +187,6 @@ class TestAddTransaction:
         asset = AssetTable(
             symbol="REGR_DETACHED",
             name="Regression Test",
-            asset_type="crypto",
             shares_number=0.0,
             cost=0.0,
             base_prum=None,
@@ -278,7 +265,7 @@ class TestGetOrCreateAsset:
         """Should retrieve existing asset."""
         # When
         asset = TransactionRepository.get_or_create_asset(
-            symbol="ETHUSDC", name="Ethereum", asset_type="crypto", session=test_session
+            symbol="ETHUSDC", name="Ethereum", session=test_session
         )
 
         # Then
@@ -291,7 +278,6 @@ class TestGetOrCreateAsset:
         asset = TransactionRepository.get_or_create_asset(
             symbol="BTCUSDC",
             name="Bitcoin",
-            asset_type="crypto",
             base_prum=Decimal("45000.0"),
             historical_quantity=0.5,
             session=test_session,
@@ -300,7 +286,6 @@ class TestGetOrCreateAsset:
         # Then
         assert asset is not None
         assert asset.symbol == "BTCUSDC"
-        assert asset.asset_type == "crypto"
         assert asset.base_prum == Decimal("45000.0")
         assert asset.shares_number == 0.5
 
@@ -314,7 +299,6 @@ class TestGetRecentTransactions:
         asset = AssetTable(
             symbol="RECENT_TEST",
             name="Recent Test",
-            asset_type="crypto",
             shares_number=0.0,
             cost=0.0,
             base_prum=None,
@@ -359,9 +343,7 @@ class TestGetRecentTransactions:
         """
         self._create_asset_with_transactions(mock_session_local)
 
-        result = TransactionRepository.get_recent_transactions(
-            "RECENT_TEST", asset_type="crypto", limit=10
-        )
+        result = TransactionRepository.get_recent_transactions("RECENT_TEST", limit=10)
 
         assert len(result) == 2
 
@@ -371,9 +353,7 @@ class TestGetRecentTransactions:
         When: get_recent_transactions(symbol)
         Then: Returns empty list
         """
-        result = TransactionRepository.get_recent_transactions(
-            "NONEXISTENT", asset_type="crypto"
-        )
+        result = TransactionRepository.get_recent_transactions("NONEXISTENT")
         assert result == []
 
 
@@ -391,7 +371,6 @@ class TestGetAssetStatistics:
         asset = AssetTable(
             symbol="STATS_TEST",
             name="Stats Test",
-            asset_type="crypto",
             shares_number=1.0,
             cost=2000.0,
             base_prum=Decimal("2000.0"),
@@ -418,9 +397,7 @@ class TestGetAssetStatistics:
         session.close()
 
         # When
-        stats = TransactionRepository.get_asset_statistics(
-            "STATS_TEST", asset_type="crypto"
-        )
+        stats = TransactionRepository.get_asset_statistics("STATS_TEST")
 
         # Then
         assert stats["symbol"] == "STATS_TEST"
@@ -434,9 +411,7 @@ class TestGetAssetStatistics:
         When: get_asset_statistics(symbol)
         Then: Returns empty dict
         """
-        stats = TransactionRepository.get_asset_statistics(
-            "NONEXISTENT", asset_type="crypto"
-        )
+        stats = TransactionRepository.get_asset_statistics("NONEXISTENT")
         assert stats == {}
 
 
@@ -454,7 +429,6 @@ class TestGetAssetBySymbol:
         asset = AssetTable(
             symbol="LOOKUP_TEST",
             name="Lookup Test",
-            asset_type="crypto",
             shares_number=0.0,
             cost=0.0,
             base_prum=None,
@@ -469,9 +443,7 @@ class TestGetAssetBySymbol:
         session.close()
 
         # When
-        result = TransactionRepository.get_asset_by_symbol(
-            "LOOKUP_TEST", asset_type="crypto"
-        )
+        result = TransactionRepository.get_asset_by_symbol("LOOKUP_TEST")
         assert result is not None
         assert result.symbol == "LOOKUP_TEST"
 
@@ -481,7 +453,5 @@ class TestGetAssetBySymbol:
         When: get_asset_by_symbol(symbol)
         Then: Returns None
         """
-        result = TransactionRepository.get_asset_by_symbol(
-            "NONEXISTENT", asset_type="crypto"
-        )
+        result = TransactionRepository.get_asset_by_symbol("NONEXISTENT")
         assert result is None

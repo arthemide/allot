@@ -35,27 +35,28 @@ def mock_yfinance(mocker):
 
 @pytest.fixture
 def mock_fund_table(mocker):
-    """Create a mock FundTable with stocks."""
+    """Create a simple object that mimics FundTable with real attributes (not Mock)."""
+    from types import SimpleNamespace
 
-    def _create(name="Test Fund", fund_id=1, stocks=None):
-        fund = mocker.Mock()
-        fund.id = fund_id
-        fund.name = name
-        fund.created_at = None
-        fund.updated_at = None
-        if stocks is None:
-            stock = mocker.Mock()
-            stock.id = 10
-            stock.name = "Apple Inc."
-            stock.symbol = "AAPL"
-            stock.shares_number = 10.0
-            stock.cost = 1500.0
-            stock.current_repartition = 50.0
-            stock.target_repartition = 60.0
-            stock.arbitration_threshold = 5.0
-            stock.threshold_to_alert = 10.0
-            stocks = [stock]
-        fund.stocks = stocks
+    def _create(name="Test Fund", fund_id=1, assets=None):
+        if assets is None:
+            asset = SimpleNamespace(
+                id=10,
+                name="Apple Inc.",
+                symbol="AAPL",
+                shares_number=10.0,
+                cost=1500.0,
+                current_repartition=50.0,
+                target_repartition=60.0,
+                arbitration_threshold=5.0,
+                threshold_to_alert=10.0,
+            )
+            assets = [asset]
+
+        # Create fund with real attributes
+        fund = SimpleNamespace(
+            id=fund_id, name=name, created_at=None, updated_at=None, assets=assets
+        )
         return fund
 
     return _create
@@ -143,7 +144,7 @@ class TestFundService:
         Then: Returns created FundSchema
         """
         # Given
-        created_fund = mock_fund_table(name="New Fund", stocks=[])
+        created_fund = mock_fund_table(name="New Fund", assets=[])
         mock_repos["fund"].create.return_value = created_fund
 
         # When
@@ -194,12 +195,13 @@ class TestFundService:
         Then: Old stocks are removed and new stocks are added
         """
         # Given
-        old_stock = mocker.Mock()
-        old_stock.id = 10
-        existing_fund = mock_fund_table(stocks=[old_stock])
-        updated_fund = mock_fund_table(name="Test Fund", stocks=[])
+        from types import SimpleNamespace
 
-        # 1st call: returns fund with old stock, 2nd call: returns fund after cleanup
+        old_asset = SimpleNamespace(id=10)
+        existing_fund = mock_fund_table(assets=[old_asset])
+        updated_fund = mock_fund_table(name="Test Fund", assets=[])
+
+        # 1st call: returns fund with old asset, 2nd call: returns fund after cleanup
         mock_repos["fund"].get_by_id.side_effect = [existing_fund, updated_fund]
 
         new_stock = StockSchema(
@@ -418,7 +420,7 @@ class TestStockService:
         Then: Returns fund without stock
         """
         # Given
-        fund = mock_fund_table(stocks=[])
+        fund = mock_fund_table(assets=[])
         mock_repos["stock"].remove.return_value = fund
 
         # When

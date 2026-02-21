@@ -100,6 +100,15 @@ All configuration is done via environment variables in `bot/dca/.env`:
 
 See `bot/dca/.env.template` for all available options.
 
+### Page Bot (`/bot`)
+
+The `/bot` page provides a visual interface for DCA bot transactions recorded in the database:
+
+- **Fund selector** — filter transactions by fund
+- **Cumulative investment chart** — line chart showing cumulative investment per asset over time (Chart.js)
+- **Transaction timeline** — bar chart of transaction amounts, color-coded by type (buy/sell)
+- **Transactions table** — detailed list with date, asset, type badge, quantity, price, and total
+
 ### Features
 
 ✅ Automatic balance checking (spot + earn)  

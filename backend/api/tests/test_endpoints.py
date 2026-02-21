@@ -5,13 +5,13 @@ Tests HTTP layer with mocked services — verifies status codes,
 response schemas, and correct service method calls.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.models.pydantic.schema import FundSchema, StockSchema
+from src.models.pydantic.schema import FundSchema, StockSchema, TransactionSchema
 
 
 @pytest.fixture
@@ -434,3 +434,108 @@ class TestStockSearchEndpoint:
 
         assert response.status_code == 500
         assert "error" in response.json()["detail"].lower()
+
+
+# ── Transaction Endpoints ─────────────────────────────────────────
+
+
+def make_transaction_schema(
+    tx_id=1,
+    asset_id=10,
+    asset_symbol="AAPL",
+    asset_name="Apple Inc.",
+    transaction_type="buy",
+    quantity=1.5,
+    price=100.0,
+    total_cost=150.0,
+    order_id=None,
+) -> TransactionSchema:
+    """Helper to create a TransactionSchema for test assertions."""
+    return TransactionSchema(
+        id=tx_id,
+        asset_id=asset_id,
+        asset_symbol=asset_symbol,
+        asset_name=asset_name,
+        transaction_type=transaction_type,
+        timestamp=datetime(2026, 1, 15, tzinfo=timezone.utc),
+        quantity=quantity,
+        price=price,
+        total_cost=total_cost,
+        order_id=order_id,
+        created_at=datetime(2026, 1, 15, tzinfo=timezone.utc),
+    )
+
+
+class TestTransactionEndpoints:
+    """Tests for /transactions endpoints."""
+
+    def test_get_transactions_returns_200(self, client, mocker):
+        """
+        Given: No transactions
+        When: GET /transactions
+        Then: Returns 200 with empty list
+        """
+        mocker.patch(
+            "src.routes.transactions.TransactionService.get_all",
+            return_value=[],
+        )
+
+        response = client.get("/transactions")
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_get_transactions_with_fund_id(self, client, mocker):
+        """
+        Given: fund_id query param
+        When: GET /transactions?fund_id=1
+        Then: TransactionService.get_all called with fund_id=1
+        """
+        mock_get_all = mocker.patch(
+            "src.routes.transactions.TransactionService.get_all",
+            return_value=[],
+        )
+
+        client.get("/transactions?fund_id=1")
+
+        mock_get_all.assert_called_once_with(fund_id=1, asset_id=None, limit=100)
+
+    def test_get_transactions_with_limit(self, client, mocker):
+        """
+        Given: limit query param
+        When: GET /transactions?limit=10
+        Then: TransactionService.get_all called with limit=10
+        """
+        mock_get_all = mocker.patch(
+            "src.routes.transactions.TransactionService.get_all",
+            return_value=[],
+        )
+
+        client.get("/transactions?limit=10")
+
+        mock_get_all.assert_called_once_with(fund_id=None, asset_id=None, limit=10)
+
+    def test_get_transactions_returns_transaction_list(self, client, mocker):
+        """
+        Given: Two transactions exist
+        When: GET /transactions
+        Then: Returns 200 with list of 2 transactions in JSON
+        """
+        tx1 = make_transaction_schema(tx_id=1, asset_symbol="AAPL", total_cost=150.0)
+        tx2 = make_transaction_schema(
+            tx_id=2, asset_symbol="ETH", transaction_type="sell", total_cost=500.0
+        )
+        mocker.patch(
+            "src.routes.transactions.TransactionService.get_all",
+            return_value=[tx1, tx2],
+        )
+
+        response = client.get("/transactions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["asset_symbol"] == "AAPL"
+        assert data[0]["total_cost"] == 150.0
+        assert data[1]["asset_symbol"] == "ETH"
+        assert data[1]["transaction_type"] == "sell"

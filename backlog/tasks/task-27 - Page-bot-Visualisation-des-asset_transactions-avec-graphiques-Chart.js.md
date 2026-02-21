@@ -1,7 +1,7 @@
 ---
 id: TASK-27
 title: 'Page /bot : Visualisation des asset_transactions avec graphiques Chart.js'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-02-14 17:58'
 labels:
@@ -16,86 +16,49 @@ priority: medium
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-## Objectif
+## What was built
 
-Creer une page `/bot` dans le frontend SvelteKit pour afficher les transactions (table `asset_transactions`) via graphiques Chart.js et tableau. Transactions enregistrees par le bot DCA dans PostgreSQL, actuellement invisibles dans l'interface.
+Page `/bot` in the SvelteKit frontend displaying DCA bot transactions from `asset_transactions` via two Chart.js charts and a detail table.
 
-## Contexte technique
+## Backend
 
-### Modele `asset_transactions` (PostgreSQL)
-Defini dans `backend/shared/src/shared/db/models/transaction.py` (AssetTransactionTable) :
-- `id` (PK), `asset_id` (FK→stocks.id), `transaction_type` ('buy'/'sell'/'dividend')
-- `timestamp`, `quantity` (Numeric 20,10), `price` (Numeric 20,10), `total_cost` (Numeric 20,10)
-- `order_id` (nullable, ref externe Binance), `created_at`
-- Index `idx_asset_timestamp` sur (asset_id, timestamp)
+### `GET /transactions?fund_id=&asset_id=&limit=`
+Returns `List[TransactionSchema]` (id, asset_id, asset_symbol, asset_name, transaction_type, timestamp, quantity, price, total_cost, order_id, created_at). Joins `AssetTransactionTable` + `AssetTable`, filters by fund_id/asset_id, ordered by timestamp desc.
 
-### Relations
-- `AssetTable` (stocks) → `transactions` (one-to-many), chaque asset a symbol/name/asset_type
-- Assets appartiennent a un `FundTable` via fund_id
+### `GET /stocks/price-history?symbol=&start=&end=`
+Returns `List[PricePoint]` (date, price) fetched via yfinance daily close. Returns `[]` silently for unrecognised symbols (crypto pairs, etc.).
 
-### Repository existant (`backend/shared/src/shared/db/repositories/transaction.py`)
-- `get_recent_transactions(symbol, asset_type, limit)`, `get_asset_statistics()`, `calculate_prum()`
+## Frontend
 
-### Stack frontend
-SvelteKit 2.48/Svelte 5, Bits UI, TailwindCSS 4, Lucide. Pas de lib graphique installee.
+### `CumulativeInvestment.svelte`
+Line chart (Chart.js). Single line across all assets. Transactions grouped by ISO date, sorted chronologically. buy → `+= total_cost`, sell → `-= total_cost`. Indigo area fill. Dark mode aware.
 
-### API existante (FastAPI sur :8000)
-Routes : `/funds`, `/stocks/search`. Aucune route transactions.
+### `TransactionTimeline.svelte`
+Mixed scatter + line chart (Chart.js, no extra adapter needed). Three datasets:
+- **Scatter** — one point per day (average price if multiple tx same day). Green = buy, red = sell.
+- **AVCO line** — running average cost basis, recomputed in the frontend from sorted buy transactions, forward-filled, orange dashed.
+- **Historical price line** *(optional)* — loaded from `/stocks/price-history`, indigo semi-transparent. Omitted silently if API returns `[]`.
 
----
+Dates: all timestamps converted to ISO `YYYY-MM-DD`, merged and sorted before building the category axis, formatted with 2-digit year to avoid cross-year collisions.
 
-## PARTIE 1 : Backend
-
-### 1.1 Schema Pydantic (`backend/api/src/models/pydantic/schema.py`)
-Ajouter `TransactionSchema(BaseModel)` avec : id, asset_id, asset_symbol, asset_name, transaction_type, timestamp, quantity, price, total_cost, order_id, created_at.
-
-### 1.2 Service (`backend/api/src/services/transaction.py` - CREER)
-`TransactionService.get_all(fund_id?, asset_id?, limit=100)` :
-- Join AssetTransactionTable + AssetTable
-- Filtres optionnels fund_id et asset_id
-- Tri par timestamp desc, limit
-- Enrichir avec asset_symbol/name
-
-### 1.3 Route (`backend/api/src/routes/transactions.py` - CREER)
-`GET /transactions?fund_id=X&asset_id=Y&limit=100` → List[TransactionSchema]
-Enregistrer dans `routes/__init__.py`.
-
-## PARTIE 2 : Frontend
-
-### 2.1 Installer `chart.js` (npm install)
-
-### 2.2 Type (`front/src/lib/types/config.ts`)
-Ajouter interface `AssetTransaction` (id, asset_id, asset_symbol, asset_name, transaction_type, timestamp, quantity, price, total_cost, order_id).
-
-### 2.3 API call (`front/src/lib/services/api-calls.ts`)
-Ajouter `getTransactions(params?)` avec URLSearchParams pour fund_id/asset_id/limit.
-
-### 2.4 TransactionTimeline.svelte (CREER)
-Bar chart : axe X=temps, Y=total_cost. Barres vertes (buy), rouges (sell). Tooltip avec details. $effect pour lifecycle Chart.js.
-
-### 2.5 CumulativeInvestment.svelte (CREER)
-Line chart : axe X=temps, Y=cumul progressif. buy→cumul+=total_cost, sell→cumul-=total_cost. Une ligne/couleur par asset_symbol. Area fill gradient.
-
-### 2.6 Page /bot (`front/src/routes/bot/+page.svelte` - CREER)
-- Selecteur de fonds en haut
-- Graphique investissement cumule (line)
-- Graphique timeline transactions (bar)
-- Tableau : Date, Asset, Type (badge colore), Qty, Prix, Total
-- Etats : loading, vide, erreur
-- Composants UI existants : Card, Table
-
-### 2.7 Navigation (`front/src/routes/+layout.svelte`)
-Barre nav minimaliste : lien "Portfolio" (/) + "Bot" (/bot). Toggle dark mode a droite.
+### Page `/bot`
+- Fund selector (top) — filters all data
+- **Chart 1**: Cumulative Investment (all assets)
+- **Chart 2**: Purchase Price per Transaction & AVCO — with per-pair selector in card header (dropdown only shown when multiple symbols exist, auto-selects first symbol)
+- Transaction history table: Date, Asset, Type (coloured badge), Quantity, Price, Total
+- States: loading, empty, error — all in English
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 GET /transactions fonctionne avec filtres fund_id, asset_id, limit et retourne transactions enrichies (symbol, name)
-- [ ] #2 Chart.js installe dans le frontend
-- [ ] #3 Composant TransactionTimeline : bar chart barres vertes (buy) / rouges (sell) sur axe temporel
-- [ ] #4 Composant CumulativeInvestment : line chart courbe cumulative par asset
-- [ ] #5 Page /bot avec selecteur de fonds, 2 graphiques, tableau de transactions
-- [ ] #6 Navigation dans le layout (liens Portfolio et Bot)
-- [ ] #7 Graphiques responsives et lisibles en dark mode
-- [ ] #8 Etats loading, vide et erreur geres
+- [x] #1 GET /transactions works with fund_id, asset_id, limit filters and returns enriched transactions (symbol, name)
+- [x] #2 Chart.js installed in the frontend
+- [x] #3 TransactionTimeline: scatter points per day + AVCO dashed line + optional historical price line
+- [x] #4 CumulativeInvestment: single cumulative line across all assets with area fill
+- [x] #5 Page /bot with fund selector, 2 charts, transaction table
+- [x] #6 Navigation in layout (Portfolio and Bot links)
+- [x] #7 Charts responsive and readable in dark mode
+- [x] #8 Loading, empty and error states handled (in English)
+- [x] #9 Per-pair filter on the price/AVCO chart
+- [x] #10 Historical price fetched from /stocks/price-history, silently omitted if unavailable
 <!-- AC:END -->

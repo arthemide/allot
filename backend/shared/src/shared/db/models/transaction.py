@@ -8,7 +8,7 @@ from shared.db.config import Base
 
 class AssetTransactionTable(Base):
     """
-    Tracks individual transactions (purchases, sales, dividends) for assets.
+    Tracks individual transactions (purchases, sales) for assets.
     Used to calculate weighted average purchase price (PRUM) and maintain transaction history.
     """
 
@@ -20,9 +20,7 @@ class AssetTransactionTable(Base):
     )
 
     # Transaction details
-    transaction_type = Column(
-        String(20), nullable=False
-    )  # 'buy', 'sell', 'dividend', etc.
+    transaction_type = Column(String(20), nullable=False)  # 'buy', 'sell', etc.
     timestamp = Column(DateTime(timezone=True), nullable=False)
     quantity = Column(Numeric(20, 10), nullable=False)  # Amount transacted
     price = Column(Numeric(20, 10), nullable=False)  # Price per unit
