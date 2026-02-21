@@ -85,7 +85,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: backend
-      run: uv sync
+      run: make install
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Run tests
