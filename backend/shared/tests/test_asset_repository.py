@@ -8,7 +8,6 @@ from shared.db.repositories.fund import FundRepository
 ASSET_DEFAULTS = dict(
     name="Ethereum",
     symbol="ETHUSDC",
-    asset_type="crypto",
     shares_number=1.0,
     cost=2000.0,
     current_repartition=0.0,
@@ -58,13 +57,13 @@ class TestAssetCRUD:
 
     def test_get_by_symbol(self, mock_session_local):
         """
-        Given: Asset exists with symbol and type
-        When: get_by_symbol(symbol, asset_type)
+        Given: Asset exists with symbol
+        When: get_by_symbol(symbol)
         Then: Returns the asset
         """
         AssetRepository.create(fund_id=None, **ASSET_DEFAULTS)
 
-        result = AssetRepository.get_by_symbol("ETHUSDC", asset_type="crypto")
+        result = AssetRepository.get_by_symbol("ETHUSDC")
 
         assert result is not None
         assert result.symbol == "ETHUSDC"
@@ -75,33 +74,8 @@ class TestAssetCRUD:
         When: get_by_symbol(symbol)
         Then: Returns None
         """
-        result = AssetRepository.get_by_symbol("NONEXIST", asset_type="crypto")
+        result = AssetRepository.get_by_symbol("NONEXIST")
         assert result is None
-
-    def test_get_all_by_type(self, mock_session_local):
-        """
-        Given: Multiple assets of different types
-        When: get_all_by_type(type)
-        Then: Returns only matching assets
-        """
-        AssetRepository.create(fund_id=None, **ASSET_DEFAULTS)
-        AssetRepository.create(
-            fund_id=None,
-            name="Apple",
-            symbol="AAPL",
-            asset_type="stock",
-            shares_number=10.0,
-            cost=1500.0,
-            current_repartition=0.0,
-        )
-
-        crypto = AssetRepository.get_all_by_type("crypto")
-        stocks = AssetRepository.get_all_by_type("stock")
-
-        assert len(crypto) == 1
-        assert crypto[0].symbol == "ETHUSDC"
-        assert len(stocks) == 1
-        assert stocks[0].symbol == "AAPL"
 
     def test_update(self, mock_session_local):
         """

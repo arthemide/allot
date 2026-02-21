@@ -20,10 +20,16 @@ def _get_history_metadata(symbol: str) -> dict | None:
         Dictionary with metadata or None if not found
     """
     logger.debug(f"Getting history metadata of {symbol}")
-    stock_data = yf.Ticker(symbol)
-    history_metadata = stock_data.get_history_metadata()
-    if history_metadata is None:
-        logger.error(f"{symbol}: No data found, symbol may be delisted")
+    try:
+        stock_data = yf.Ticker(symbol)
+        history_metadata = stock_data.get_history_metadata()
+    except Exception as e:
+        logger.warning(f"{symbol}: failed to fetch metadata — {e}")
+        return None
+    if not history_metadata:
+        logger.warning(
+            f"{symbol}: no data found, symbol may be delisted or unsupported"
+        )
         return None
     return history_metadata
 

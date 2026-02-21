@@ -1,4 +1,4 @@
-import type { FundConfig, Stock } from '$lib/types/config';
+import type { AssetTransaction, FundConfig, Stock } from '$lib/types/config';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -117,6 +117,43 @@ export const configApi = {
 		}
 		if (!response.ok) {
 			throw new Error(`Failed to remove stock: ${response.statusText}`);
+		}
+		return response.json();
+	}
+};
+
+export const stockApi = {
+	async getPriceHistory(
+		symbol: string,
+		start: string,
+		end: string
+	): Promise<{ date: string; price: number }[]> {
+		const url = new URL(`${API_BASE_URL}/stocks/price-history`);
+		url.searchParams.set('symbol', symbol);
+		url.searchParams.set('start', start);
+		url.searchParams.set('end', end);
+		const response = await fetch(url.toString());
+		if (!response.ok) {
+			return [];
+		}
+		return response.json();
+	}
+};
+
+export const transactionApi = {
+	async getAll(params?: {
+		fund_id?: string;
+		asset_id?: string;
+		limit?: number;
+	}): Promise<AssetTransaction[]> {
+		const url = new URL(`${API_BASE_URL}/transactions`);
+		if (params?.fund_id) url.searchParams.set('fund_id', params.fund_id);
+		if (params?.asset_id) url.searchParams.set('asset_id', params.asset_id);
+		if (params?.limit !== undefined) url.searchParams.set('limit', String(params.limit));
+
+		const response = await fetch(url.toString());
+		if (!response.ok) {
+			throw new Error(`Failed to fetch transactions: ${response.statusText}`);
 		}
 		return response.json();
 	}

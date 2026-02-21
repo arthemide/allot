@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from shared.db.config import Base
 from shared.db.models.asset import AssetTable
 from shared.db.models.fund import FundTable
+from shared.db.models.transaction import AssetTransactionTable
 
 
 @pytest.fixture
@@ -81,7 +82,6 @@ def sample_stock(test_session, sample_fund):
         fund_id=sample_fund.id,
         name="Apple Inc.",
         symbol="AAPL",
-        asset_type="stock",
         shares_number=10.0,
         cost=1500.0,
         current_repartition=50.0,
@@ -96,6 +96,25 @@ def sample_stock(test_session, sample_fund):
 
 
 @pytest.fixture
+def sample_transaction(test_session, sample_stock):
+    """Create a sample transaction for testing."""
+    from datetime import datetime, timezone
+
+    tx = AssetTransactionTable(
+        asset_id=sample_stock.id,
+        transaction_type="buy",
+        timestamp=datetime(2026, 1, 15, tzinfo=timezone.utc),
+        quantity=1.5,
+        price=100.0,
+        total_cost=150.0,
+    )
+    test_session.add(tx)
+    test_session.commit()
+    test_session.refresh(tx)
+    return tx
+
+
+@pytest.fixture
 def fund_with_stocks(test_session):
     """Create a fund with multiple stocks."""
     fund = FundTable(name="Portfolio Fund")
@@ -107,7 +126,6 @@ def fund_with_stocks(test_session):
             fund_id=fund.id,
             name="Apple Inc.",
             symbol="AAPL",
-            asset_type="stock",
             shares_number=10.0,
             cost=1500.0,
             current_repartition=30.0,
@@ -118,7 +136,6 @@ def fund_with_stocks(test_session):
             fund_id=fund.id,
             name="Microsoft",
             symbol="MSFT",
-            asset_type="stock",
             shares_number=5.0,
             cost=2000.0,
             current_repartition=40.0,
@@ -129,7 +146,6 @@ def fund_with_stocks(test_session):
             fund_id=fund.id,
             name="Google",
             symbol="GOOGL",
-            asset_type="stock",
             shares_number=2.0,
             cost=3000.0,
             current_repartition=30.0,

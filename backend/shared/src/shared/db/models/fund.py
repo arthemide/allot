@@ -20,12 +20,7 @@ class FundTable(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # Relationship to assets (previously stocks)
+    # Relationship to assets
     assets = relationship(
         "AssetTable", back_populates="fund", cascade="all, delete-orphan"
     )
-
-    # Keep old relationship name for backward compatibility
-    @property
-    def stocks(self):
-        return self.assets

@@ -8,11 +8,11 @@ if __name__ == "__main__":
     funds = FundService.get_all()
     for fund in funds:
         logger.info(f"Fund: {fund.fund_name}")
-        for stock in fund.stocks:
+        for asset in fund.assets:
             logger.info(
-                f"  Stock: {stock.symbol}, Shares: {stock.shares_number}, Price: {stock.today_price}, Name: {stock.name}"
+                f"  Stock: {asset.symbol}, Shares: {asset.shares_number}, Price: {asset.today_price}, Name: {asset.name}"
             )
-            if stock.name == "NULL":
-                stock.name = get_long_name(stock.symbol)
-                StockService.update(fund.id, stock.id, stock)
-                logger.info(f"    Updated name to: {stock.name}")
+            if asset.name == "NULL":
+                asset.name = get_long_name(asset.symbol)
+                StockService.update(fund.id, asset.id, asset)
+                logger.info(f"    Updated name to: {asset.name}")

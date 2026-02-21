@@ -27,6 +27,20 @@ export interface FundConfig {
 	average_gain_loss_percentage?: number;
 }
 
+export interface AssetTransaction {
+	id: number;
+	asset_id: number;
+	asset_symbol: string;
+	asset_name: string | null;
+	transaction_type: 'buy' | 'sell';
+	timestamp: string;
+	quantity: number;
+	price: number;
+	total_cost: number;
+	order_id: string | null;
+	created_at: string;
+}
+
 export interface StockFormData {
 	symbol: string;
 	shares_number: string;

@@ -4,6 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
 
 from shared.db.config import SessionLocal, with_db_retry
+from shared.db.models.asset import AssetTable
 from shared.db.models.fund import FundTable
 
 
@@ -15,7 +16,9 @@ class FundRepository:
         with SessionLocal() as session:
             stmt = (
                 select(FundTable)
-                .options(selectinload(FundTable.assets))
+                .options(
+                    selectinload(FundTable.assets).selectinload(AssetTable.transactions)
+                )
                 .order_by(FundTable.created_at.desc())
             )
             records = session.scalars(stmt).all()
@@ -28,7 +31,9 @@ class FundRepository:
         with SessionLocal() as session:
             stmt = (
                 select(FundTable)
-                .options(selectinload(FundTable.assets))
+                .options(
+                    selectinload(FundTable.assets).selectinload(AssetTable.transactions)
+                )
                 .where(FundTable.id == id)
             )
             record = session.scalars(stmt).one_or_none()
@@ -48,7 +53,9 @@ class FundRepository:
             # Fetch the fund with stocks loaded before session closes
             fund_with_stocks = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.assets))
+                .options(
+                    selectinload(FundTable.assets).selectinload(AssetTable.transactions)
+                )
                 .where(FundTable.id == fund_table.id)
             ).one()
 
@@ -68,7 +75,9 @@ class FundRepository:
             # Fetch and return the updated fund with stocks
             fund = session.scalars(
                 select(FundTable)
-                .options(selectinload(FundTable.assets))
+                .options(
+                    selectinload(FundTable.assets).selectinload(AssetTable.transactions)
+                )
                 .where(FundTable.id == fund_id)
             ).one_or_none()
         return fund

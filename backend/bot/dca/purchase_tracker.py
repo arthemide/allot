@@ -29,7 +29,6 @@ class PurchaseTracker:
         fund_id: Optional[int] = None,
         base_prum: Optional[float] = None,
         base_quantity: float = 0.0,
-        file_path: str = None,  # Ignored, kept for backward compatibility
     ):
         """
         Initialize purchase tracker.
@@ -57,7 +56,6 @@ class PurchaseTracker:
             self.asset = TransactionRepository.get_or_create_asset(
                 symbol=self.symbol,
                 name=self.asset_name,
-                asset_type="crypto",
                 fund_id=self.fund_id,
                 base_prum=self.base_prum,
                 historical_quantity=self.base_quantity,
@@ -120,9 +118,7 @@ class PurchaseTracker:
             Average purchase price or None if no purchases
         """
         try:
-            prum = TransactionRepository.calculate_prum(
-                self.symbol, asset_type="crypto"
-            )
+            prum = TransactionRepository.calculate_prum(self.symbol)
 
             if prum:
                 logger.info(f"PRUM calculated: {prum}")
@@ -142,9 +138,7 @@ class PurchaseTracker:
             Dictionary with statistics
         """
         try:
-            stats = TransactionRepository.get_asset_statistics(
-                self.symbol, asset_type="crypto"
-            )
+            stats = TransactionRepository.get_asset_statistics(self.symbol)
             # Add last_updated for backward compatibility
             stats["last_updated"] = datetime.utcnow().isoformat()
             return stats
@@ -164,7 +158,7 @@ class PurchaseTracker:
         """
         try:
             transactions = TransactionRepository.get_recent_transactions(
-                self.symbol, asset_type="crypto", limit=limit
+                self.symbol, limit=limit
             )
 
             # Convert to dict format for backward compatibility

@@ -79,6 +79,22 @@ The API is available at `http://localhost:8000`. Interactive docs at `http://loc
 | PUT | `/funds/{fund_id}/stocks/{stock_id}` | Update a stock in a fund |
 | DELETE | `/funds/{fund_id}/stocks/{stock_id}` | Remove a stock from a fund |
 
+### Transactions
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/transactions` | List asset transactions |
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `fund_id` | int | — | Filter by fund ID |
+| `asset_id` | int | — | Filter by asset ID |
+| `limit` | int | 100 | Maximum number of results |
+
+**Response:** `List[TransactionSchema]` — sorted by timestamp DESC.
+
 ## Testing
 
 ```bash

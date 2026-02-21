@@ -39,9 +39,9 @@ class FundService:
             if not fund:
                 return None
 
-            # Remove all existing stocks
-            for stock in list(fund.stocks):
-                StockRepository.remove(fund_id, stock.id)
+            # Remove all existing assets
+            for asset in list(fund.assets):
+                StockRepository.remove(fund_id, asset.id)
 
             # Add new stocks
             for stock in updates.stocks:

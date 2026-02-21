@@ -53,3 +53,22 @@ class StockSearchResponse(BaseModel):
     query: str
     results: list[StockSearchResult]
     count: int
+
+
+class TransactionSchema(BaseModel):
+    id: int
+    asset_id: int
+    asset_symbol: str
+    asset_name: str | None
+    transaction_type: str  # 'buy' | 'sell'
+    timestamp: datetime
+    quantity: float
+    price: float
+    total_cost: float
+    order_id: str | None
+    created_at: datetime
+
+
+class PricePoint(BaseModel):
+    date: str
+    price: float
