@@ -1,7 +1,7 @@
 ---
 id: TASK-3
 title: Create API README.md
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-16 10:15'
 labels:
@@ -31,9 +31,9 @@ Document the API module with setup, architecture, and usage instructions.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Technology stack documented
-- [ ] #2 Directory structure explained
-- [ ] #3 Setup instructions clear and complete
-- [ ] #4 All API endpoints listed with descriptions
-- [ ] #5 Testing instructions included
+- [x] #1 Technology stack documented
+- [x] #2 Directory structure explained
+- [x] #3 Setup instructions clear and complete
+- [x] #4 All API endpoints listed with descriptions
+- [x] #5 Testing instructions included
 <!-- AC:END -->

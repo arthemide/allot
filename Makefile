@@ -42,14 +42,29 @@ dca-logs:
 dca-stop:
 	docker-compose -f docker-compose.yaml --profile dca stop dca-bot
 
-.PHONY: db-backup ## 💾 backup postgres data to ./data/db-backup
+.PHONY: db-backup ## 💾 backup postgres to ./backups
 db-backup:
-	mkdir -p ./data/db-backup
-	docker run --rm -v stock_postgres_data:/data -v $(PWD)/data/db-backup:/backup alpine tar czf /backup/postgres_backup.tar.gz -C /data .
-	echo "✅ Backup saved to ./data/db-backup/postgres_backup.tar.gz"
+	mkdir -p ./backups
+	docker exec stock-alerting-db pg_dump -U romeo stock_alerting > ./backups/db-export-$$(date +%Y%m%d-%H%M%S).sql
+	docker run --rm -v stock_alerting_postgres_data:/data -v $(PWD)/backups:/backup alpine tar czf /backup/postgres-backup-$$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+	@echo "✅ Backups saved to ./backups/"
+	@ls -lh ./backups/
 
-.PHONY: db-restore ## 💾 restore postgres data from ./data/db-backup
+.PHONY: db-restore ## 💾 restore from ./backups/postgres-backup-*.tar.gz
 db-restore:
-	docker volume create stock_postgres_data 2>/dev/null || true
-	docker run --rm -v stock_postgres_data:/data -v $(PWD)/data/db-backup:/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/postgres_backup.tar.gz -C /data"
-	echo "✅ Database restored from ./data/db-backup/postgres_backup.tar.gz"
+	@if [ -z "$(FILE)" ]; then \
+		echo "❌ Usage: make db-restore FILE=./backups/postgres-backup-YYYYMMDD-HHMMSS.tar.gz"; \
+		echo ""; \
+		echo "Available backups:"; \
+		ls -lh ./backups/*.tar.gz 2>/dev/null || echo "No backups found"; \
+		exit 1; \
+	fi
+	@echo "⚠️  This will REPLACE all current database data!"
+	@echo "Backup file: $(FILE)"
+	@read -p "Continue? (yes/no): " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled" && exit 1)
+	docker-compose down
+	docker volume rm stock_alerting_postgres_data 2>/dev/null || true
+	docker volume create stock_alerting_postgres_data
+	docker run --rm -v stock_alerting_postgres_data:/data -v $(PWD)/backups:/backup alpine tar xzf /backup/$$(basename $(FILE)) -C /data
+	docker-compose up -d db
+	@echo "✅ Database restored from $(FILE)"

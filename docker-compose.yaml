@@ -20,7 +20,6 @@ services:
 
   api:
     container_name: stock-alerting-api
-    image: "api"
     build:
       context: ./backend
       dockerfile: api/Dockerfile
@@ -44,7 +43,6 @@ services:
 
   front:
     container_name: stock-alerting-front
-    image: "front"
     build:
       context: ./front
       dockerfile: "Dockerfile"
@@ -55,7 +53,6 @@ services:
 
   dca-bot:
     container_name: stock-alerting-dca-bot
-    image: "dca-bot"
     build:
       context: ./backend
       dockerfile: bot/Dockerfile
