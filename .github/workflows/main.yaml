@@ -90,4 +90,6 @@ jobs:
 
     - name: Run tests
       working-directory: backend
+      env:
+        POSTGRESQL_CONNECTION_STRING: postgresql://postgres:postgres@localhost:5432/stock_alerting_test
       run: make tests
