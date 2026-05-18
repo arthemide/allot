@@ -8,11 +8,13 @@ if __name__ == "__main__":
     funds = FundService.get_all()
     for fund in funds:
         logger.info(f"Fund: {fund.fund_name}")
-        for asset in fund.assets:
+        if fund.id is None:
+            continue
+        for asset in fund.stocks:
             logger.info(
                 f"  Stock: {asset.symbol}, Shares: {asset.shares_number}, Price: {asset.today_price}, Name: {asset.name}"
             )
-            if asset.name == "NULL":
+            if asset.name == "NULL" and asset.id is not None:
                 asset.name = get_long_name(asset.symbol)
                 StockService.update(fund.id, asset.id, asset)
                 logger.info(f"    Updated name to: {asset.name}")

@@ -242,6 +242,7 @@ class TestFundService:
         result = FundService.update("1", updates)
 
         # Then
+        assert result is not None
         assert result.fund_name == "New Name"
         mock_repos["fund"].update.assert_called_once_with("1", "New Name")
         mock_repos["stock_in_fund"].remove.assert_not_called()

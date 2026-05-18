@@ -3,7 +3,7 @@ Purchase tracker for DCA bot - PostgreSQL version.
 Maintains purchase history in PostgreSQL to calculate average price (PRUM).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 
@@ -143,7 +143,7 @@ class PurchaseTracker:
         try:
             stats = TransactionRepository.get_asset_statistics(self.symbol)
             # Add last_updated for backward compatibility
-            stats["last_updated"] = datetime.utcnow().isoformat()
+            stats["last_updated"] = datetime.now(timezone.utc).isoformat()
             return stats
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")

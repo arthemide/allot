@@ -86,7 +86,7 @@ class AssetRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-                if result.rowcount == 0:
+                if result.rowcount == 0:  # ty: ignore[unresolved-attribute]
                     return None
 
             # Return updated asset
@@ -105,7 +105,7 @@ class AssetRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-        return result.rowcount > 0
+        return result.rowcount > 0  # ty: ignore[unresolved-attribute]
 
     @staticmethod
     @with_db_retry(max_retries=3)
@@ -147,7 +147,7 @@ class AssetRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-                if result.rowcount == 0:
+                if result.rowcount == 0:  # ty: ignore[unresolved-attribute]
                     return None
 
             # Return the fund with assets loaded
@@ -171,7 +171,7 @@ class AssetRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-                if result.rowcount == 0:
+                if result.rowcount == 0:  # ty: ignore[unresolved-attribute]
                     return None
 
             # Return the fund with assets loaded

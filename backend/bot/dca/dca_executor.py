@@ -5,13 +5,14 @@ Handles balance verification, earn transfer, and order execution.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 from loguru import logger
 
 from .binance_client import BinanceAPIError, BinanceClient
 from .config import Config
 from .email_notifier import get_notifier
+from .models import MarketOrder
 from .purchase_tracker import PurchaseTracker
 from .retry import retry_with_backoff
 
@@ -191,6 +192,9 @@ class DCAExecutor:
             # 3. Transfer from earn to spot
             logger.info(f"Transferring {shortage} {quote_asset} from Earn to Spot...")
 
+            if product_id is None:
+                logger.error("Earn position has no product_id")
+                return False
             redeem_result = self.client.redeem_flexible_product(
                 product_id=product_id, amount=str(shortage)
             )
@@ -219,7 +223,7 @@ class DCAExecutor:
             return False
 
     @retry_with_backoff(max_retries=3, initial_delay=2.0, exceptions=(BinanceAPIError,))
-    def execute_dca_purchase(self) -> Optional[Dict[str, Any]]:
+    def execute_dca_purchase(self) -> Optional[MarketOrder]:
         """
         Execute complete DCA purchase:
         1. Check decision logic (momentum + PRUM)

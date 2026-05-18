@@ -36,7 +36,7 @@ lint:
 	uv run ruff format .
 
 .PHONY: check ## 🕵 Run lint check without fixing
-check:
+check: install
 	uv run ruff check .
 	uv run ty check
 

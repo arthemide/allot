@@ -76,7 +76,7 @@ class BinanceClient:
 
     def _request(
         self, method: str, endpoint: str, signed: bool = False, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> Any:
         """
         Perform a request to Binance API.
 
@@ -371,13 +371,13 @@ class BinanceClient:
         # Parse klines
         parsed_klines = [
             Kline(
-                open_time=kline[0],
+                open_time=int(kline[0]),
                 open=Decimal(kline[1]),
                 high=Decimal(kline[2]),
                 low=Decimal(kline[3]),
                 close=Decimal(kline[4]),
                 volume=Decimal(kline[5]),
-                close_time=kline[6],
+                close_time=int(kline[6]),
             )
             for kline in result
         ]

@@ -51,6 +51,8 @@ def get_stock_price(symbol: str) -> float | None:
 
     current_price = history_metadata.get("regularMarketPrice")
     logger.debug(f"Current price of '{symbol}' is {current_price}")
+    if current_price is None:
+        return None
     return round(current_price, 2)
 
 

@@ -67,7 +67,7 @@ class TransactionSchema(BaseModel):
     price: float
     total_cost: float
     order_id: str | None
-    created_at: datetime
+    created_at: datetime | None = None
 
 
 class PricePoint(BaseModel):
