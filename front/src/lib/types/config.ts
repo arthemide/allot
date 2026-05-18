@@ -13,6 +13,7 @@ export interface Stock {
 	target_repartition: number;
 	arbitration_threshold: number;
 	threshold_to_alert: number;
+	currency?: string;
 }
 
 export interface FundConfig {

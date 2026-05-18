@@ -14,7 +14,8 @@ class AssetTable(Base):
 
     # Asset identification
     name = Column(String(255), nullable=False)
-    symbol = Column(String(20), nullable=False, index=True)
+    symbol = Column(String(20), nullable=False, index=True, unique=True)
+    currency = Column(String(3), nullable=False, server_default="USD")
 
     shares_number = Column(Float, nullable=False)  # Pre-bot historical quantity
     cost = Column(Float, nullable=False)

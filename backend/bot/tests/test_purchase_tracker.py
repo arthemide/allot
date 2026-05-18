@@ -59,6 +59,7 @@ class TestPurchaseTrackerInit:
             fund_id=None,
             base_prum=Decimal("2500.0"),
             historical_quantity=Decimal("1.5"),
+            currency="USD"
         )
         assert tracker.symbol == "ETHUSDC"
         assert tracker.base_prum == Decimal("2500.0")

@@ -34,12 +34,16 @@ class DCAExecutor:
         self.dca_config = config.dca
 
         # Initialize purchase tracker
+        # NB: tracker stores the asset by `asset_symbol` (e.g. "ETH-USD"), not
+        # the Binance trading pair (e.g. "ETHUSDC"), so it lines up with assets
+        # already linked to a fund and avoids duplicates.
         self.tracker = PurchaseTracker(
-            symbol=config.dca.symbol,
+            symbol=config.dca.asset_symbol,
             asset_name=f"{config.dca.base_asset}",  # e.g., "ETH"
             fund_id=None,  # No fund for crypto assets
             base_prum=config.dca.base_prum,
             base_quantity=config.dca.base_quantity,
+            currency=config.dca.asset_currency,
         )
 
     def should_execute_purchase(self) -> Tuple[bool, str]:

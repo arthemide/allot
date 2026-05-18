@@ -29,6 +29,7 @@ class PurchaseTracker:
         fund_id: Optional[int] = None,
         base_prum: Optional[float] = None,
         base_quantity: float = 0.0,
+        currency: str = "USD",
     ):
         """
         Initialize purchase tracker.
@@ -46,6 +47,7 @@ class PurchaseTracker:
         self.fund_id = fund_id
         self.base_prum = Decimal(str(base_prum)) if base_prum else None
         self.base_quantity = Decimal(str(base_quantity))
+        self.currency = currency
 
         # Initialize or get existing asset in database
         self._initialize_asset()
@@ -59,6 +61,7 @@ class PurchaseTracker:
                 fund_id=self.fund_id,
                 base_prum=self.base_prum,
                 historical_quantity=self.base_quantity,
+                currency=self.currency,
             )
             logger.info(
                 f"Initialized purchase tracker for {self.symbol} (asset_id={self.asset.id})"

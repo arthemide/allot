@@ -18,6 +18,7 @@ class StockSchema(BaseModel):
     target_repartition: float | None = None
     arbitration_threshold: float
     threshold_to_alert: float
+    currency: str = "USD"
 
 
 class FundSchema(BaseModel):
