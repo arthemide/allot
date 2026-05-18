@@ -50,6 +50,7 @@ def mock_fund_table(mocker):
                 target_repartition=60.0,
                 arbitration_threshold=5.0,
                 threshold_to_alert=10.0,
+                currency="USD",
             )
             assets = [asset]
 

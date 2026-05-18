@@ -38,6 +38,7 @@ lint:
 .PHONY: check ## 🕵 Run lint check without fixing
 check:
 	uv run ruff check .
+	uv run ty check
 
 .PHONY: tests ## 🧪 Run all tests
 tests:
