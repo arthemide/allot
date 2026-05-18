@@ -35,6 +35,14 @@ class DCAConfig(BaseModel):
     # Quote currency (the one we spend)
     quote_asset: str = "USDC"
 
+    # Symbol used to identify the asset in the DB (e.g. "ETH-USD").
+    # Distinct from `symbol` (Binance trading pair) so the bot can attach its
+    # transactions to an asset already linked to a fund.
+    asset_symbol: str = "ETH-USD"
+
+    # Display currency for the asset in the front (e.g. "USD", "EUR").
+    asset_currency: str = "USD"
+
     # Base PRUM (average purchase price) from historical purchases
     # Set this to your known average purchase price from past transactions
     # Leave None to calculate from bot purchases only
@@ -86,6 +94,8 @@ class Config:
             symbol=self._get_env("DCA_SYMBOL", "ETHUSDC"),
             base_asset=self._get_env("DCA_BASE_ASSET", "ETH"),
             quote_asset=self._get_env("DCA_QUOTE_ASSET", "USDC"),
+            asset_symbol=self._get_env("DCA_ASSET_SYMBOL", "ETH-USD"),
+            asset_currency=self._get_env("DCA_ASSET_CURRENCY", "USD"),
             base_prum=float(base_prum) if base_prum else None,
             base_quantity=float(self._get_env("DCA_BASE_QUANTITY", "0.0")),
             days_of_month=self._get_env("DCA_DAYS_OF_MONTH", "1,15"),

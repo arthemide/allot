@@ -3,7 +3,7 @@ Purchase tracker for DCA bot - PostgreSQL version.
 Maintains purchase history in PostgreSQL to calculate average price (PRUM).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 
@@ -29,6 +29,7 @@ class PurchaseTracker:
         fund_id: Optional[int] = None,
         base_prum: Optional[float] = None,
         base_quantity: float = 0.0,
+        currency: str = "USD",
     ):
         """
         Initialize purchase tracker.
@@ -46,6 +47,7 @@ class PurchaseTracker:
         self.fund_id = fund_id
         self.base_prum = Decimal(str(base_prum)) if base_prum else None
         self.base_quantity = Decimal(str(base_quantity))
+        self.currency = currency
 
         # Initialize or get existing asset in database
         self._initialize_asset()
@@ -59,6 +61,7 @@ class PurchaseTracker:
                 fund_id=self.fund_id,
                 base_prum=self.base_prum,
                 historical_quantity=self.base_quantity,
+                currency=self.currency,
             )
             logger.info(
                 f"Initialized purchase tracker for {self.symbol} (asset_id={self.asset.id})"
@@ -140,7 +143,7 @@ class PurchaseTracker:
         try:
             stats = TransactionRepository.get_asset_statistics(self.symbol)
             # Add last_updated for backward compatibility
-            stats["last_updated"] = datetime.utcnow().isoformat()
+            stats["last_updated"] = datetime.now(timezone.utc).isoformat()
             return stats
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")

@@ -16,3 +16,8 @@ dependencies = [
 
 [tool.uv.sources]
 stock-alerting-shared = { workspace = true }
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that hit live external services (deselect with '-m \"not integration\"')",
+]

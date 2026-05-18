@@ -22,7 +22,7 @@ class FundRepository:
                 .order_by(FundTable.created_at.desc())
             )
             records = session.scalars(stmt).all()
-        return records
+        return list(records)
 
     @staticmethod
     @with_db_retry(max_retries=3)
@@ -69,7 +69,7 @@ class FundRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-                if result.rowcount == 0:
+                if result.rowcount == 0:  # ty: ignore[unresolved-attribute]
                     return None
 
             # Fetch and return the updated fund with stocks

@@ -7,6 +7,7 @@
 	import StockForm from '$lib/components/StockForm.svelte';
 	import type { FundConfig, Stock } from '$lib/types/config';
 	import { configApi } from '$lib/services/api-calls';
+	import { currencySymbol, formatMoney } from '$lib/utils';
 	import Trash2 from "@lucide/svelte/icons/trash-2";
     import Pencil from "@lucide/svelte/icons/pencil";
     import Download from "@lucide/svelte/icons/download";
@@ -332,11 +333,11 @@
 														</div>
 													</Table.Cell>
 													<Table.Cell>{stock.shares_number}</Table.Cell>
-													<Table.Cell>{stock.cost ? stock.cost.toFixed(2) + '€' : 'N/A'}</Table.Cell>
-													<Table.Cell>{stock.today_price ? stock.today_price.toFixed(2) + '€' : 'N/A'}</Table.Cell>
-													<Table.Cell>{stock.market_value ? stock.market_value.toFixed(2) + '€' : 'N/A'}</Table.Cell>
+													<Table.Cell>{formatMoney(stock.cost, stock.currency)}</Table.Cell>
+													<Table.Cell>{formatMoney(stock.today_price, stock.currency)}</Table.Cell>
+													<Table.Cell>{formatMoney(stock.market_value, stock.currency)}</Table.Cell>
 													<Table.Cell class={stock.gain_loss && stock.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
-														{stock.gain_loss ? stock.gain_loss.toFixed(2) + '€' : 'N/A'}
+														{formatMoney(stock.gain_loss, stock.currency)}
 													</Table.Cell>
 													<Table.Cell class="text-right">
 														<div class="flex justify-end gap-2">
@@ -365,7 +366,7 @@
 														<div class="grid grid-cols-3 gap-4 text-sm">
 															<div>
 																<span class="font-semibold">PRUM:</span>
-																<span class="ml-2">{stock.prum ? stock.prum.toFixed(2) + '€' : 'N/A'}</span>
+																<span class="ml-2">{formatMoney(stock.prum, stock.currency)}</span>
 															</div>
 															<div>
 																<span class="font-semibold">Gain/Loss %:</span>
@@ -405,13 +406,13 @@
 										<div>
 											<p class="text-slate-600">Total Cost</p>
 											<p class="text-lg font-semibold">
-												{selectedConfig.total_cost?.toFixed(2) || '0.00'}€
+												{selectedConfig.total_cost?.toFixed(2) || '0.00'}{currencySymbol(selectedConfig.stocks[0]?.currency)}
 											</p>
 										</div>
 										<div>
 											<p class="text-slate-600">Total Market Value</p>
 											<p class="text-lg font-semibold">
-												{selectedConfig.total_market_value?.toFixed(2) || '0.00'}€
+												{selectedConfig.total_market_value?.toFixed(2) || '0.00'}{currencySymbol(selectedConfig.stocks[0]?.currency)}
 											</p>
 										</div>
 										<div>
@@ -419,7 +420,7 @@
 											<p class="text-lg font-semibold" 
 												class:text-green-600={(selectedConfig.total_gain_loss || 0) >= 0} 
 												class:text-red-600={(selectedConfig.total_gain_loss || 0) < 0}>
-												{selectedConfig.total_gain_loss?.toFixed(2) || '0.00'}€
+												{selectedConfig.total_gain_loss?.toFixed(2) || '0.00'}{currencySymbol(selectedConfig.stocks[0]?.currency)}
 											</p>
 										</div>
 										<div>

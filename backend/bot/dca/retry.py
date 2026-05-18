@@ -49,14 +49,14 @@ def retry_with_backoff(
 
                     if attempt < max_retries:
                         logger.warning(
-                            f"Attempt {attempt + 1}/{max_retries + 1} failed for {func.__name__}: {e}. "
+                            f"Attempt {attempt + 1}/{max_retries + 1} failed for {getattr(func, '__name__', '<callable>')}: {e}. "
                             f"Retrying in {delay:.1f}s..."
                         )
                         time.sleep(delay)
                         delay *= backoff_factor
                     else:
                         logger.error(
-                            f"Definitive failure after {max_retries + 1} attempts for {func.__name__}: {e}"
+                            f"Definitive failure after {max_retries + 1} attempts for {getattr(func, '__name__', '<callable>')}: {e}"
                         )
 
             # If we reach here, all attempts failed

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError, OperationalError
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 load_dotenv()
 
@@ -33,8 +33,10 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 # Declarative base for all models
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 # Type variable for generic return type
@@ -100,6 +102,7 @@ def with_db_retry(
                             f"DB operation failed after {max_retries + 1} attempts: {e}"
                         )
 
+            assert last_exception is not None
             raise last_exception
 
         return wrapper

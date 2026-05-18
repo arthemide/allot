@@ -44,6 +44,8 @@ class EmailNotifier:
         try:
             msg = MIMEMultipart()
             msg["From"] = self.from_email
+            if not self.to_email:
+                raise ValueError("Recipient email (EMAIL_TO) not set")
             msg["To"] = self.to_email
             msg["Subject"] = f"[DCA Bot] {subject}"
             msg["Date"] = formatdate(localtime=True)

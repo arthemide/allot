@@ -22,6 +22,7 @@ class TransactionRepository:
         fund_id: Optional[int] = None,
         base_prum: Optional[Decimal] = None,
         historical_quantity: Decimal = Decimal("0"),
+        currency: str = "USD",
         session=None,
     ) -> AssetTable:
         """
@@ -66,6 +67,7 @@ class TransactionRepository:
                 arbitration_threshold=0.0,
                 threshold_to_alert=0.0,
                 base_prum=base_prum,
+                currency=currency,
             )
             session.add(asset)
             session.commit()

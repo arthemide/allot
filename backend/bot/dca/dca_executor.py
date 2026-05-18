@@ -5,13 +5,14 @@ Handles balance verification, earn transfer, and order execution.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 from loguru import logger
 
 from .binance_client import BinanceAPIError, BinanceClient
 from .config import Config
 from .email_notifier import get_notifier
+from .models import MarketOrder
 from .purchase_tracker import PurchaseTracker
 from .retry import retry_with_backoff
 
@@ -34,12 +35,16 @@ class DCAExecutor:
         self.dca_config = config.dca
 
         # Initialize purchase tracker
+        # NB: tracker stores the asset by `asset_symbol` (e.g. "ETH-USD"), not
+        # the Binance trading pair (e.g. "ETHUSDC"), so it lines up with assets
+        # already linked to a fund and avoids duplicates.
         self.tracker = PurchaseTracker(
-            symbol=config.dca.symbol,
+            symbol=config.dca.asset_symbol,
             asset_name=f"{config.dca.base_asset}",  # e.g., "ETH"
             fund_id=None,  # No fund for crypto assets
             base_prum=config.dca.base_prum,
             base_quantity=config.dca.base_quantity,
+            currency=config.dca.asset_currency,
         )
 
     def should_execute_purchase(self) -> Tuple[bool, str]:
@@ -187,6 +192,9 @@ class DCAExecutor:
             # 3. Transfer from earn to spot
             logger.info(f"Transferring {shortage} {quote_asset} from Earn to Spot...")
 
+            if product_id is None:
+                logger.error("Earn position has no product_id")
+                return False
             redeem_result = self.client.redeem_flexible_product(
                 product_id=product_id, amount=str(shortage)
             )
@@ -215,7 +223,7 @@ class DCAExecutor:
             return False
 
     @retry_with_backoff(max_retries=3, initial_delay=2.0, exceptions=(BinanceAPIError,))
-    def execute_dca_purchase(self) -> Optional[Dict[str, Any]]:
+    def execute_dca_purchase(self) -> Optional[MarketOrder]:
         """
         Execute complete DCA purchase:
         1. Check decision logic (momentum + PRUM)

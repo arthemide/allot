@@ -1,26 +1,29 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.db.config import Base
+
+if TYPE_CHECKING:
+    from shared.db.models.asset import AssetTable
 
 
 class FundTable(Base):
     __tablename__ = "funds"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    created_at = Column(
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
-    updated_at = Column(
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # Relationship to assets
-    assets = relationship(
+    assets: Mapped[List["AssetTable"]] = relationship(  # noqa: F821
         "AssetTable", back_populates="fund", cascade="all, delete-orphan"
     )

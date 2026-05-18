@@ -87,6 +87,7 @@ def fund_table_to_pydantic(fund: FundTable) -> FundSchema:
                 target_repartition=asset.target_repartition,
                 arbitration_threshold=asset.arbitration_threshold,
                 threshold_to_alert=asset.threshold_to_alert,
+                currency=asset.currency,
             )
         )
 

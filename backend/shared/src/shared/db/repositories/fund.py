@@ -18,7 +18,7 @@ class FundRepository:
                 .options(selectinload(FundTable.assets))
                 .order_by(FundTable.created_at.desc())
             )
-            records = session.scalars(stmt).all()
+            records = list(session.scalars(stmt).all())
         return records
 
     @staticmethod
@@ -61,7 +61,7 @@ class FundRepository:
         with SessionLocal() as session:
             with session.begin():
                 result = session.execute(stmt)
-                if result.rowcount == 0:
+                if result.rowcount == 0:  # ty: ignore[unresolved-attribute]
                     return None
 
             # Fetch and return the updated fund with assets

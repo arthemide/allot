@@ -18,6 +18,7 @@ class StockSchema(BaseModel):
     target_repartition: float | None = None
     arbitration_threshold: float
     threshold_to_alert: float
+    currency: str = "USD"
 
 
 class FundSchema(BaseModel):
@@ -66,7 +67,7 @@ class TransactionSchema(BaseModel):
     price: float
     total_cost: float
     order_id: str | None
-    created_at: datetime
+    created_at: datetime | None = None
 
 
 class PricePoint(BaseModel):
