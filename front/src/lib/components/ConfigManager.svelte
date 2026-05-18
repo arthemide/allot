@@ -185,6 +185,30 @@
 		}
 	}
 
+	type AlertStatus = { arbitration: 'over' | 'under' | null; gainLoss: 'gain' | 'loss' | null };
+
+	function getAlertStatus(stock: Stock): AlertStatus {
+		let arbitration: AlertStatus['arbitration'] = null;
+		if (stock.target_repartition != null) {
+			const diff = stock.current_repartition - stock.target_repartition;
+			if (Math.abs(diff) > stock.arbitration_threshold) {
+				arbitration = diff > 0 ? 'over' : 'under';
+			}
+		}
+		let gainLoss: AlertStatus['gainLoss'] = null;
+		if (stock.gain_loss_percentage != null && Math.abs(stock.gain_loss_percentage) > stock.threshold_to_alert) {
+			gainLoss = stock.gain_loss_percentage > 0 ? 'gain' : 'loss';
+		}
+		return { arbitration, gainLoss };
+	}
+
+	const ALERT_BADGES: Record<'over' | 'under' | 'gain' | 'loss', { label: string; classes: string }> = {
+		over: { label: 'Over-weight', classes: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200' },
+		under: { label: 'Under-weight', classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' },
+		gain: { label: 'Gain', classes: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' },
+		loss: { label: 'Loss', classes: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' }
+	};
+
 	function exportConfig() {
 		if (!selectedConfig) return;
 
@@ -320,11 +344,13 @@
                                                 <Table.Head>Today Price</Table.Head>
 												<Table.Head>Market Value</Table.Head>
 												<Table.Head>Gain/Loss</Table.Head>
+												<Table.Head>Alerts</Table.Head>
 												<Table.Head class="text-right">Actions</Table.Head>
                                             </Table.Row>
                                         </Table.Header>
 										<Table.Body>
 											{#each selectedConfig.stocks as stock}
+												{@const alertStatus = getAlertStatus(stock)}
 												<Table.Row class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick={() => expandedStockId = expandedStockId === stock.id ? null : stock.id}>
 													<Table.Cell class="font-medium">
 														<div class="flex flex-col">
@@ -338,6 +364,15 @@
 													<Table.Cell>{formatMoney(stock.market_value, stock.currency)}</Table.Cell>
 													<Table.Cell class={stock.gain_loss && stock.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
 														{formatMoney(stock.gain_loss, stock.currency)}
+													</Table.Cell>
+													<Table.Cell>
+														<div class="flex flex-wrap gap-1">
+															{#each [alertStatus.arbitration, alertStatus.gainLoss].filter((v) => v !== null) as variant}
+																<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {ALERT_BADGES[variant!].classes}">
+																	{ALERT_BADGES[variant!].label}
+																</span>
+															{/each}
+														</div>
 													</Table.Cell>
 													<Table.Cell class="text-right">
 														<div class="flex justify-end gap-2">
@@ -362,7 +397,7 @@
 												</Table.Row>
 												{#if expandedStockId === stock.id}
 												<Table.Row class="bg-slate-50 dark:bg-slate-800">
-													<Table.Cell colspan="7" class="p-4">
+													<Table.Cell colspan="8" class="p-4">
 														<div class="grid grid-cols-3 gap-4 text-sm">
 															<div>
 																<span class="font-semibold">PRUM:</span>
@@ -370,13 +405,15 @@
 															</div>
 															<div>
 																<span class="font-semibold">Gain/Loss %:</span>
-																<span class="ml-2 {stock.gain_loss_percentage && stock.gain_loss_percentage >= 0 ? 'text-green-600' : 'text-red-600'}">
+																<span class="ml-2 {alertStatus.gainLoss === 'gain' ? 'text-green-600 font-medium' : alertStatus.gainLoss === 'loss' ? 'text-red-600 font-medium' : ''}">
 																	{stock.gain_loss_percentage ? stock.gain_loss_percentage.toFixed(2) + '%' : 'N/A'}
 																</span>
 															</div>
 															<div>
 																<span class="font-semibold">Current Repartition:</span>
-																<span class="ml-2">{stock.current_repartition}%</span>
+																<span class="ml-2 {alertStatus.arbitration === 'over' ? 'text-orange-600 font-medium' : alertStatus.arbitration === 'under' ? 'text-blue-600 font-medium' : ''}">
+																	{stock.current_repartition}%
+																</span>
 															</div>
 															<div>
 																<span class="font-semibold">Target Repartition:</span>
