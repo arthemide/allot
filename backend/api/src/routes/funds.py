@@ -1,15 +1,28 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 from src.models.pydantic.schema import (
+    Alert,
     FundSchema,
     FundSchemaCreate,
     FundSchemaUpdate,
     StockSchema,
 )
+from src.services.alerts import check_fund_alerts
+from src.services.email_notifier import get_alert_notifier
 from src.services.fund import FundService
 from src.services.stock import StockService
+
+
+class FundAlertResponse(BaseModel):
+    fund_id: str
+    fund_name: str
+    alerts_count: int
+    alerts: list[Alert]
+    email_sent: bool
+
 
 # Fund configuration routes
 router = APIRouter(prefix="/funds", tags=["funds"])
@@ -75,6 +88,25 @@ def update_stock(fund_id: str, stock_id: str, stock: StockSchema):
             status_code=status.HTTP_404_NOT_FOUND, detail="Fund or stock not found"
         )
     return result
+
+
+@router.post("/{fund_id}/check-alerts", response_model=FundAlertResponse)
+def check_alerts(fund_id: str):
+    """Manually trigger a threshold check for a fund and email the digest."""
+    fund = FundService.get_by_id(fund_id)
+    if fund is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Fund not found"
+        )
+    alerts = check_fund_alerts(fund)
+    email_sent = get_alert_notifier().notify_fund_alerts(fund, alerts)
+    return FundAlertResponse(
+        fund_id=fund_id,
+        fund_name=fund.fund_name,
+        alerts_count=len(alerts),
+        alerts=alerts,
+        email_sent=email_sent,
+    )
 
 
 @router.delete("/{fund_id}/stocks/{stock_id}", response_model=FundSchema)

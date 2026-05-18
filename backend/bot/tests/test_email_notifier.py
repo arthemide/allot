@@ -28,7 +28,7 @@ class TestSendEmail:
         Then: Returns True, SMTP methods called correctly
         """
         # Given
-        mock_smtp = mocker.patch("dca.email_notifier.smtplib.SMTP")
+        mock_smtp = mocker.patch("shared.email_notifier.smtplib.SMTP")
         mock_server = mock_smtp.return_value.__enter__.return_value
 
         # When
@@ -50,7 +50,7 @@ class TestSendEmail:
         """
         # Given
         mocker.patch(
-            "dca.email_notifier.smtplib.SMTP",
+            "shared.email_notifier.smtplib.SMTP",
             side_effect=Exception("Connection refused"),
         )
 

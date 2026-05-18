@@ -1015,6 +1015,7 @@ name = "stock-alerting-api"
 version = "0.1.0"
 source = { virtual = "api" }
 dependencies = [
+    { name = "apscheduler" },
     { name = "fastapi" },
     { name = "stock-alerting-shared" },
     { name = "uvicorn" },
@@ -1023,6 +1024,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "apscheduler", specifier = ">=3.10.4" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "stock-alerting-shared", editable = "shared" },
     { name = "uvicorn", specifier = ">=0.32.0" },
