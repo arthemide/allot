@@ -234,6 +234,12 @@ class TestAssetSymbolIsDbIdentifier:
         except requests.exceptions.RequestException as exc:
             pytest.skip(f"Binance unreachable: {exc}")
 
+        if response.status_code == 451:
+            pytest.skip(
+                "Binance unavailable from this region (HTTP 451) — "
+                "cannot validate symbol against the live API."
+            )
+
         assert response.status_code == 200, (
             f"Binance rejected DCAConfig().symbol={symbol!r} — likely a "
             f"regression where the DB asset id was passed as Binance pair. "
