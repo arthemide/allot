@@ -166,6 +166,47 @@ class TestAddTransaction:
         assert transactions[0].quantity == Decimal("0.5")
         assert transactions[0].price == Decimal("3100.0")
 
+    def test_add_transaction_is_idempotent_on_order_id(
+        self, test_session, sample_asset
+    ):
+        """
+        Re-recording the same broker order must not create a duplicate row.
+
+        Given: A transaction already recorded with a given order_id
+        When: add_transaction is called again with the same order_id
+        Then: The existing transaction is returned and no new row is created
+        """
+        # Given
+        first = TransactionRepository.add_transaction(
+            asset_id=sample_asset.id,
+            transaction_type="buy",
+            quantity=Decimal("0.01"),
+            price=Decimal("3000.0"),
+            total_cost=Decimal("30.0"),
+            order_id="dup_order",
+            session=test_session,
+        )
+
+        # When
+        second = TransactionRepository.add_transaction(
+            asset_id=sample_asset.id,
+            transaction_type="buy",
+            quantity=Decimal("0.01"),
+            price=Decimal("3000.0"),
+            total_cost=Decimal("30.0"),
+            order_id="dup_order",
+            session=test_session,
+        )
+
+        # Then
+        assert second.id == first.id
+        transactions = (
+            test_session.query(AssetTransactionTable)
+            .filter_by(asset_id=sample_asset.id, order_id="dup_order")
+            .all()
+        )
+        assert len(transactions) == 1
+
     def test_add_transaction_returns_accessible_attributes_with_own_session(
         self, test_engine, mocker
     ):

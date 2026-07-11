@@ -291,6 +291,7 @@ class DCAExecutor:
             total_fees = Decimal("0")
             total_cost = Decimal("0")
             total_qty = Decimal("0")
+            base_asset_fees = Decimal("0")
 
             for fill in fills:
                 qty = fill.qty
@@ -301,11 +302,25 @@ class DCAExecutor:
                 total_cost += qty * price
                 total_fees += commission
 
-            avg_price = total_cost / total_qty if total_qty > 0 else Decimal("0")
+                # Commissions reduce what actually lands in the wallet (base
+                # asset) or add to what was really spent (quote asset).
+                if fill.commission_asset == self.dca_config.base_asset:
+                    base_asset_fees += commission
+                elif fill.commission_asset == self.dca_config.quote_asset:
+                    total_cost += commission
+                else:
+                    logger.warning(
+                        f"Commission paid in {fill.commission_asset} "
+                        f"({commission}) not reflected in cost basis"
+                    )
 
-            # 6. Record purchase in tracker
+            net_qty = executed_qty - base_asset_fees
+            avg_price = total_cost / net_qty if net_qty > 0 else Decimal("0")
+
+            # 6. Record purchase in tracker (net of base-asset fees, so the
+            # local position matches the balance Binance actually credits)
             self.tracker.add_purchase(
-                quantity=executed_qty,
+                quantity=net_qty,
                 price=avg_price,
                 total_cost=total_cost,
                 order_id=str(order_id),
@@ -317,7 +332,8 @@ class DCAExecutor:
             logger.info(f"Order ID: {order_id}")
             logger.info(f"Status: {status}")
             logger.info(
-                f"Quantity purchased: {executed_qty} {self.dca_config.base_asset}"
+                f"Quantity purchased: {executed_qty} {self.dca_config.base_asset} "
+                f"(net credited: {net_qty})"
             )
             logger.info(f"Average price: {avg_price} {self.dca_config.quote_asset}")
             logger.info(f"Total cost: {total_cost} {self.dca_config.quote_asset}")
@@ -332,7 +348,7 @@ class DCAExecutor:
             # Send email notification
             get_notifier().notify_purchase_success(
                 symbol=symbol,
-                quantity=float(executed_qty),
+                quantity=float(net_qty),
                 price=float(avg_price),
                 cost=float(total_cost),
                 reason=reason,

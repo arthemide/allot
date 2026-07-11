@@ -131,6 +131,22 @@ class TransactionRepository:
             if not asset_id:
                 raise ValueError(f"Asset not found: {symbol}")
 
+            # Idempotency: an order already recorded must not be inserted twice
+            # (scheduler misfire retries, manual re-runs, etc.)
+            if order_id:
+                existing = session.scalars(
+                    select(AssetTransactionTable).where(
+                        AssetTransactionTable.asset_id == asset_id,
+                        AssetTransactionTable.order_id == order_id,
+                    )
+                ).first()
+                if existing:
+                    logger.warning(
+                        f"Transaction with order_id={order_id} already recorded "
+                        f"for asset_id={asset_id} (id={existing.id}) - skipping insert"
+                    )
+                    return existing
+
             # Begin transaction only if we created our own session
             if use_existing_session:
                 transaction = AssetTransactionTable(
@@ -146,17 +162,17 @@ class TransactionRepository:
                 session.flush()
                 session.refresh(transaction)
             else:
-                with session.begin():
-                    transaction = AssetTransactionTable(
-                        asset_id=asset_id,
-                        transaction_type=transaction_type,
-                        timestamp=timestamp or datetime.now(timezone.utc),
-                        quantity=quantity,
-                        price=price,
-                        total_cost=total_cost,
-                        order_id=order_id,
-                    )
-                    session.add(transaction)
+                transaction = AssetTransactionTable(
+                    asset_id=asset_id,
+                    transaction_type=transaction_type,
+                    timestamp=timestamp or datetime.now(timezone.utc),
+                    quantity=quantity,
+                    price=price,
+                    total_cost=total_cost,
+                    order_id=order_id,
+                )
+                session.add(transaction)
+                session.commit()
                 # Refresh after commit to load attributes while session is still open
                 session.refresh(transaction)
 
@@ -233,6 +249,48 @@ class TransactionRepository:
                 f"PRUM calculated for {symbol}: {prum} (total_cost={total_cost}, total_qty={total_qty})"
             )
             return prum
+        finally:
+            if not use_existing_session:
+                session.close()
+
+    @staticmethod
+    @with_db_retry(max_retries=3)
+    def calculate_total_quantity(symbol: str, session=None) -> Optional[Decimal]:
+        """
+        Calculate the total quantity held for an asset:
+        base historical quantity + buys - sells.
+
+        Args:
+            symbol: Asset symbol
+            session: Optional database session (for testing)
+
+        Returns:
+            Total quantity or None if asset not found
+        """
+        use_existing_session = session is not None
+        if not session:
+            session = SessionLocal()
+
+        try:
+            stmt = (
+                select(AssetTable)
+                .options(selectinload(AssetTable.transactions))
+                .where(AssetTable.symbol == symbol)
+            )
+            asset = session.scalars(stmt).first()
+
+            if not asset:
+                logger.warning(f"Asset not found: {symbol}")
+                return None
+
+            total_qty = Decimal(str(asset.shares_number or 0))
+            for transaction in asset.transactions:
+                if transaction.transaction_type == "buy":
+                    total_qty += transaction.quantity
+                elif transaction.transaction_type == "sell":
+                    total_qty -= transaction.quantity
+
+            return total_qty
         finally:
             if not use_existing_session:
                 session.close()

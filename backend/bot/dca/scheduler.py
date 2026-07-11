@@ -14,6 +14,7 @@ from shared.db.config import check_db_health
 from .config import Config
 from .dca_executor import create_dca_executor
 from .email_notifier import get_notifier
+from .reconciliation import reconcile_balance
 
 
 class DCAScheduler:
@@ -57,6 +58,18 @@ class DCAScheduler:
         except Exception as e:
             logger.error(f"❌ Critical error in DCA job: {e}", exc_info=True)
             get_notifier().notify_crash(str(e))
+
+    def _reconciliation_job(self):
+        """
+        Job executed daily to check that the local position still matches
+        the Binance spot balance (alerts by email on drift).
+        """
+        try:
+            logger.info("🔍 Reconciliation job triggered")
+            reconcile_balance(self.dca_executor.client, self.config)
+        except Exception as e:
+            logger.error(f"❌ Critical error in reconciliation job: {e}", exc_info=True)
+            get_notifier().notify_error("Reconciliation Error", str(e))
 
     def _check_and_handle_misfires(self):
         """
@@ -186,6 +199,17 @@ class DCAScheduler:
             max_instances=1,  # Prevent concurrent executions
             misfire_grace_time=grace_seconds,
         )
+
+        # Daily reconciliation of local position vs Binance balance
+        self.scheduler.add_job(
+            self._reconciliation_job,
+            trigger=CronTrigger(hour=8, minute=0),
+            id="reconciliation_job",
+            name="Position Reconciliation Job",
+            replace_existing=True,
+            max_instances=1,
+        )
+        logger.info("📅 Reconciliation: daily at 08:00")
 
         logger.info("✅ Scheduler configured successfully")
         logger.info(

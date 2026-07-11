@@ -70,6 +70,12 @@ Examples:
         help="Test mode: display configuration without executing purchase",
     )
 
+    parser.add_argument(
+        "--reconcile",
+        action="store_true",
+        help="Compare local position with Binance balance then exit",
+    )
+
     return parser.parse_args()
 
 
@@ -157,8 +163,19 @@ def main():
             success = test_mode()
             sys.exit(0 if success else 1)
 
-        # Create scheduler
         config = get_config()
+
+        # Manual reconciliation mode
+        if args.reconcile:
+            from .binance_client import BinanceClient
+            from .reconciliation import reconcile_balance
+
+            logger.info("Manual reconciliation mode (--reconcile)")
+            client = BinanceClient(config.binance)
+            in_sync = reconcile_balance(client, config)
+            sys.exit(0 if in_sync else 1)
+
+        # Create scheduler
         scheduler = DCAScheduler(config)
 
         # Single execution mode

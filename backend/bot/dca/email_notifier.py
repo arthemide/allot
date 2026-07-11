@@ -77,6 +77,29 @@ This is an automated notification from your DCA bot.
 """
         self.send_email(subject, body)
 
+    def notify_reconciliation_drift(
+        self, asset: str, local_qty: str, broker_qty: str, drift: str
+    ):
+        subject = f"⚠️ Position Drift Detected - {asset}"
+        body = f"""Position Reconciliation Alert
+
+The locally tracked position no longer matches the Binance spot balance.
+
+Asset: {asset}
+Local quantity: {local_qty}
+Binance balance (free + locked): {broker_qty}
+Drift (broker - local): {drift}
+
+Possible causes: sell/withdrawal/conversion made outside the bot,
+funds moved to Earn/staking, or an incorrect historical seed
+(DCA_BASE_QUANTITY / DCA_BASE_PRUM).
+
+Please review and adjust the local records.
+
+This is an automated notification from your DCA bot.
+"""
+        self.send_email(subject, body)
+
     def notify_misfire(self, missed_time: str, will_retry: bool = True):
         subject = "⏰ Missed Execution Detected"
         retry_info = (

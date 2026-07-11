@@ -445,6 +445,61 @@ class TestExecuteDCAPurchase:
         mock_purchase_tracker.add_purchase.assert_called_once()
         mock_notifier.return_value.notify_purchase_success.assert_called_once()
 
+    def test_should_apply_commissions_to_recorded_purchase(
+        self, mocker, mock_binance_client, mock_purchase_tracker, dca_config
+    ):
+        """
+        Should deduct base-asset fees from quantity and add quote-asset fees to cost.
+
+        Given: An order with one fill paying commission in ETH and one in USDC
+        When: Executing DCA purchase
+        Then: Recorded quantity is net of the ETH commission and recorded cost
+              includes the USDC commission
+        """
+        # Given
+        mocker.patch("dca.dca_executor.PurchaseTracker")
+        mocker.patch("dca.dca_executor.get_notifier")
+
+        executor = DCAExecutor(mock_binance_client, dca_config)
+        executor.tracker = mock_purchase_tracker
+
+        mocker.patch.object(
+            executor,
+            "should_execute_purchase",
+            return_value=(True, "Execute: conditions met"),
+        )
+        mocker.patch.object(executor, "check_and_ensure_balance", return_value=True)
+
+        mock_binance_client.get_symbol_price.return_value = Decimal("3000.0")
+
+        mock_order = mocker.Mock()
+        mock_order.order_id = 12345
+        mock_order.status = "FILLED"
+        mock_order.executed_qty = Decimal("0.01")
+        mock_order.fills = [
+            mocker.Mock(
+                qty=Decimal("0.005"),
+                price=Decimal("3000.0"),
+                commission=Decimal("0.000005"),
+                commission_asset="ETH",
+            ),
+            mocker.Mock(
+                qty=Decimal("0.005"),
+                price=Decimal("3000.0"),
+                commission=Decimal("0.015"),
+                commission_asset="USDC",
+            ),
+        ]
+        mock_binance_client.create_market_order.return_value = mock_order
+
+        # When
+        executor.execute_dca_purchase()
+
+        # Then
+        call_kwargs = mock_purchase_tracker.add_purchase.call_args.kwargs
+        assert call_kwargs["quantity"] == Decimal("0.01") - Decimal("0.000005")
+        assert call_kwargs["total_cost"] == Decimal("30.0") + Decimal("0.015")
+
     def test_should_return_none_when_purchase_skipped(
         self, mocker, mock_binance_client, mock_purchase_tracker, dca_config
     ):

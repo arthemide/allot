@@ -326,13 +326,16 @@ class TestSetupSchedule:
 
         Given: Config with days_of_month="1,15", hour=10, minute=2
         When: Setting up schedule
-        Then: Job added to scheduler with correct trigger
+        Then: DCA and reconciliation jobs added to scheduler
         """
         # When
         dca_scheduler.setup_schedule()
 
         # Then
-        dca_scheduler.scheduler.add_job.assert_called_once()
+        job_ids = [
+            call.kwargs["id"] for call in dca_scheduler.scheduler.add_job.call_args_list
+        ]
+        assert job_ids == ["dca_job", "reconciliation_job"]
 
     def test_should_raise_when_no_days_configured(self, mocker, dca_scheduler):
         """
