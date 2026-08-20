@@ -1,4 +1,13 @@
-import type { Chart, NewTransaction, Position, Summary, Transaction } from '$lib/types/api';
+import type {
+	Chart,
+	Envelope,
+	NewAsset,
+	NewTransaction,
+	Position,
+	SearchHit,
+	Summary,
+	Transaction
+} from '$lib/types/api';
 
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';
@@ -36,11 +45,6 @@ export const addTransaction = (transaction: NewTransaction) =>
 export const deleteTransaction = (id: number) =>
 	request<void>(`/transactions/${id}`, { method: 'DELETE' });
 
-export const setManualValue = (symbol: string, value: number) =>
-	request<Position>(`/assets/${encodeURIComponent(symbol)}/manual-value`, {
-		method: 'PUT',
-		body: JSON.stringify({ value })
-	});
 
 
 
@@ -49,3 +53,29 @@ export async function getNote(): Promise<string> {
 	if (!response.ok) throw new Error(`GET /note failed: ${response.status}`);
 	return response.text();
 }
+
+export const searchTickers = (query: string) =>
+	request<SearchHit[]>(`/assets/search?q=${encodeURIComponent(query)}`);
+
+export const createAsset = (asset: NewAsset) =>
+	request<Position>('/assets', { method: 'POST', body: JSON.stringify(asset) });
+
+export const updateAsset = (
+	symbol: string,
+	body: { label: string; envelope: string; weight: number }
+) =>
+	request<Position>(`/assets/${encodeURIComponent(symbol)}`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
+
+export const deleteAsset = (symbol: string) =>
+	request<void>(`/assets/${encodeURIComponent(symbol)}`, { method: 'DELETE' });
+
+export const getEnvelopes = () => request<Envelope[]>('/envelopes');
+
+export const setEnvelopeAmount = (name: string, monthlyAmount: number) =>
+	request<Envelope>(`/envelopes/${encodeURIComponent(name)}`, {
+		method: 'PUT',
+		body: JSON.stringify({ name, monthly_amount: monthlyAmount })
+	});

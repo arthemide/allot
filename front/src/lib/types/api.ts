@@ -3,9 +3,9 @@ export interface Position {
 	label: string;
 	envelope: string;
 	currency: string;
-	price_source: 'yfinance' | 'manual';
-	quantity: number | null;
-	prum: number | null;
+	weight: number;
+	quantity: number;
+	prum: number;
 	invested: number;
 	price: number | null;
 	market_value: number | null;
@@ -74,4 +74,27 @@ export interface Summary {
 	gain: number;
 	gain_percent: number | null;
 	envelopes: SummaryEnvelope[];
+}
+
+
+export interface SearchHit {
+	symbol: string;
+	label: string;
+	exchange: string;
+	type: string;
+	currency: string | null;
+	price: number | null;
+}
+
+export interface Envelope {
+	name: string;
+	monthly_amount: number;
+}
+
+export interface NewAsset {
+	symbol: string;
+	label: string;
+	envelope: string;
+	currency: string;
+	weight: number;
 }

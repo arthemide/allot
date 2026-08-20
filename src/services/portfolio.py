@@ -12,8 +12,6 @@ from src import calc
 from src.databases import sqlite as db
 from src.services import prices
 
-MANUAL = "manual"
-
 
 def _trades(symbol: str) -> list[calc.Trade]:
     return [
@@ -28,30 +26,8 @@ def _trades(symbol: str) -> list[calc.Trade]:
 
 
 def position_of(asset: dict) -> dict:
-    """PRUM, quantity, invested, market value and gain for one asset.
-
-    A manual asset has no PRUM and no chart: its market value is the number the
-    user typed in, and no network call is made for it.
-    """
+    """PRUM, quantity, invested, market value and gain for one asset."""
     symbol = asset["symbol"]
-
-    if asset["price_source"] == MANUAL:
-        value = asset["manual_value"] or 0.0
-        return {
-            "symbol": symbol,
-            "label": asset["label"],
-            "envelope": asset["envelope"],
-            "currency": asset["currency"],
-            "price_source": MANUAL,
-            "quantity": None,
-            "prum": None,
-            "invested": value,
-            "price": None,
-            "market_value": value,
-            "gain": None,
-            "gain_percent": None,
-        }
-
     result = calc.position(_trades(symbol), asset["base_quantity"], asset["base_prum"])
     price = prices.current_price(symbol)
     market_value = result.quantity * price if price is not None else None
@@ -67,7 +43,7 @@ def position_of(asset: dict) -> dict:
         "label": asset["label"],
         "envelope": asset["envelope"],
         "currency": asset["currency"],
-        "price_source": asset["price_source"],
+        "weight": asset["weight"],
         "quantity": result.quantity,
         "prum": result.prum,
         "invested": result.invested,
@@ -90,7 +66,7 @@ def chart_data(symbol: str) -> dict:
     last twelve months.
     """
     asset = db.get_asset(symbol)
-    if asset is None or asset["price_source"] == MANUAL:
+    if asset is None:
         return {"symbol": symbol, "prices": [], "transactions": [], "prum": []}
 
     rows = db.transactions_of(symbol)

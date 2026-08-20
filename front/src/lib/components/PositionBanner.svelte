@@ -6,8 +6,7 @@
 
 	const money = $derived((value: number | null) => formatMoney(value, position.currency));
 
-	function quantity(value: number | null): string {
-		if (value === null) return '-';
+	function quantity(value: number): string {
 		return value.toLocaleString('fr-FR', { maximumFractionDigits: 8 });
 	}
 

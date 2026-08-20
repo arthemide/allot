@@ -64,25 +64,63 @@ def get_asset(symbol: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
-def upsert_asset(
-    symbol: str, label: str, envelope: str, currency: str, price_source: str
+def add_asset(
+    symbol: str, label: str, envelope: str, currency: str, weight: float = 1.0
 ) -> None:
     execute(
         """
-        INSERT INTO asset (symbol, label, envelope, currency, price_source)
+        INSERT INTO asset (symbol, label, envelope, currency, weight)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(symbol) DO UPDATE SET
             label = excluded.label,
             envelope = excluded.envelope,
             currency = excluded.currency,
-            price_source = excluded.price_source
+            weight = excluded.weight
         """,
-        (symbol, label, envelope, currency, price_source),
+        (symbol, label, envelope, currency, weight),
     )
 
 
-def set_manual_value(symbol: str, value: float) -> None:
-    execute("UPDATE asset SET manual_value = ? WHERE symbol = ?", (value, symbol))
+def update_asset(symbol: str, label: str, envelope: str, weight: float) -> None:
+    execute(
+        "UPDATE asset SET label = ?, envelope = ?, weight = ? WHERE symbol = ?",
+        (label, envelope, weight, symbol),
+    )
+
+
+def delete_asset(symbol: str) -> None:
+    """Transactions go with it, through ON DELETE CASCADE."""
+    execute("DELETE FROM asset WHERE symbol = ?", (symbol,))
+
+
+# --- envelopes ------------------------------------------------------------
+
+
+def all_envelopes() -> list[dict[str, Any]]:
+    return query("SELECT * FROM envelope ORDER BY name")
+
+
+def get_envelope(name: str) -> dict[str, Any] | None:
+    rows = query("SELECT * FROM envelope WHERE name = ?", (name,))
+    return rows[0] if rows else None
+
+
+def upsert_envelope(name: str, monthly_amount: float) -> None:
+    execute(
+        """
+        INSERT INTO envelope (name, monthly_amount) VALUES (?, ?)
+        ON CONFLICT(name) DO UPDATE SET monthly_amount = excluded.monthly_amount
+        """,
+        (name, monthly_amount),
+    )
+
+
+def delete_envelope(name: str) -> None:
+    execute("DELETE FROM envelope WHERE name = ?", (name,))
+
+
+def envelope_asset_count(name: str) -> int:
+    return query("SELECT count(*) AS n FROM asset WHERE envelope = ?", (name,))[0]["n"]
 
 
 # --- transactions ---------------------------------------------------------

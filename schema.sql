@@ -1,20 +1,29 @@
--- Wealth tracking schema. Single file, versioned by PRAGMA user_version.
+-- Allot schema. Single file, versioned by PRAGMA user_version.
 -- No migration framework: bump the version and add the DDL below when the
 -- schema changes.
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 
 PRAGMA foreign_keys = ON;
 
--- One row per tracked asset. Envelope, weight and currency mirror config.toml;
--- config.toml stays the source of truth for allocation, this table is the
--- source of truth for holdings.
+-- An envelope groups assets and carries the amount invested into it every
+-- month, in EUR. There is no global savings figure: each envelope stands on
+-- its own, and one never draws from another.
+CREATE TABLE IF NOT EXISTS envelope (
+    name           TEXT PRIMARY KEY,
+    monthly_amount REAL NOT NULL DEFAULT 0 CHECK (monthly_amount >= 0)
+);
+
+-- One row per tracked asset. Assets are added from the ticker search, not from
+-- a configuration file.
 CREATE TABLE IF NOT EXISTS asset (
-    symbol       TEXT PRIMARY KEY,
-    label        TEXT NOT NULL,
-    envelope     TEXT NOT NULL,
-    currency     TEXT NOT NULL,
-    price_source TEXT NOT NULL DEFAULT 'yfinance'
-                 CHECK (price_source IN ('yfinance', 'manual')),
+    symbol   TEXT PRIMARY KEY,
+    label    TEXT NOT NULL,
+    envelope TEXT NOT NULL REFERENCES envelope(name) ON UPDATE CASCADE,
+    currency TEXT NOT NULL,
+
+    -- Relative weight inside the envelope. Never constrained to sum to 1:
+    -- the monthly split normalises by the total of the envelope's weights.
+    weight REAL NOT NULL DEFAULT 1 CHECK (weight >= 0),
 
     -- Opening position carried over from the legacy database: holdings that
     -- predate transaction tracking and have no transaction to back them.
@@ -22,12 +31,10 @@ CREATE TABLE IF NOT EXISTS asset (
     base_quantity REAL NOT NULL DEFAULT 0 CHECK (base_quantity >= 0),
     base_prum     REAL CHECK (base_prum IS NULL OR base_prum > 0),
 
-    -- price_source = 'manual' only: value entered by hand, in `currency`.
-    manual_value REAL CHECK (manual_value IS NULL OR manual_value >= 0),
-
-    CHECK (base_quantity = 0 OR base_prum IS NOT NULL),
-    CHECK (price_source <> 'manual' OR base_quantity = 0)
+    CHECK (base_quantity = 0 OR base_prum IS NOT NULL)
 );
+
+CREATE INDEX IF NOT EXISTS idx_asset_envelope ON asset (envelope);
 
 -- Every buy and sell. Positions are never stored: quantity and PRUM are
 -- recomputed from this table plus the asset's opening position.

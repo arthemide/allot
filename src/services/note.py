@@ -73,15 +73,13 @@ def render(today: date | None = None) -> str:
     total = sum(e["amount"] for e in envelopes)
     lines = [
         f"Point patrimoine - {MONTHS[today.month - 1]} {today.year}",
-        f"Épargne à placer : {_money(total)}",
+        f"À placer ce mois : {_money(total)}",
         "",
     ]
 
     for envelope in envelopes:
         lines.append(f"{envelope['envelope']} - {_money(envelope['amount'])}")
         for asset in envelope["assets"]:
-            if asset["price_source"] == "manual":
-                continue
             lines.append(_asset_line(asset))
 
     lines.append("")

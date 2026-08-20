@@ -12,9 +12,9 @@ class Position(BaseModel):
     label: str
     envelope: str
     currency: str
-    price_source: str
-    quantity: float | None
-    prum: float | None
+    weight: float
+    quantity: float
+    prum: float
     invested: float
     price: float | None
     market_value: float | None
@@ -58,9 +58,34 @@ class TransactionCreate(BaseModel):
     fees: float = Field(default=0.0, ge=0)
 
 
-class ManualValue(BaseModel):
-    value: float = Field(ge=0)
+class SearchHit(BaseModel):
+    """One ticker search result, price included so a dead symbol is visible."""
 
+    symbol: str
+    label: str
+    exchange: str
+    type: str
+    currency: str | None
+    price: float | None
+
+
+class AssetCreate(BaseModel):
+    symbol: str
+    label: str
+    envelope: str
+    currency: str
+    weight: float = Field(default=1.0, ge=0)
+
+
+class AssetUpdate(BaseModel):
+    label: str
+    envelope: str
+    weight: float = Field(ge=0)
+
+
+class Envelope(BaseModel):
+    name: str
+    monthly_amount: float = Field(ge=0)
 
 
 class SummaryAsset(BaseModel):

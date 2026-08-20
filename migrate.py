@@ -1,13 +1,13 @@
 """Load the CSV export of the legacy database into SQLite.
 
-Idempotent and replayable: assets are keyed by symbol, transactions by their
-broker order id, so running it twice changes nothing.
+Idempotent and replayable: envelopes and assets are keyed by name, transactions
+by their broker order id, so running it twice changes nothing.
 
     uv run migrate.py --csv-dir ../migration-csv
 
 The old schema maps onto the new one like this:
 
-    funds                -> asset.envelope (via FUND_TO_ENVELOPE)
+    funds                -> envelope (via FUND_TO_ENVELOPE)
     stocks               -> asset
     stocks.shares_number -> asset.base_quantity   (opening position)
     stocks.base_prum     -> asset.base_prum, or cost / shares_number when the
@@ -15,8 +15,9 @@ The old schema maps onto the new one like this:
     asset_transactions   -> transaction
 
 Dropped on purpose: current_repartition, target_repartition,
-arbitration_threshold and threshold_to_alert. Allocation now lives in
-config.toml. alembic_version is not migrated.
+arbitration_threshold and threshold_to_alert. Allocation is now edited in the
+app. alembic_version is not migrated. Funds that held no asset are not created:
+assets are added from the ticker search.
 """
 
 from __future__ import annotations
@@ -25,7 +26,6 @@ import argparse
 import csv
 import sqlite3
 import sys
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -37,8 +37,10 @@ FUND_TO_ENVELOPE = {
     "Binance": "CRYPTO",
     "PEA - Bourso": "PEA",
     "Titre - Bourso": "CTO",
-    "AFER": "AFER",
 }
+
+# Monthly amount seeded per envelope, in EUR. Editable in the app afterwards.
+SEED_MONTHLY_AMOUNT = {"CRYPTO": 55.0, "PEA": 330.0, "CTO": 82.5}
 
 
 def _read_csv(csv_dir: Path, name: str) -> list[dict]:
@@ -59,19 +61,12 @@ def create_schema(connection: sqlite3.Connection) -> None:
     connection.executescript((ROOT / "schema.sql").read_text(encoding="utf-8"))
 
 
-def load_config(path: Path) -> dict:
-    with path.open("rb") as handle:
-        return tomllib.load(handle)
-
-
-def migrate_assets(
-    connection: sqlite3.Connection, csv_dir: Path, config: dict
-) -> tuple[int, int]:
-    """Insert one asset row per old stock, then fill in config-only assets."""
+def migrate_assets(connection: sqlite3.Connection, csv_dir: Path) -> tuple[int, int]:
+    """Create the envelopes that actually hold something, then their assets."""
     funds = {row["id"]: row["name"] for row in _read_csv(csv_dir, "funds")}
     stocks = _read_csv(csv_dir, "stocks")
 
-    migrated = 0
+    envelopes = set()
     for stock in stocks:
         fund_name = funds.get(stock["fund_id"], "")
         envelope = FUND_TO_ENVELOPE.get(fund_name)
@@ -80,6 +75,19 @@ def migrate_assets(
                 f"no envelope mapped for fund {fund_name!r} "
                 f"(symbol {stock['symbol']}); add it to FUND_TO_ENVELOPE"
             )
+        envelopes.add(envelope)
+
+    for envelope in sorted(envelopes):
+        connection.execute(
+            """
+            INSERT INTO envelope (name, monthly_amount) VALUES (?, ?)
+            ON CONFLICT(name) DO NOTHING
+            """,
+            (envelope, SEED_MONTHLY_AMOUNT.get(envelope, 0.0)),
+        )
+
+    for stock in stocks:
+        envelope = FUND_TO_ENVELOPE[funds[stock["fund_id"]]]
 
         base_quantity = _number(stock["shares_number"]) or 0.0
         base_prum = _number(stock["base_prum"])
@@ -93,9 +101,9 @@ def migrate_assets(
 
         connection.execute(
             """
-            INSERT INTO asset (symbol, label, envelope, currency, price_source,
+            INSERT INTO asset (symbol, label, envelope, currency, weight,
                                base_quantity, base_prum)
-            VALUES (?, ?, ?, ?, 'yfinance', ?, ?)
+            VALUES (?, ?, ?, ?, 1, ?, ?)
             ON CONFLICT(symbol) DO UPDATE SET
                 label = excluded.label,
                 envelope = excluded.envelope,
@@ -112,35 +120,8 @@ def migrate_assets(
                 base_prum,
             ),
         )
-        migrated += 1
 
-    # Assets that exist only in config.toml get an empty row, so every
-    # configured envelope has something to show.
-    filled = 0
-    for entry in config.get("assets", []):
-        symbol = entry["ticker"]
-        existing = connection.execute(
-            "SELECT 1 FROM asset WHERE symbol = ?", (symbol,)
-        ).fetchone()
-        if existing:
-            continue
-        connection.execute(
-            """
-            INSERT INTO asset (symbol, label, envelope, currency, price_source,
-                               base_quantity, base_prum)
-            VALUES (?, ?, ?, ?, ?, 0, NULL)
-            """,
-            (
-                symbol,
-                entry.get("label", symbol),
-                entry["envelope"],
-                entry["currency"],
-                entry.get("price_source", "yfinance"),
-            ),
-        )
-        filled += 1
-
-    return migrated, filled
+    return len(envelopes), len(stocks)
 
 
 def migrate_transactions(connection: sqlite3.Connection, csv_dir: Path) -> int:
@@ -198,26 +179,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--csv-dir", type=Path, default=DEFAULT_CSV_DIR)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
-    parser.add_argument("--config", type=Path, default=ROOT / "config.toml")
     args = parser.parse_args()
-
-    config = load_config(args.config)
 
     args.db.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(args.db)
     connection.execute("PRAGMA foreign_keys = ON")
     try:
         create_schema(connection)
-        migrated, filled = migrate_assets(connection, args.csv_dir, config)
+        envelopes, assets = migrate_assets(connection, args.csv_dir)
         transactions = migrate_transactions(connection, args.csv_dir)
         connection.commit()
     finally:
         connection.close()
 
-    print(f"assets migrated from CSV     : {migrated}")
-    print(f"assets created from config    : {filled}")
-    print(f"transactions read             : {transactions}")
-    print(f"database                      : {args.db}")
+    print(f"envelopes created  : {envelopes}")
+    print(f"assets migrated    : {assets}")
+    print(f"transactions read  : {transactions}")
+    print(f"database           : {args.db}")
 
 
 if __name__ == "__main__":

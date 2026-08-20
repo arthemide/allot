@@ -17,7 +17,6 @@ PLAN = [
                 "amount": 440.0,
                 "multiplier": 1.0,
                 "currency": "EUR",
-                "price_source": "yfinance",
                 "price": 6.21,
                 "prum": None,
             }
@@ -33,7 +32,6 @@ PLAN = [
                 "amount": 123.75,
                 "multiplier": 1.5,
                 "currency": "USD",
-                "price_source": "yfinance",
                 "price": 1890.0,
                 "prum": 2150.0,
             },
@@ -42,27 +40,16 @@ PLAN = [
                 "amount": 41.25,
                 "multiplier": 0.5,
                 "currency": "USD",
-                "price_source": "yfinance",
                 "price": 64300.0,
                 "prum": 58000.0,
             },
         ],
     },
     {
-        "envelope": "AFER",
-        "amount": 110.0,
+        "envelope": "CTO",
+        "amount": 80.0,
         "market_value": 0.0,
-        "assets": [
-            {
-                "symbol": "AFER",
-                "amount": 110.0,
-                "multiplier": 1.0,
-                "currency": "EUR",
-                "price_source": "manual",
-                "price": None,
-                "prum": None,
-            }
-        ],
+        "assets": [],
     },
 ]
 
@@ -88,7 +75,7 @@ class TestNote:
         text = note.render(date(2026, 9, 15))
         lines = text.splitlines()
         assert lines[0] == "Point patrimoine - septembre 2026"
-        assert lines[1] == "Épargne à placer : 715 €"
+        assert lines[1] == "À placer ce mois : 685 €"
 
     def test_priced_asset_with_a_prum_shows_the_multiplier(self, offline):
         text = note.render(date(2026, 9, 15))
@@ -105,11 +92,10 @@ class TestNote:
         text = note.render(date(2026, 9, 15))
         assert "cours 6,21 €" in text
 
-    def test_manual_envelope_shows_its_amount_alone(self, offline):
-        # AFER has no ticker: the envelope line stands with no bullet under it
+    def test_envelope_without_assets_shows_its_amount_alone(self, offline):
+        # An envelope with nothing in it yet still states what goes into it
         text = note.render(date(2026, 9, 15))
-        assert "AFER - 110 €" in text
-        assert "  - AFER" not in text
+        assert "CTO - 80 €" in text
 
     def test_uses_plain_ascii_dashes(self, offline):
         text = note.render(date(2026, 9, 15))

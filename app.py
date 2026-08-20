@@ -16,7 +16,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from src import config
 from src.databases import sqlite as db
 from src.routes import router
 from src.services import prices
@@ -28,23 +27,9 @@ FRONT_DIST = Path(__file__).parent / "front" / "dist"
 DEV_ORIGIN = "http://localhost:5173"
 
 
-def _sync_assets_from_config(settings: config.Config) -> None:
-    """Make sure every configured asset exists as a row, without touching holdings."""
-    for asset in settings.assets:
-        existing = db.get_asset(asset.ticker)
-        if existing is None:
-            db.upsert_asset(
-                asset.ticker,
-                asset.label,
-                asset.envelope,
-                asset.currency,
-                asset.price_source,
-            )
-
-
-def _check_tickers(settings: config.Config) -> None:
+def _check_tickers() -> None:
     """List tickers that do not answer. Never blocks startup."""
-    symbols = [a.ticker for a in settings.assets if a.price_source != "manual"]
+    symbols = [a["symbol"] for a in db.all_assets()]
     failing = prices.check_tickers(symbols)
     if failing:
         logger.warning("tickers not answering: %s", ", ".join(failing))
@@ -55,9 +40,7 @@ def _check_tickers(settings: config.Config) -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init()
-    settings = config.load()
-    _sync_assets_from_config(settings)
-    _check_tickers(settings)
+    _check_tickers()
     yield
 
 

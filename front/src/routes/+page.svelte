@@ -2,29 +2,29 @@
 	import AssetChart from '$lib/components/AssetChart.svelte';
 	import GlobalSummary from '$lib/components/GlobalSummary.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
+	import TickerSearch from '$lib/components/TickerSearch.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
-	import { getAssets, getChart, setManualValue } from '$lib/services/api';
-	import type { Chart, Position } from '$lib/types/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { getAssets, getChart, getEnvelopes } from '$lib/services/api';
+	import type { Chart, Envelope, Position } from '$lib/types/api';
 
-	// Sentinel value of the selector: show the totals instead of one asset.
+	// Sentinel value of the selector: totals and settings instead of one asset.
 	const ALL = '*';
 
 	let positions = $state<Position[]>([]);
+	let envelopes = $state<Envelope[]>([]);
 	let selected = $state<string>(ALL);
 	let chart = $state<Chart | null>(null);
 	let loading = $state(true);
 	let error = $state('');
-	let manualValue = $state('');
 
 	const showingAll = $derived(selected === ALL);
 	const position = $derived(positions.find((p) => p.symbol === selected) ?? null);
-	const isManual = $derived(position?.price_source === 'manual');
 
 	async function loadPositions() {
 		try {
-			positions = await getAssets();
+			[positions, envelopes] = await Promise.all([getAssets(), getEnvelopes()]);
+			// The selected asset may have just been deleted.
+			if (!showingAll && !positions.some((p) => p.symbol === selected)) selected = ALL;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not reach the API.';
 		} finally {
@@ -33,7 +33,7 @@
 	}
 
 	async function loadChart() {
-		if (showingAll || !selected || isManual) {
+		if (showingAll || !selected) {
 			chart = null;
 			return;
 		}
@@ -43,13 +43,6 @@
 	async function refresh() {
 		await loadPositions();
 		await loadChart();
-	}
-
-	async function saveManualValue() {
-		if (!position) return;
-		await setManualValue(position.symbol, Number(manualValue));
-		manualValue = '';
-		await loadPositions();
 	}
 
 	$effect(() => {
@@ -77,7 +70,7 @@
 				bind:value={selected}
 				class="border-input bg-background h-9 min-w-64 rounded-md border px-3 text-sm"
 			>
-				<option value={ALL}>* All assets (totals in EUR)</option>
+				<option value={ALL}>* All assets (totals and settings)</option>
 				{#each positions as p (p.symbol)}
 					<option value={p.symbol}>{p.envelope} - {p.symbol} ({p.label})</option>
 				{/each}
@@ -85,40 +78,23 @@
 		</div>
 
 		{#if showingAll}
-			<GlobalSummary />
+			<GlobalSummary {positions} onChange={refresh} />
+			<TickerSearch {envelopes} onAdded={refresh} />
 		{:else if position}
 			<PositionBanner {position} />
 
-			{#if isManual}
-				<div class="space-y-3 rounded-lg border p-4">
-					<p class="text-muted-foreground text-sm">
-						{position.symbol} has no ticker: no PRUM and no chart. Enter its value by hand.
-					</p>
-					<div class="flex gap-2">
-						<Input
-							type="number"
-							step="any"
-							placeholder="Current value"
-							bind:value={manualValue}
-							class="max-w-48"
-						/>
-						<Button onclick={saveManualValue}>Save</Button>
-					</div>
+			{#if chart}
+				<div class="rounded-lg border p-4">
+					<AssetChart
+						transactions={chart.transactions}
+						priceHistory={chart.prices}
+						prumHistory={chart.prum}
+						currency={chart.currency}
+					/>
 				</div>
-			{:else}
-				{#if chart}
-					<div class="rounded-lg border p-4">
-						<AssetChart
-							transactions={chart.transactions}
-							priceHistory={chart.prices}
-							prumHistory={chart.prum}
-							currency={chart.currency}
-						/>
-					</div>
-				{/if}
-
-				<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
 			{/if}
+
+			<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
 		{/if}
 	{/if}
 </div>
