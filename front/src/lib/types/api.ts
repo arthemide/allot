@@ -11,6 +11,8 @@ export interface Position {
 	market_value: number | null;
 	gain: number | null;
 	gain_percent: number | null;
+	actual_quantity: number | null;
+	quantity_gap: number | null;
 }
 
 export interface Transaction {
@@ -47,4 +49,29 @@ export interface NewTransaction {
 	quantity: number;
 	unit_price: number;
 	fees: number;
+}
+
+export interface BuySimulation {
+	amount: number;
+	fees: number;
+	quantity: number;
+	new_prum: number;
+}
+
+export interface TargetSimulation {
+	target_prum: number;
+	reachable: boolean;
+	reason: string | null;
+	quantity: number | null;
+	amount: number | null;
+}
+
+export interface Simulation {
+	symbol: string;
+	currency: string;
+	price: number;
+	quantity: number;
+	prum: number;
+	buy: BuySimulation | null;
+	target: TargetSimulation | null;
 }

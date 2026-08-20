@@ -1,6 +1,9 @@
 <script lang="ts">
 	import AssetChart from '$lib/components/AssetChart.svelte';
+	import MonthlyNote from '$lib/components/MonthlyNote.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
+	import ReconciliationBanner from '$lib/components/ReconciliationBanner.svelte';
+	import Simulator from '$lib/components/Simulator.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
 	import { getAssets, getChart, setManualValue } from '$lib/services/api';
 	import type { Chart, Position } from '$lib/types/api';
@@ -110,8 +113,14 @@
 					</div>
 				{/if}
 
+				<ReconciliationBanner {position} onChange={refresh} />
+
+				<Simulator {position} />
+
 				<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
 			{/if}
 		{/if}
+
+		<MonthlyNote />
 	{/if}
 </div>

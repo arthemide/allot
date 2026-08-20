@@ -3,7 +3,14 @@
 from fastapi import APIRouter, HTTPException, status
 
 from src.databases import sqlite as db
-from src.models.schema import Chart, ManualValue, Position
+from src.models.schema import (
+    ActualQuantity,
+    Chart,
+    ManualValue,
+    Position,
+    Simulation,
+    SimulationRequest,
+)
 from src.services import portfolio
 
 router = APIRouter(prefix="/assets", tags=["assets"])
@@ -42,4 +49,26 @@ def set_manual_value(symbol: str, payload: ManualValue):
             status.HTTP_400_BAD_REQUEST, "Asset is priced from yfinance"
         )
     db.set_manual_value(symbol, payload.value)
+    return portfolio.position_of(db.get_asset(symbol))
+
+
+@router.post("/{symbol}/simulate", response_model=Simulation)
+def simulate(symbol: str, payload: SimulationRequest):
+    """What a buy would do to the PRUM, and what a target PRUM would cost."""
+    if db.get_asset(symbol) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+    try:
+        return portfolio.simulate(
+            symbol, payload.amount, payload.fees, payload.target_prum
+        )
+    except ValueError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
+
+
+@router.put("/{symbol}/actual-quantity", response_model=Position)
+def set_actual_quantity(symbol: str, payload: ActualQuantity):
+    """Record the quantity actually held on the platform, for comparison only."""
+    if db.get_asset(symbol) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+    db.set_actual_quantity(symbol, payload.quantity)
     return portfolio.position_of(db.get_asset(symbol))
