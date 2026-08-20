@@ -61,7 +61,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Wealth tracking", lifespan=lifespan)
+app = FastAPI(title="Allot", lifespan=lifespan)
 app.include_router(router)
 
 app.add_middleware(

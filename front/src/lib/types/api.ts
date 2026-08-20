@@ -48,3 +48,30 @@ export interface NewTransaction {
 	unit_price: number;
 	fees: number;
 }
+
+export interface SummaryAsset {
+	symbol: string;
+	label: string;
+	currency: string;
+	invested: number;
+	market_value: number;
+	gain: number;
+}
+
+export interface SummaryEnvelope {
+	envelope: string;
+	invested: number;
+	market_value: number;
+	gain: number;
+	assets: SummaryAsset[];
+}
+
+export interface Summary {
+	currency: string;
+	eur_usd_rate: number | null;
+	invested: number;
+	market_value: number;
+	gain: number;
+	gain_percent: number | null;
+	envelopes: SummaryEnvelope[];
+}

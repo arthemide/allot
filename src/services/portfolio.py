@@ -143,3 +143,59 @@ def chart_data(symbol: str) -> dict:
         "prum": steps,
     }
 
+
+
+def _to_eur(value: float | None, currency: str, rate: float | None) -> float:
+    """Convert to EUR at the very last moment, for totals only."""
+    if not value:
+        return 0.0
+    if currency == "USD" and rate:
+        return value / rate
+    return value
+
+
+def summary() -> dict:
+    """Totals across every asset, in EUR, grouped by envelope.
+
+    Native currencies stay untouched everywhere else; conversion happens here
+    and nowhere else, because only totals mix currencies.
+    """
+    rate = prices.eur_usd_rate()
+    positions = all_positions()
+
+    envelopes: dict[str, dict] = {}
+    for position in positions:
+        name = position["envelope"]
+        bucket = envelopes.setdefault(
+            name, {"envelope": name, "invested": 0.0, "market_value": 0.0, "assets": []}
+        )
+        currency = position["currency"]
+        invested = _to_eur(position["invested"], currency, rate)
+        market_value = _to_eur(position["market_value"], currency, rate)
+        bucket["invested"] += invested
+        bucket["market_value"] += market_value
+        bucket["assets"].append(
+            {
+                "symbol": position["symbol"],
+                "label": position["label"],
+                "currency": currency,
+                "invested": invested,
+                "market_value": market_value,
+                "gain": market_value - invested,
+            }
+        )
+
+    for bucket in envelopes.values():
+        bucket["gain"] = bucket["market_value"] - bucket["invested"]
+
+    invested = sum(b["invested"] for b in envelopes.values())
+    market_value = sum(b["market_value"] for b in envelopes.values())
+    return {
+        "currency": "EUR",
+        "eur_usd_rate": rate,
+        "invested": invested,
+        "market_value": market_value,
+        "gain": market_value - invested,
+        "gain_percent": (market_value - invested) / invested * 100 if invested else None,
+        "envelopes": sorted(envelopes.values(), key=lambda b: b["envelope"]),
+    }

@@ -61,3 +61,32 @@ class TransactionCreate(BaseModel):
 class ManualValue(BaseModel):
     value: float = Field(ge=0)
 
+
+
+class SummaryAsset(BaseModel):
+    symbol: str
+    label: str
+    currency: str
+    invested: float
+    market_value: float
+    gain: float
+
+
+class SummaryEnvelope(BaseModel):
+    envelope: str
+    invested: float
+    market_value: float
+    gain: float
+    assets: list[SummaryAsset]
+
+
+class Summary(BaseModel):
+    """Everything totalled in EUR; the only place currencies are mixed."""
+
+    currency: str
+    eur_usd_rate: float | None
+    invested: float
+    market_value: float
+    gain: float
+    gain_percent: float | None
+    envelopes: list[SummaryEnvelope]

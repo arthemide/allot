@@ -1,7 +1,7 @@
 [project]
-name = "wealth-tracking"
+name = "allot"
 version = "0.1.0"
-description = "Per-asset PRUM tracking, decision simulator and monthly note"
+description = "Allot - per-asset PRUM tracking and monthly allocation note"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",

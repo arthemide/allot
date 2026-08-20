@@ -267,7 +267,7 @@ data/
 
 .claude
 # Local SQLite database
-data/wealth.db
-data/wealth.db-journal
+data/allot.db
+data/allot.db-journal
 front/dist/
 front/.svelte-kit/

@@ -1,4 +1,4 @@
-import type { Chart, NewTransaction, Position, Transaction } from '$lib/types/api';
+import type { Chart, NewTransaction, Position, Summary, Transaction } from '$lib/types/api';
 
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';
@@ -15,6 +15,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const getAssets = () => request<Position[]>('/assets');
+
+export const getSummary = () => request<Summary>('/assets/summary');
 
 export const getAsset = (symbol: string) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`);

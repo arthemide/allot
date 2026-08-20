@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from src.databases import sqlite as db
-from src.models.schema import Chart, ManualValue, Position
+from src.models.schema import Chart, ManualValue, Position, Summary
 from src.services import portfolio
 
 router = APIRouter(prefix="/assets", tags=["assets"])
@@ -13,6 +13,12 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 def list_assets():
     """Every tracked asset with its recomputed position."""
     return portfolio.all_positions()
+
+
+@router.get("/summary", response_model=Summary)
+def get_summary():
+    """Totals across every asset, converted to EUR."""
+    return portfolio.summary()
 
 
 @router.get("/{symbol}", response_model=Position)

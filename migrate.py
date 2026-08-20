@@ -29,7 +29,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-DEFAULT_DB = ROOT / "data" / "wealth.db"
+DEFAULT_DB = ROOT / "data" / "allot.db"
 DEFAULT_CSV_DIR = ROOT.parent / "migration-csv"
 
 # Old fund names to new envelope names.

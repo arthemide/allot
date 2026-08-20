@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 ROOT = Path(__file__).parent.parent.parent
-DB_PATH = ROOT / "data" / "wealth.db"
+DB_PATH = ROOT / "data" / "allot.db"
 SCHEMA_PATH = ROOT / "schema.sql"
 
 

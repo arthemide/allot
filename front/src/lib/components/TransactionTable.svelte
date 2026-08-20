@@ -16,9 +16,6 @@
 		onChange: () => void;
 	} = $props();
 
-
-
-	// The add form lives in the first row of the table, not in a dialog.
 	let date = $state(new Date().toISOString().slice(0, 10));
 	let side = $state<'buy' | 'sell'>('buy');
 	let quantity = $state('');
@@ -26,6 +23,8 @@
 	let fees = $state('0');
 	let error = $state('');
 	let saving = $state(false);
+
+	const money = $derived((value: number) => formatMoney(value, position.currency, 4));
 
 	// Prefill the price with the current quote, still editable.
 	$effect(() => {
@@ -61,67 +60,75 @@
 		await deleteTransaction(id);
 		onChange();
 	}
-
-	const money = $derived((value: number) => formatMoney(value, position.currency, 4));
 </script>
+
+<form class="space-y-3 rounded-lg border p-4" onsubmit={submit}>
+	<h2 class="font-semibold">Add a transaction</h2>
+
+	<div class="flex flex-wrap items-end gap-3">
+		<div class="space-y-1">
+			<label for="tx-date" class="text-muted-foreground block text-xs uppercase">Date</label>
+			<Input id="tx-date" type="date" bind:value={date} required class="w-40" />
+		</div>
+		<div class="space-y-1">
+			<label for="tx-side" class="text-muted-foreground block text-xs uppercase">Side</label>
+			<select
+				id="tx-side"
+				bind:value={side}
+				class="border-input bg-background h-9 rounded-md border px-2 text-sm"
+			>
+				<option value="buy">buy</option>
+				<option value="sell">sell</option>
+			</select>
+		</div>
+		<div class="space-y-1">
+			<label for="tx-quantity" class="text-muted-foreground block text-xs uppercase">Quantity</label>
+			<Input id="tx-quantity" type="number" step="any" bind:value={quantity} class="w-36" />
+		</div>
+		<div class="space-y-1">
+			<label for="tx-price" class="text-muted-foreground block text-xs uppercase">Unit price</label>
+			<Input id="tx-price" type="number" step="any" bind:value={unitPrice} class="w-36" />
+		</div>
+		<div class="space-y-1">
+			<label for="tx-fees" class="text-muted-foreground block text-xs uppercase">Fees</label>
+			<Input id="tx-fees" type="number" step="any" bind:value={fees} class="w-28" />
+		</div>
+		<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add'}</Button>
+	</div>
+
+	{#if error}
+		<p class="text-sm text-red-600">{error}</p>
+	{/if}
+</form>
 
 <div class="rounded-lg border">
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
-				<Table.Head>Date</Table.Head>
-				<Table.Head>Side</Table.Head>
+				<Table.Head class="w-32 text-left">Date</Table.Head>
+				<Table.Head class="w-20 text-left">Side</Table.Head>
 				<Table.Head class="text-right">Quantity</Table.Head>
 				<Table.Head class="text-right">Unit price</Table.Head>
 				<Table.Head class="text-right">Fees</Table.Head>
 				<Table.Head class="text-right">Total</Table.Head>
-				<Table.Head></Table.Head>
+				<Table.Head class="w-24 text-right">Actions</Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
-			<Table.Row class="bg-muted/40">
-				<Table.Cell><Input type="date" bind:value={date} form="add-tx" required /></Table.Cell>
-				<Table.Cell>
-					<select
-						bind:value={side}
-						form="add-tx"
-						class="border-input bg-background h-9 rounded-md border px-2 text-sm"
-					>
-						<option value="buy">buy</option>
-						<option value="sell">sell</option>
-					</select>
-				</Table.Cell>
-				<Table.Cell>
-					<Input type="number" step="any" placeholder="0" bind:value={quantity} form="add-tx" />
-				</Table.Cell>
-				<Table.Cell>
-					<Input type="number" step="any" bind:value={unitPrice} form="add-tx" />
-				</Table.Cell>
-				<Table.Cell><Input type="number" step="any" bind:value={fees} form="add-tx" /></Table.Cell>
-				<Table.Cell></Table.Cell>
-				<Table.Cell>
-					<form id="add-tx" onsubmit={submit}>
-						<Button type="submit" size="sm" disabled={saving}>
-							{saving ? 'Saving…' : 'Add'}
-						</Button>
-					</form>
-				</Table.Cell>
-			</Table.Row>
-
 			{#each transactions as tx (tx.id)}
 				<Table.Row>
-					<Table.Cell>{tx.date}</Table.Cell>
-					<Table.Cell>
+					<Table.Cell class="w-32 text-left tabular-nums">{tx.date}</Table.Cell>
+					<Table.Cell class="w-20 text-left">
 						<span class={tx.side === 'sell' ? 'text-red-600' : 'text-green-600'}>{tx.side}</span>
 					</Table.Cell>
-					<Table.Cell class="text-right">{tx.quantity}</Table.Cell>
-					<Table.Cell class="text-right">{money(tx.unit_price)}</Table.Cell>
-					<Table.Cell class="text-right">{money(tx.fees)}</Table.Cell>
-					<Table.Cell class="text-right">
+					<Table.Cell class="text-right tabular-nums">{tx.quantity}</Table.Cell>
+					<Table.Cell class="text-right tabular-nums">{money(tx.unit_price)}</Table.Cell>
+					<Table.Cell class="text-right tabular-nums">{money(tx.fees)}</Table.Cell>
+					<Table.Cell class="text-right tabular-nums">
 						{money(tx.quantity * tx.unit_price + tx.fees)}
 					</Table.Cell>
-					<Table.Cell class="text-right">
-						<Button variant="ghost" size="sm" onclick={() => remove(tx.id)}>Delete</Button>
+					<Table.Cell class="w-24 text-right">
+						<Button variant="destructive" size="sm" onclick={() => remove(tx.id)}>Delete</Button>
 					</Table.Cell>
 				</Table.Row>
 			{:else}
@@ -134,7 +141,3 @@
 		</Table.Body>
 	</Table.Root>
 </div>
-
-{#if error}
-	<p class="mt-2 text-sm text-red-600">{error}</p>
-{/if}
