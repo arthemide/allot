@@ -266,3 +266,6 @@ hive-mind-prompt-*.txt
 data/
 
 .claude
+# Local SQLite database
+wealth.db
+wealth.db-journal
