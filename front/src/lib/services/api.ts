@@ -1,4 +1,4 @@
-import type { Chart, NewTransaction, Position, Simulation, Transaction } from '$lib/types/api';
+import type { Chart, NewTransaction, Position, Transaction } from '$lib/types/api';
 
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';
@@ -40,20 +40,7 @@ export const setManualValue = (symbol: string, value: number) =>
 		body: JSON.stringify({ value })
 	});
 
-export const simulate = (
-	symbol: string,
-	body: { amount?: number; fees?: number; target_prum?: number }
-) =>
-	request<Simulation>(`/assets/${encodeURIComponent(symbol)}/simulate`, {
-		method: 'POST',
-		body: JSON.stringify(body)
-	});
 
-export const setActualQuantity = (symbol: string, quantity: number | null) =>
-	request<Position>(`/assets/${encodeURIComponent(symbol)}/actual-quantity`, {
-		method: 'PUT',
-		body: JSON.stringify({ quantity })
-	});
 
 export async function getNote(): Promise<string> {
 	const response = await fetch(`${BASE}/note`);

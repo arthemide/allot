@@ -23,31 +23,10 @@ def connect(path: Path = DB_PATH) -> sqlite3.Connection:
     return connection
 
 
-SCHEMA_VERSION = 2
-
-# One entry per schema version above 1, applied to databases created before it.
-# schema.sql alone covers a fresh database.
-UPGRADES: dict[int, list[str]] = {
-    2: ["ALTER TABLE asset ADD COLUMN actual_quantity REAL"],
-}
-
-
 def init(path: Path = DB_PATH) -> None:
-    """Create the schema, or bring an older database up to date.
-
-    Safe to call on every boot: creating tables is guarded by IF NOT EXISTS and
-    upgrades only run for versions the database has not reached yet.
-    """
+    """Create the schema if the database is empty. Safe to call on every boot."""
     connection = connect(path)
     try:
-        version = connection.execute("PRAGMA user_version").fetchone()[0]
-        has_tables = connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'asset'"
-        ).fetchone()
-        if has_tables:
-            for step in range(version + 1, SCHEMA_VERSION + 1):
-                for statement in UPGRADES.get(step, []):
-                    connection.execute(statement)
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         connection.commit()
     finally:
@@ -104,10 +83,6 @@ def upsert_asset(
 
 def set_manual_value(symbol: str, value: float) -> None:
     execute("UPDATE asset SET manual_value = ? WHERE symbol = ?", (value, symbol))
-
-
-def set_actual_quantity(symbol: str, quantity: float | None) -> None:
-    execute("UPDATE asset SET actual_quantity = ? WHERE symbol = ?", (quantity, symbol))
 
 
 # --- transactions ---------------------------------------------------------

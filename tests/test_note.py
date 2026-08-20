@@ -86,32 +86,46 @@ class TestNote:
 
     def test_header_names_the_month_and_the_amount(self, offline):
         text = note.render(date(2026, 9, 15))
-        assert "Point patrimoine — septembre 2026" in text
-        assert "715 €" in text.splitlines()[0]
+        lines = text.splitlines()
+        assert lines[0] == "Point patrimoine - septembre 2026"
+        assert lines[1] == "Épargne à placer : 715 €"
 
     def test_priced_asset_with_a_prum_shows_the_multiplier(self, offline):
         text = note.render(date(2026, 9, 15))
         assert "ETH-USD" in text
-        assert "×1,5" in text
-        assert "×0,5" in text
+        assert "x1,5" in text
+        assert "x0,5" in text
 
-    def test_asset_without_a_prum_shows_share_count(self, offline):
+    def test_assets_are_listed_as_bullets(self, offline):
         text = note.render(date(2026, 9, 15))
-        assert "parts" in text
+        assert "  - WPEA.PA" in text
+        assert "  - ETH-USD" in text
 
-    def test_manual_envelope_is_collapsed_to_a_bare_amount(self, offline):
+    def test_asset_without_a_prum_shows_its_price(self, offline):
         text = note.render(date(2026, 9, 15))
-        assert "AFER — 110 €" in text
+        assert "cours 6,21 €" in text
+
+    def test_manual_envelope_shows_its_amount_alone(self, offline):
+        # AFER has no ticker: the envelope line stands with no bullet under it
+        text = note.render(date(2026, 9, 15))
+        assert "AFER - 110 €" in text
+        assert "  - AFER" not in text
+
+    def test_uses_plain_ascii_dashes(self, offline):
+        text = note.render(date(2026, 9, 15))
+        assert "—" not in text
+        assert "−" not in text
+        assert "×" not in text
 
     def test_warns_when_nothing_was_entered_for_45_days(self, offline):
         # Given the last transaction is 12 July and we are in September
         text = note.render(date(2026, 9, 15))
-        assert "⚠ Aucune transaction saisie depuis le 12 juillet." in text
+        assert "- Aucune transaction saisie depuis le 12 juillet." in text
 
     def test_stays_quiet_when_entries_are_recent(self, offline):
         # Given the last transaction is only a few days old
         text = note.render(date(2026, 7, 20))
-        assert "⚠" not in text
+        assert "Aucune transaction saisie" not in text
 
     def test_excel_block_converts_usd_envelopes_to_eur(self, offline):
         text = note.render(date(2026, 9, 15))

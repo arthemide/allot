@@ -1,7 +1,7 @@
 -- Wealth tracking schema. Single file, versioned by PRAGMA user_version.
 -- No migration framework: bump the version and add the DDL below when the
 -- schema changes.
-PRAGMA user_version = 2;
+PRAGMA user_version = 1;
 
 PRAGMA foreign_keys = ON;
 
@@ -24,10 +24,6 @@ CREATE TABLE IF NOT EXISTS asset (
 
     -- price_source = 'manual' only: value entered by hand, in `currency`.
     manual_value REAL CHECK (manual_value IS NULL OR manual_value >= 0),
-
-    -- Quantity actually held on the platform, entered by hand now and then.
-    -- Compared against the computed quantity; never used in any calculation.
-    actual_quantity REAL CHECK (actual_quantity IS NULL OR actual_quantity >= 0),
 
     CHECK (base_quantity = 0 OR base_prum IS NOT NULL),
     CHECK (price_source <> 'manual' OR base_quantity = 0)

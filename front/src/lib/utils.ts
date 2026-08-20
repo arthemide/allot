@@ -28,7 +28,7 @@ export function formatMoney(
 	currency: string | null | undefined,
 	fractionDigits = 2
 ): string {
-	if (value === null || value === undefined) return '—';
+	if (value === null || value === undefined) return '-';
 	const amount = value.toLocaleString('fr-FR', {
 		minimumFractionDigits: fractionDigits,
 		maximumFractionDigits: fractionDigits

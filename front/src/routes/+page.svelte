@@ -2,8 +2,6 @@
 	import AssetChart from '$lib/components/AssetChart.svelte';
 	import MonthlyNote from '$lib/components/MonthlyNote.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
-	import ReconciliationBanner from '$lib/components/ReconciliationBanner.svelte';
-	import Simulator from '$lib/components/Simulator.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
 	import { getAssets, getChart, setManualValue } from '$lib/services/api';
 	import type { Chart, Position } from '$lib/types/api';
@@ -77,7 +75,7 @@
 				class="border-input bg-background h-9 min-w-56 rounded-md border px-3 text-sm"
 			>
 				{#each positions as p (p.symbol)}
-					<option value={p.symbol}>{p.envelope} — {p.symbol} ({p.label})</option>
+					<option value={p.symbol}>{p.envelope} - {p.symbol} ({p.label})</option>
 				{/each}
 			</select>
 		</div>
@@ -112,10 +110,6 @@
 						/>
 					</div>
 				{/if}
-
-				<ReconciliationBanner {position} onChange={refresh} />
-
-				<Simulator {position} />
 
 				<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
 			{/if}

@@ -50,12 +50,9 @@ def position_of(asset: dict) -> dict:
             "market_value": value,
             "gain": None,
             "gain_percent": None,
-            "actual_quantity": None,
-            "quantity_gap": None,
         }
 
     result = calc.position(_trades(symbol), asset["base_quantity"], asset["base_prum"])
-    actual = asset.get("actual_quantity")
     price = prices.current_price(symbol)
     market_value = result.quantity * price if price is not None else None
     gain = market_value - result.invested if market_value is not None else None
@@ -78,8 +75,6 @@ def position_of(asset: dict) -> dict:
         "market_value": market_value,
         "gain": gain,
         "gain_percent": gain_percent,
-        "actual_quantity": actual,
-        "quantity_gap": (actual - result.quantity) if actual is not None else None,
     }
 
 
@@ -148,66 +143,3 @@ def chart_data(symbol: str) -> dict:
         "prum": steps,
     }
 
-
-def simulate(
-    symbol: str,
-    amount: float | None = None,
-    fees: float = 0.0,
-    target_prum: float | None = None,
-) -> dict:
-    """What a buy would do to the PRUM, and what reaching a target would cost."""
-    asset = db.get_asset(symbol)
-    if asset is None or asset["price_source"] == MANUAL:
-        raise ValueError("simulation needs a priced asset")
-
-    price = prices.current_price(symbol)
-    if price is None:
-        raise ValueError("no current price for this asset")
-
-    current = calc.position(_trades(symbol), asset["base_quantity"], asset["base_prum"])
-    result = {
-        "symbol": symbol,
-        "currency": asset["currency"],
-        "price": price,
-        "quantity": current.quantity,
-        "prum": current.prum,
-        "buy": None,
-        "target": None,
-    }
-
-    if amount is not None:
-        bought, new_prum = calc.prum_after_buy(
-            current.quantity, current.prum, price, amount, fees
-        )
-        result["buy"] = {
-            "amount": amount,
-            "fees": fees,
-            "quantity": bought,
-            "new_prum": new_prum,
-        }
-
-    if target_prum is not None:
-        needed = calc.quantity_for_target_prum(
-            current.quantity, current.prum, price, target_prum
-        )
-        if needed is None:
-            reason = (
-                "the price is at or above the target: buying can only raise the PRUM"
-                if price >= target_prum
-                else "the target is above the current PRUM"
-            )
-            result["target"] = {
-                "target_prum": target_prum,
-                "reachable": False,
-                "reason": reason,
-            }
-        else:
-            quantity, cost = needed
-            result["target"] = {
-                "target_prum": target_prum,
-                "reachable": True,
-                "quantity": quantity,
-                "amount": cost,
-            }
-
-    return result

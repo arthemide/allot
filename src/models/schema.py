@@ -20,8 +20,6 @@ class Position(BaseModel):
     market_value: float | None
     gain: float | None
     gain_percent: float | None
-    actual_quantity: float | None = None
-    quantity_gap: float | None = None
 
 
 class PricePoint(BaseModel):
@@ -63,39 +61,3 @@ class TransactionCreate(BaseModel):
 class ManualValue(BaseModel):
     value: float = Field(ge=0)
 
-
-class SimulationRequest(BaseModel):
-    """Either an amount to invest, a target PRUM, or both."""
-
-    amount: float | None = Field(default=None, gt=0)
-    fees: float = Field(default=0.0, ge=0)
-    target_prum: float | None = Field(default=None, gt=0)
-
-
-class BuySimulation(BaseModel):
-    amount: float
-    fees: float
-    quantity: float
-    new_prum: float
-
-
-class TargetSimulation(BaseModel):
-    target_prum: float
-    reachable: bool
-    reason: str | None = None
-    quantity: float | None = None
-    amount: float | None = None
-
-
-class Simulation(BaseModel):
-    symbol: str
-    currency: str
-    price: float
-    quantity: float
-    prum: float
-    buy: BuySimulation | None = None
-    target: TargetSimulation | None = None
-
-
-class ActualQuantity(BaseModel):
-    quantity: float | None = Field(default=None, ge=0)

@@ -7,12 +7,12 @@
 	const money = $derived((value: number | null) => formatMoney(value, position.currency));
 
 	function quantity(value: number | null): string {
-		if (value === null) return '—';
+		if (value === null) return '-';
 		return value.toLocaleString('fr-FR', { maximumFractionDigits: 8 });
 	}
 
 	function percent(value: number | null): string {
-		if (value === null) return '—';
+		if (value === null) return '-';
 		return `${value >= 0 ? '+' : ''}${value.toFixed(2)} %`;
 	}
 
