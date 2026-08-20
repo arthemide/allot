@@ -1,7 +1,7 @@
 """Pure calculation helpers.
 
 No database access, no network, no I/O. Everything here takes plain numbers or
-plain dataclasses and returns plain numbers. This is the only module worth
+plain pydantic models and returns plain numbers. This is the only module worth
 unit-testing.
 
 All amounts and prices are expressed in the asset's native currency.
@@ -9,7 +9,7 @@ All amounts and prices are expressed in the asset's native currency.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 # Relative gap to the PRUM beyond which the monthly amount is modulated.
 MODULATION_BAND = 0.10
@@ -18,9 +18,10 @@ MULTIPLIER_ABOVE = 0.5
 MULTIPLIER_NEUTRAL = 1.0
 
 
-@dataclass(frozen=True)
-class Trade:
+class Trade(BaseModel):
     """A single buy or sell."""
+
+    model_config = ConfigDict(frozen=True)
 
     side: str  # "buy" or "sell"
     quantity: float
@@ -28,9 +29,10 @@ class Trade:
     fees: float = 0.0
 
 
-@dataclass(frozen=True)
-class Position:
+class Position(BaseModel):
     """A holding, recomputed from trades. Never stored."""
+
+    model_config = ConfigDict(frozen=True)
 
     quantity: float
     prum: float

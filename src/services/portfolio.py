@@ -110,7 +110,12 @@ def chart_data(symbol: str) -> dict:
         steps.append({"date": start.isoformat(), "prum": asset["base_prum"]})
     for row in rows:
         running.append(
-            calc.Trade(row["side"], row["quantity"], row["unit_price"], row["fees"])
+            calc.Trade(
+                side=row["side"],
+                quantity=row["quantity"],
+                unit_price=row["unit_price"],
+                fees=row["fees"],
+            )
         )
         current = calc.position(running, asset["base_quantity"], asset["base_prum"])
         steps.append(

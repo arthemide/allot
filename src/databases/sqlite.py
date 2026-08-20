@@ -1,6 +1,6 @@
 """SQLite access. Standard library only, no ORM.
 
-Every read returns plain dicts or dataclasses; no derived state is ever stored,
+Every read returns plain dicts; no derived state is ever stored,
 so there is nothing to keep in sync.
 """
 

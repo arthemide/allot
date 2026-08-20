@@ -8,15 +8,17 @@ assets. Holdings live in the database, never here.
 from __future__ import annotations
 
 import tomllib
-from dataclasses import dataclass
 from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
 TOLERANCE = 1e-9
 
 
-@dataclass(frozen=True)
-class AssetConfig:
+class AssetConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     ticker: str
     label: str
     envelope: str
@@ -25,8 +27,9 @@ class AssetConfig:
     price_source: str
 
 
-@dataclass(frozen=True)
-class Config:
+class Config(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     monthly_savings: float
     envelope_shares: dict[str, float]
     assets: list[AssetConfig]

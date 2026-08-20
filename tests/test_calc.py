@@ -15,7 +15,10 @@ from src.calc import (
 class TestPosition:
     def test_prum_includes_fees(self):
         # Given two buys carrying 10 of fees between them
-        trades = [Trade("buy", 1.0, 100.0, fees=6.0), Trade("buy", 1.0, 200.0, fees=4.0)]
+        trades = [
+            Trade(side="buy", quantity=1.0, unit_price=100.0, fees=6.0),
+            Trade(side="buy", quantity=1.0, unit_price=200.0, fees=4.0),
+        ]
         # When the position is recomputed
         result = position(trades)
         # Then the fees are spread over the bought quantity
@@ -25,9 +28,9 @@ class TestPosition:
     def test_sell_reduces_quantity_but_not_prum(self):
         # Given two buys followed by a sell at a very different price
         trades = [
-            Trade("buy", 1.0, 100.0),
-            Trade("buy", 1.0, 200.0),
-            Trade("sell", 0.5, 900.0),
+            Trade(side="buy", quantity=1.0, unit_price=100.0),
+            Trade(side="buy", quantity=1.0, unit_price=200.0),
+            Trade(side="sell", quantity=0.5, unit_price=900.0),
         ]
         # When the position is recomputed
         result = position(trades)
@@ -37,13 +40,17 @@ class TestPosition:
 
     def test_opening_position_behaves_like_a_first_buy(self):
         # Given an opening position of 2 at 50 and one buy of 2 at 150
-        result = position([Trade("buy", 2.0, 150.0)], base_quantity=2.0, base_prum=50.0)
+        result = position(
+            [Trade(side="buy", quantity=2.0, unit_price=150.0)],
+            base_quantity=2.0,
+            base_prum=50.0,
+        )
         # Then both are averaged together
         assert result.quantity == pytest.approx(4.0)
         assert result.prum == pytest.approx(100.0)
 
     def test_invested_follows_quantity_and_prum(self):
-        result = position([Trade("buy", 2.0, 100.0)])
+        result = position([Trade(side="buy", quantity=2.0, unit_price=100.0)])
         assert result.invested == pytest.approx(200.0)
 
     def test_empty_history_is_flat(self):
@@ -52,7 +59,7 @@ class TestPosition:
 
     def test_unknown_side_is_rejected(self):
         with pytest.raises(ValueError):
-            position([Trade("swap", 1.0, 100.0)])
+            position([Trade(side="swap", quantity=1.0, unit_price=100.0)])
 
 
 class TestPrumAfterBuy:
@@ -85,7 +92,9 @@ class TestQuantityForTargetPrum:
     def test_reaching_the_target_actually_reaches_it(self):
         needed, amount = quantity_for_target_prum(3.0, 120.0, 60.0, 90.0)
         after = position(
-            [Trade("buy", needed, 60.0)], base_quantity=3.0, base_prum=120.0
+            [Trade(side="buy", quantity=needed, unit_price=60.0)],
+            base_quantity=3.0,
+            base_prum=120.0,
         )
         assert after.prum == pytest.approx(90.0)
 

@@ -1,15 +1,16 @@
 <script lang="ts">
-	import type { AssetTransaction } from '$lib/types/config';
+	import type { PricePoint, PrumPoint, Transaction } from '$lib/types/api';
+	import { currencySymbol } from '$lib/utils';
 	import {
+		CategoryScale,
 		Chart,
-		ScatterController,
+		Legend,
+		LinearScale,
 		LineController,
 		LineElement,
 		PointElement,
-		CategoryScale,
-		LinearScale,
-		Tooltip,
-		Legend
+		ScatterController,
+		Tooltip
 	} from 'chart.js';
 
 	Chart.register(
@@ -23,24 +24,27 @@
 		Legend
 	);
 
+	// The PRUM curve comes from the API on purpose: recomputing it here would
+	// ignore the opening position and show a PRUM well below the real one.
 	let {
-		transactions,
-		priceHistory = []
+		transactions = [],
+		priceHistory = [],
+		prumHistory = [],
+		currency = 'EUR'
 	}: {
-		transactions: AssetTransaction[];
-		priceHistory?: { date: string; price: number }[];
+		transactions?: Transaction[];
+		priceHistory?: PricePoint[];
+		prumHistory?: PrumPoint[];
+		currency?: string;
 	} = $props();
 
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | null = null;
 
+	const symbol = $derived(currencySymbol(currency));
+
 	function isDark() {
 		return document.documentElement.classList.contains('dark');
-	}
-
-	// ISO date key for dedup/sort, formatted label for display
-	function toISO(ts: string | number): string {
-		return new Date(ts).toISOString().slice(0, 10);
 	}
 
 	function fmtISO(iso: string): string {
@@ -57,82 +61,57 @@
 		const gridColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 		const textColor = dark ? '#e5e7eb' : '#374151';
 
-		const sorted = [...transactions].sort(
-			(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-		);
-
-		// Merge all ISO dates from both sources, sort, deduplicate
 		const isoSet = new Set<string>([
-			...priceHistory.map((p) => toISO(p.date)),
-			...sorted.map((tx) => toISO(tx.timestamp))
+			...priceHistory.map((p) => p.date),
+			...prumHistory.map((p) => p.date),
+			...transactions.map((tx) => tx.date)
 		]);
 		const allISO = [...isoSet].sort();
 		const allDates = allISO.map(fmtISO);
-
-		// Map ISO date → index
 		const labelIndex = new Map(allISO.map((iso, i) => [iso, i]));
 
-		// Group transactions by date (one point per day)
-		const txByDate = new Map<string, AssetTransaction[]>();
-		for (const tx of sorted) {
-			const iso = toISO(tx.timestamp);
-			if (!txByDate.has(iso)) txByDate.set(iso, []);
-			txByDate.get(iso)!.push(tx);
+		// One scatter point per day, averaging same-day transactions.
+		const txByDate = new Map<string, Transaction[]>();
+		for (const tx of transactions) {
+			if (!txByDate.has(tx.date)) txByDate.set(tx.date, []);
+			txByDate.get(tx.date)!.push(tx);
 		}
 
-		// Scatter: one point per date with average price
 		const scatterPoints: { x: string; y: number }[] = [];
 		const pointColors: string[] = [];
-		const dailyTransactions: AssetTransaction[][] = [];
-
-		const sortedDates = [...txByDate.keys()].sort();
-		for (const iso of sortedDates) {
+		const dailyTransactions: Transaction[][] = [];
+		for (const iso of [...txByDate.keys()].sort()) {
 			const txs = txByDate.get(iso)!;
-			const avgPrice = txs.reduce((sum, tx) => sum + tx.price, 0) / txs.length;
-			const label = fmtISO(iso);
-			scatterPoints.push({ x: label, y: avgPrice });
+			const avgPrice = txs.reduce((sum, tx) => sum + tx.unit_price, 0) / txs.length;
+			scatterPoints.push({ x: fmtISO(iso), y: avgPrice });
 			dailyTransactions.push(txs);
-
-			// Color: prioritize sell > buy, or mixed if multiple types
-			const types = new Set(txs.map((tx) => tx.transaction_type));
-			if (types.has('sell')) pointColors.push('rgba(239,68,68,0.9)');
-			else pointColors.push('rgba(34,197,94,0.9)');
-			}
-
-		// PRUM: running average cost basis
-		let cumCost = 0;
-		let cumQty = 0;
-		let lastPrum: number | null = null;
-		const prumLine: (number | null)[] = Array(allDates.length).fill(null);
-		for (const tx of sorted) {
-			if (tx.transaction_type === 'buy') {
-				cumCost += tx.total_cost;
-				cumQty += tx.quantity;
-				lastPrum = cumCost / cumQty;
-			}
-			if (lastPrum !== null) {
-				const idx = labelIndex.get(toISO(tx.timestamp));
-				if (idx !== undefined) prumLine[idx] = lastPrum;
-			}
+			pointColors.push(
+				txs.some((tx) => tx.side === 'sell') ? 'rgba(239,68,68,0.9)' : 'rgba(34,197,94,0.9)'
+			);
 		}
-		// Forward-fill PRUM gaps
+
+		// Step curve: hold each PRUM until the next transaction changes it.
+		const prumLine: (number | null)[] = Array(allDates.length).fill(null);
+		for (const point of prumHistory) {
+			const idx = labelIndex.get(point.date);
+			if (idx !== undefined) prumLine[idx] = point.prum;
+		}
 		let last: number | null = null;
 		for (let i = 0; i < prumLine.length; i++) {
 			if (prumLine[i] !== null) last = prumLine[i];
 			else if (last !== null) prumLine[i] = last;
 		}
 
-		// History line
 		const histLine: (number | null)[] = Array(allDates.length).fill(null);
 		for (const p of priceHistory) {
-			const idx = labelIndex.get(toISO(p.date));
+			const idx = labelIndex.get(p.date);
 			if (idx !== undefined) histLine[idx] = p.price;
 		}
 
 		const datasets: object[] = [
 			{
 				type: 'line',
-				label: 'AVCO',
+				label: 'PRUM',
 				data: prumLine,
 				borderColor: 'rgba(251,146,60,1)',
 				backgroundColor: 'transparent',
@@ -180,7 +159,6 @@
 					tooltip: {
 						callbacks: {
 							title: (items) => {
-								// Display the actual X value (date) from the scatter point
 								if (items.length > 0 && items[0].dataset.label === 'Transaction price') {
 									const point = scatterPoints[items[0].dataIndex];
 									return point ? point.x : items[0].label;
@@ -191,18 +169,14 @@
 								if (ctx.dataset.label === 'Transaction price') {
 									const txs = dailyTransactions[ctx.dataIndex];
 									if (!txs) return '';
-									if (txs.length === 1) {
-										const tx = txs[0];
-										return `${tx.transaction_type.toUpperCase()} ${tx.asset_symbol} — $${tx.price.toFixed(4)}`;
-									}
-									// Multiple transactions on same day: show all
 									return txs.map(
-										(tx) => `${tx.transaction_type.toUpperCase()} ${tx.asset_symbol} — $${tx.price.toFixed(4)}`
+										(tx) =>
+											`${tx.side.toUpperCase()} ${tx.quantity} @ ${symbol}${tx.unit_price.toFixed(4)}`
 									);
 								}
-								const y = (ctx.raw as { y: number } | number);
-								const val = typeof y === 'number' ? y : (y as { y: number }).y;
-								return `${ctx.dataset.label}: $${val.toFixed(4)}`;
+								const raw = ctx.raw as { y: number } | number;
+								const val = typeof raw === 'number' ? raw : raw.y;
+								return `${ctx.dataset.label}: ${symbol}${val.toFixed(4)}`;
 							}
 						}
 					}
@@ -214,7 +188,7 @@
 						grid: { color: gridColor }
 					},
 					y: {
-						ticks: { color: textColor, callback: (v) => `$${v}` },
+						ticks: { color: textColor, callback: (v) => `${symbol}${v}` },
 						grid: { color: gridColor }
 					}
 				}
@@ -225,6 +199,7 @@
 	$effect(() => {
 		transactions;
 		priceHistory;
+		prumHistory;
 		buildChart();
 		return () => {
 			chart?.destroy();
@@ -233,6 +208,6 @@
 	});
 </script>
 
-<div class="relative h-64 w-full">
+<div class="relative h-72 w-full">
 	<canvas bind:this={canvas}></canvas>
 </div>
