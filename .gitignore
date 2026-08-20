@@ -267,5 +267,5 @@ data/
 
 .claude
 # Local SQLite database
-wealth.db
-wealth.db-journal
+data/wealth.db
+data/wealth.db-journal

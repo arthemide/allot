@@ -1,4 +1,4 @@
-"""Load the CSV export of the old Postgres database into SQLite.
+"""Load the CSV export of the legacy database into SQLite.
 
 Idempotent and replayable: assets are keyed by symbol, transactions by their
 broker order id, so running it twice changes nothing.
@@ -29,7 +29,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-DEFAULT_DB = ROOT / "wealth.db"
+DEFAULT_DB = ROOT / "data" / "wealth.db"
 DEFAULT_CSV_DIR = ROOT.parent / "migration-csv"
 
 # Old fund names to new envelope names.
@@ -203,6 +203,7 @@ def main() -> None:
 
     config = load_config(args.config)
 
+    args.db.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(args.db)
     connection.execute("PRAGMA foreign_keys = ON")
     try:
@@ -213,7 +214,7 @@ def main() -> None:
     finally:
         connection.close()
 
-    print(f"assets migrated from Postgres : {migrated}")
+    print(f"assets migrated from CSV     : {migrated}")
     print(f"assets created from config    : {filled}")
     print(f"transactions read             : {transactions}")
     print(f"database                      : {args.db}")

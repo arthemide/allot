@@ -48,7 +48,7 @@ label = "Bitcoin USD"
 weight = 0.50
 currency = "USD"
 
-# Legacy position kept from the Postgres database. Weight 0: tracked but never
+# Legacy position kept from the previous database. Weight 0: tracked but never
 # allocated by the monthly split.
 [[assets]]
 envelope = "CRYPTO"

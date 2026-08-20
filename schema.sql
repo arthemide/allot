@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS asset (
     price_source TEXT NOT NULL DEFAULT 'yfinance'
                  CHECK (price_source IN ('yfinance', 'manual')),
 
-    -- Opening position carried over from the Postgres database: holdings that
+    -- Opening position carried over from the legacy database: holdings that
     -- predate transaction tracking and have no transaction to back them.
     -- base_prum is the weighted average price of that opening position.
     base_quantity REAL NOT NULL DEFAULT 0 CHECK (base_quantity >= 0),
