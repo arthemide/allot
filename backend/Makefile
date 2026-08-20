@@ -15,12 +15,8 @@ help:
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "BOT"
-	grep -E '^\.PHONY: (bot-install|bot-test|dca-test|dca-debug|dca-once|dca-now|dca-start) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "TERMINAL AUTO-START"
-	grep -E '^\.PHONY: (dca-autostart-install|dca-autostart-uninstall) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	
 # =============================================================================
 # Global commands
@@ -44,7 +40,6 @@ check: install
 tests:
 	$(MAKE) api-test
 	$(MAKE) db-test
-	$(MAKE) bot-test
 
 # =============================================================================
 # API commands
@@ -81,65 +76,8 @@ db-downgrade:
 	cd shared && uv run alembic downgrade -1
 
 db-test:
-	PYTHONPATH=bot uv run pytest shared/tests --disable-warnings --cov=shared/src --cov-fail-under 80 --junitxml=bot/coverage/junit-report.xml --cov-report=xml:bot/coverage/coverage.xml --cov-report=html:bot/coverage/htmlcov
+	uv run pytest shared/tests --disable-warnings --cov=shared/src --cov-fail-under 80 --junitxml=shared/coverage/junit-report.xml --cov-report=xml:shared/coverage/coverage.xml --cov-report=html:shared/coverage/htmlcov
 
 # =============================================================================
 # Bot commands
 # =============================================================================
-
-.PHONY: bot-install ## 💁 Install Bot dependencies only
-bot-install:
-	uv sync --package stock-alerting-bot
-
-.PHONY: bot-test ## 🧪 Run Bot tests
-bot-test:
-	PYTHONPATH=bot uv run pytest bot/tests --disable-warnings --cov=bot/dca --cov-fail-under 80 --junitxml=bot/coverage/junit-report.xml --cov-report=xml:bot/coverage/coverage.xml --cov-report=html:bot/coverage/htmlcov
-
-.PHONY: dca-test ## 🧪 Test DCA bot configuration (no real purchase)
-dca-test:
-	cd bot && uv run python -m dca.main --test
-
-.PHONY: dca-debug ## 🔍 Run DCA API debug tests (read-only, no trades)
-dca-debug:
-	cd bot && uv run python -m dca.test_debug
-
-.PHONY: dca-once ## ▶️  Execute a single DCA purchase
-dca-once:
-	cd bot && uv run python -m dca.main --once
-
-.PHONY: dca-now ## ⚡ Execute immediately then start the scheduler
-dca-now:
-	cd bot && uv run python -m dca.main --now
-
-.PHONY: dca-start ## 🚀 Start the DCA bot in scheduler mode
-dca-start:
-	cd bot && uv run python -m dca.main
-
-# =============================================================================
-# Terminal auto-start commands
-# =============================================================================
-
-BACKEND_DIR := $(shell pwd)
-
-.PHONY: dca-autostart-install ## 🚀 Add DCA bot auto-start to terminal (zshrc)
-dca-autostart-install:
-	@if grep -q "make dca-start" ~/.zshrc 2>/dev/null; then \
-		echo "⚠️  Auto-start already configured in ~/.zshrc"; \
-	else \
-		echo "" >> ~/.zshrc; \
-		echo "# DCA Bot auto-start" >> ~/.zshrc; \
-		echo "echo '🤖 DCA Bot starting... Logs: $(BACKEND_DIR)/logs/app.log'" >> ~/.zshrc; \
-		echo "nohup make -C $(BACKEND_DIR) dca-start >> $(BACKEND_DIR)/logs/app.log 2>&1 &" >> ~/.zshrc; \
-		echo "✅ Added DCA bot auto-start to ~/.zshrc"; \
-		echo "   Restart your terminal or run: source ~/.zshrc"; \
-	fi
-
-.PHONY: dca-autostart-uninstall ## 🗑️  Remove DCA bot auto-start from terminal
-dca-autostart-uninstall:
-	@if grep -q "make dca-start" ~/.zshrc 2>/dev/null; then \
-		sed -i '' '/# DCA Bot auto-start/d' ~/.zshrc; \
-		sed -i '' '/make dca-start/d' ~/.zshrc; \
-		echo "✅ Removed DCA bot auto-start from ~/.zshrc"; \
-	else \
-		echo "⚠️  No auto-start configuration found in ~/.zshrc"; \
-	fi

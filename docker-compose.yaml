@@ -51,23 +51,6 @@ services:
     depends_on:
       - api
 
-  dca-bot:
-    container_name: stock-alerting-dca-bot
-    build:
-      context: ./backend
-      dockerfile: bot/Dockerfile
-    env_file: "./backend/bot/dca/.env"
-    environment:
-      POSTGRESQL_CONNECTION_STRING: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${DB_NAME}
-      TZ: Europe/Paris
-    volumes:
-      - ./bot-logs:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-    profiles:
-      - dca
-
 volumes:
   stock_alerting_front_node_modules:
     name: stock_alerting_front_node_modules

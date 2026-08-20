@@ -5,7 +5,7 @@ description = "Stock alerting backend monorepo"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]
-members = ["api", "bot", "shared"]
+members = ["api", "shared"]
 
 [dependency-groups]
 dev = [
@@ -17,18 +17,6 @@ dev = [
     "ty>=0.0.37",
 ]
 
-[tool.coverage.run]
-omit = [
-    "bot/dca/main.py",
-    "bot/dca/test_debug.py",
-]
-
-[tool.coverage.report]
-omit = [
-    "bot/dca/main.py",
-    "bot/dca/test_debug.py",
-]
-
 [tool.ruff]
 line-length = 88
 target-version = "py312"
@@ -38,7 +26,7 @@ select = ["E4", "E7", "E9", "F", "I"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["shared", "src", "dca"]
+known-first-party = ["shared", "src"]
 
 [tool.ruff.format]
 quote-style = "double"

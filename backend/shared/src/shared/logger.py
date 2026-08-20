@@ -1,5 +1,5 @@
 """
-Logging module configured for the DCA bot.
+Logging module for the API.
 """
 
 import sys

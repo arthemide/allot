@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel
 
@@ -74,13 +73,3 @@ class TransactionSchema(BaseModel):
 class PricePoint(BaseModel):
     date: str
     price: float
-
-
-class Alert(BaseModel):
-    stock_symbol: str
-    stock_name: str | None
-    kind: Literal["arbitration", "gain_loss"]
-    direction: Literal["over", "under", "gain", "loss"]
-    value: float
-    threshold: float
-    message: str

@@ -7,8 +7,6 @@ help:
 		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "BOT"
-	grep -E '^\.PHONY: (dca-start|dca-logs|dca-stop) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
 	echo ""
 	echo "DATABASE"
 	grep -E '^\.PHONY: (db-backup|db-restore) .*?## .*$$' $(MAKEFILE_LIST) \
@@ -30,17 +28,8 @@ up-debug-no-mig:
 down:
 	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml down
 
-.PHONY: dca-start ## 🤖 start DCA bot detached
-dca-start:
-	docker-compose -f docker-compose.yaml --profile dca up --build -d dca-bot
 
-.PHONY: dca-logs ## 📋 view DCA bot logs
-dca-logs:
-	docker-compose -f docker-compose.yaml --profile dca logs -f dca-bot
 
-.PHONY: dca-stop ## 🛑 stop DCA bot
-dca-stop:
-	docker-compose -f docker-compose.yaml --profile dca stop dca-bot
 
 .PHONY: db-backup ## 💾 backup postgres to ./backups
 db-backup:
