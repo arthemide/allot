@@ -111,9 +111,11 @@
 				</div>
 			{/if}
 
-			<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
-
-			<OpeningPosition {position} onChange={refresh} />
+			<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh}>
+				{#snippet actions()}
+					<OpeningPosition {position} onChange={refresh} />
+				{/snippet}
+			</TransactionTable>
 		{/if}
 	{/if}
 </div>

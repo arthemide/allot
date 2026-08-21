@@ -2,6 +2,7 @@
 	import { addTransaction, deleteTransaction } from '$lib/services/api';
 	import type { Position, Transaction } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { formatMoney } from '$lib/utils';
@@ -9,12 +10,17 @@
 	let {
 		position,
 		transactions,
-		onChange
+		onChange,
+		actions
 	}: {
 		position: Position;
 		transactions: Transaction[];
 		onChange: () => void;
+		// Extra buttons for the toolbar, so rarely used forms stay out of the way.
+		actions?: import('svelte').Snippet;
 	} = $props();
+
+	let open = $state(false);
 
 	let date = $state(new Date().toISOString().slice(0, 10));
 	let side = $state<'buy' | 'sell'>('buy');
@@ -49,6 +55,7 @@
 			quantity = '';
 			fees = '0';
 			onChange();
+			open = false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not save the transaction.';
 		} finally {
@@ -62,44 +69,73 @@
 	}
 </script>
 
-<form class="space-y-3 rounded-lg border p-4" onsubmit={submit}>
-	<h2 class="font-semibold">Add a transaction</h2>
+<div class="flex items-center justify-between gap-2">
+	<h2 class="font-semibold">Transactions</h2>
+	<div class="flex items-center gap-1">
+		{@render actions?.()}
 
-	<div class="flex flex-wrap items-end gap-3">
-		<div class="space-y-1">
-			<label for="tx-date" class="text-muted-foreground block text-xs uppercase">Date</label>
-			<Input id="tx-date" type="date" bind:value={date} required class="w-40" />
-		</div>
-		<div class="space-y-1">
-			<label for="tx-side" class="text-muted-foreground block text-xs uppercase">Side</label>
-			<select
-				id="tx-side"
-				bind:value={side}
-				class="border-input bg-background h-9 rounded-md border px-2 text-sm"
-			>
-				<option value="buy">buy</option>
-				<option value="sell">sell</option>
-			</select>
-		</div>
-		<div class="space-y-1">
-			<label for="tx-quantity" class="text-muted-foreground block text-xs uppercase">Quantity</label>
-			<Input id="tx-quantity" type="number" step="any" bind:value={quantity} class="w-36" />
-		</div>
-		<div class="space-y-1">
-			<label for="tx-price" class="text-muted-foreground block text-xs uppercase">Unit price</label>
-			<Input id="tx-price" type="number" step="any" bind:value={unitPrice} class="w-36" />
-		</div>
-		<div class="space-y-1">
-			<label for="tx-fees" class="text-muted-foreground block text-xs uppercase">Fees</label>
-			<Input id="tx-fees" type="number" step="any" bind:value={fees} class="w-28" />
-		</div>
-		<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add'}</Button>
+		<Dialog.Root bind:open>
+			<Dialog.Trigger>
+				{#snippet child({ props })}
+					<Button {...props} size="sm" title="Add a transaction">+</Button>
+				{/snippet}
+			</Dialog.Trigger>
+
+			<Dialog.Content class="max-w-xl">
+				<Dialog.Header>
+					<Dialog.Title>Add a transaction</Dialog.Title>
+					<Dialog.Description>
+						The unit price is prefilled with the current quote and stays editable.
+					</Dialog.Description>
+				</Dialog.Header>
+
+				<form class="space-y-3" onsubmit={submit}>
+					<div class="flex flex-wrap items-end gap-3">
+						<div class="space-y-1">
+							<label for="tx-date" class="text-muted-foreground block text-xs uppercase">Date</label>
+							<Input id="tx-date" type="date" bind:value={date} required class="w-40" />
+						</div>
+						<div class="space-y-1">
+							<label for="tx-side" class="text-muted-foreground block text-xs uppercase">Side</label>
+							<select
+								id="tx-side"
+								bind:value={side}
+								class="border-input bg-background h-9 rounded-md border px-2 text-sm"
+							>
+								<option value="buy">buy</option>
+								<option value="sell">sell</option>
+							</select>
+						</div>
+						<div class="space-y-1">
+							<label for="tx-quantity" class="text-muted-foreground block text-xs uppercase">
+								Quantity
+							</label>
+							<Input id="tx-quantity" type="number" step="any" bind:value={quantity} class="w-36" />
+						</div>
+						<div class="space-y-1">
+							<label for="tx-price" class="text-muted-foreground block text-xs uppercase">
+								Unit price
+							</label>
+							<Input id="tx-price" type="number" step="any" bind:value={unitPrice} class="w-36" />
+						</div>
+						<div class="space-y-1">
+							<label for="tx-fees" class="text-muted-foreground block text-xs uppercase">Fees</label>
+							<Input id="tx-fees" type="number" step="any" bind:value={fees} class="w-28" />
+						</div>
+					</div>
+
+					{#if error}
+						<p class="text-sm text-red-600">{error}</p>
+					{/if}
+
+					<Dialog.Footer>
+						<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Add'}</Button>
+					</Dialog.Footer>
+				</form>
+			</Dialog.Content>
+		</Dialog.Root>
 	</div>
-
-	{#if error}
-		<p class="text-sm text-red-600">{error}</p>
-	{/if}
-</form>
+</div>
 
 <div class="rounded-lg border">
 	<Table.Root>
