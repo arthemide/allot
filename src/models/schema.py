@@ -104,6 +104,7 @@ class SummaryAsset(BaseModel):
     invested: float
     market_value: float
     gain: float
+    gain_percent: float | None
 
 
 class SummaryEnvelope(BaseModel):
@@ -111,6 +112,7 @@ class SummaryEnvelope(BaseModel):
     invested: float
     market_value: float
     gain: float
+    gain_percent: float | None
     assets: list[SummaryAsset]
 
 

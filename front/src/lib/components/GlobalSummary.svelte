@@ -7,17 +7,18 @@
 		updateAsset
 	} from '$lib/services/api';
 	import type { Envelope, Position, Summary } from '$lib/types/api';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { formatMoney } from '$lib/utils';
 
 	let {
 		positions,
-		onChange
+		onChange,
+		onSelect
 	}: {
 		positions: Position[];
 		onChange: () => void;
+		onSelect: (symbol: string) => void;
 	} = $props();
 
 	let summary = $state<Summary | null>(null);
@@ -43,6 +44,11 @@
 
 	function tone(value: number): string {
 		return value >= 0 ? 'text-green-600' : 'text-red-600';
+	}
+
+	function percent(value: number | null | undefined): string {
+		if (value === null || value === undefined) return '';
+		return `${value >= 0 ? '+' : ''}${value.toFixed(1)} %`;
 	}
 
 	function assetsOf(envelope: string): Position[] {
@@ -119,7 +125,7 @@
 					<Table.Head class="text-right">Invested</Table.Head>
 					<Table.Head class="text-right">Market value</Table.Head>
 					<Table.Head class="text-right">Gain / loss</Table.Head>
-					<Table.Head class="w-24 text-right">Actions</Table.Head>
+					<Table.Head class="w-16"></Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -142,8 +148,9 @@
 						<Table.Cell class="text-right tabular-nums">{eur(totals?.market_value ?? 0)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums {tone(totals?.gain ?? 0)}">
 							{eur(totals?.gain ?? 0)}
+							<span class="ml-1 text-xs font-normal">{percent(totals?.gain_percent)}</span>
 						</Table.Cell>
-						<Table.Cell class="w-24"></Table.Cell>
+						<Table.Cell class="w-16"></Table.Cell>
 					</Table.Row>
 
 					{#each assetsOf(envelope.name) as asset (asset.symbol)}
@@ -152,8 +159,14 @@
 							?.assets.find((a) => a.symbol === asset.symbol)}
 						<Table.Row>
 							<Table.Cell class="pl-8 text-left">
-								<span class="font-mono">{asset.symbol}</span>
-								<span class="text-muted-foreground ml-2 text-xs">{asset.label}</span>
+								<button
+									type="button"
+									class="hover:text-primary text-left hover:underline"
+									onclick={() => onSelect(asset.symbol)}
+								>
+									<span class="font-mono">{asset.symbol}</span>
+									<span class="text-muted-foreground ml-2 text-xs">{asset.label}</span>
+								</button>
 							</Table.Cell>
 							<Table.Cell class="w-40 text-right">
 								<Input
@@ -173,9 +186,19 @@
 							</Table.Cell>
 							<Table.Cell class="text-right tabular-nums {tone(totals2?.gain ?? 0)}">
 								{eur(totals2?.gain ?? 0)}
+								<span class="ml-1 text-xs">{percent(totals2?.gain_percent)}</span>
 							</Table.Cell>
-							<Table.Cell class="w-24 text-right">
-								<Button variant="destructive" size="sm" onclick={() => remove(asset)}>Delete</Button>
+							<Table.Cell class="w-16 text-right">
+								<button
+									type="button"
+									title="Delete {asset.symbol} and its transactions"
+									aria-label="Delete {asset.symbol}"
+									class="text-muted-foreground/40 hover:text-destructive px-2 leading-none
+										transition-colors"
+									onclick={() => remove(asset)}
+								>
+									&times;
+								</button>
 							</Table.Cell>
 						</Table.Row>
 					{/each}

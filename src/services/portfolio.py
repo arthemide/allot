@@ -144,6 +144,13 @@ def _to_eur(value: float | None, currency: str, rate: float | None) -> float:
     return value
 
 
+def _percent(invested: float, market_value: float) -> float | None:
+    """Return None rather than 0 when nothing was invested: there is no rate."""
+    if not invested:
+        return None
+    return (market_value - invested) / invested * 100
+
+
 def summary() -> dict:
     """Totals across every asset, in EUR, grouped by envelope.
 
@@ -172,11 +179,13 @@ def summary() -> dict:
                 "invested": invested,
                 "market_value": market_value,
                 "gain": market_value - invested,
+                "gain_percent": _percent(invested, market_value),
             }
         )
 
     for bucket in envelopes.values():
         bucket["gain"] = bucket["market_value"] - bucket["invested"]
+        bucket["gain_percent"] = _percent(bucket["invested"], bucket["market_value"])
 
     invested = sum(b["invested"] for b in envelopes.values())
     market_value = sum(b["market_value"] for b in envelopes.values())

@@ -58,6 +58,7 @@ export interface SummaryAsset {
 	invested: number;
 	market_value: number;
 	gain: number;
+	gain_percent: number | null;
 }
 
 export interface SummaryEnvelope {
@@ -65,6 +66,7 @@ export interface SummaryEnvelope {
 	invested: number;
 	market_value: number;
 	gain: number;
+	gain_percent: number | null;
 	assets: SummaryAsset[];
 }
 

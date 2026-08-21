@@ -83,7 +83,7 @@
 		</div>
 
 		{#if showingAll}
-			<GlobalSummary {positions} onChange={refresh} />
+			<GlobalSummary {positions} onChange={refresh} onSelect={(symbol) => (selected = symbol)} />
 		{:else if position}
 			<PositionBanner {position} />
 
