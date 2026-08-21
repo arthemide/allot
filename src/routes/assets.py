@@ -7,6 +7,7 @@ from src.models.schema import (
     AssetCreate,
     AssetUpdate,
     Chart,
+    OpeningPosition,
     Position,
     SearchHit,
     Summary,
@@ -86,9 +87,31 @@ def delete_asset(symbol: str):
     db.prune_empty_envelopes()
 
 
-@router.get("/{symbol}/chart", response_model=Chart)
-def get_chart(symbol: str):
-    """Price history, transaction markers and the step PRUM curve."""
+@router.put("/{symbol}/opening", response_model=Position)
+def set_opening_position(symbol: str, payload: OpeningPosition):
+    """Set the holding that predates tracking, for a line with no history.
+
+    A statement gives units held and total paid; the PRUM follows from those.
+    """
     if db.get_asset(symbol) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
-    return portfolio.chart_data(symbol)
+    if payload.quantity > 0 and not payload.invested:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "A quantity needs the amount invested, otherwise there is no PRUM "
+            "to compute. Leave the quantity at 0 to clear the opening position.",
+        )
+    db.set_opening_position(symbol, payload.quantity, payload.invested)
+    return portfolio.position_of(db.get_asset(symbol))
+
+
+@router.get("/{symbol}/chart", response_model=Chart)
+def get_chart(symbol: str, window: str = portfolio.DEFAULT_RANGE):
+    """Price history, transaction markers and the step PRUM curve.
+
+    `window` is "tx" (a quarter before the first transaction) or one of
+    "1y", "3y", "5y", "max".
+    """
+    if db.get_asset(symbol) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
+    return portfolio.chart_data(symbol, window)

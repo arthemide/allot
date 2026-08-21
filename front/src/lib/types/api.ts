@@ -4,6 +4,8 @@ export interface Position {
 	envelope: string;
 	currency: string;
 	weight: number;
+	base_quantity: number;
+	base_prum: number | null;
 	quantity: number;
 	prum: number;
 	invested: number;

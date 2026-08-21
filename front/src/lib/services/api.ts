@@ -51,8 +51,17 @@ export const getSummary = () => request<Summary>('/assets/summary');
 export const getAsset = (symbol: string) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`);
 
-export const getChart = (symbol: string) =>
-	request<Chart>(`/assets/${encodeURIComponent(symbol)}/chart`);
+export const getChart = (symbol: string, window = 'tx') =>
+	request<Chart>(`/assets/${encodeURIComponent(symbol)}/chart?window=${window}`);
+
+export const setOpeningPosition = (
+	symbol: string,
+	body: { quantity: number; invested: number | null }
+) =>
+	request<Position>(`/assets/${encodeURIComponent(symbol)}/opening`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
 
 export const getTransactions = (symbol: string) =>
 	request<Transaction[]>(`/transactions?symbol=${encodeURIComponent(symbol)}`);

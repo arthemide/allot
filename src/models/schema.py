@@ -13,6 +13,8 @@ class Position(BaseModel):
     envelope: str
     currency: str
     weight: float
+    base_quantity: float
+    base_prum: float | None
     quantity: float
     prum: float
     invested: float
@@ -81,6 +83,13 @@ class AssetUpdate(BaseModel):
     label: str
     envelope: str
     weight: float = Field(ge=0)
+
+
+class OpeningPosition(BaseModel):
+    """A holding that predates tracking, as it reads on a statement."""
+
+    quantity: float = Field(ge=0)
+    invested: float | None = Field(default=None, ge=0)
 
 
 class Envelope(BaseModel):

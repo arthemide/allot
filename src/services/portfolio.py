@@ -6,7 +6,7 @@ transactions plus the asset's opening position.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src import calc
 from src.databases import sqlite as db
@@ -44,6 +44,8 @@ def position_of(asset: dict) -> dict:
         "envelope": asset["envelope"],
         "currency": asset["currency"],
         "weight": asset["weight"],
+        "base_quantity": asset["base_quantity"],
+        "base_prum": asset["base_prum"],
         "quantity": result.quantity,
         "prum": result.prum,
         "invested": result.invested,
@@ -58,12 +60,21 @@ def all_positions() -> list[dict]:
     return [position_of(asset) for asset in db.all_assets()]
 
 
-def chart_data(symbol: str) -> dict:
+# How far back each range reaches, in days. "tx" starts at the first
+# transaction; "max" goes back as far as the provider will answer.
+RANGE_DAYS = {"1y": 365, "3y": 3 * 365, "5y": 5 * 365, "max": 40 * 365}
+DEFAULT_RANGE = "tx"
+# Lead-in before the first transaction, so the price is not glued to the left
+# edge and the first buy can be read in context.
+LEAD_IN_DAYS = 90
+
+
+def chart_data(symbol: str, window: str = DEFAULT_RANGE) -> dict:
     """Price history, transaction markers and the step PRUM curve.
 
-    The window is pinned to the asset's real transactions: it starts at the
-    first one and runs to today. An asset with no transaction falls back to the
-    last twelve months.
+    By default the window starts a quarter before the first transaction, so the
+    first buy sits in context rather than on the left edge. A named range
+    ("1y", "3y", "5y", "max") overrides that.
     """
     asset = db.get_asset(symbol)
     if asset is None:
@@ -71,10 +82,13 @@ def chart_data(symbol: str) -> dict:
 
     rows = db.transactions_of(symbol)
     today = datetime.now().date()
-    if rows:
-        start = datetime.fromisoformat(rows[0]["date"]).date()
+    if window in RANGE_DAYS:
+        start = today - timedelta(days=RANGE_DAYS[window])
+    elif rows:
+        first = datetime.fromisoformat(rows[0]["date"]).date()
+        start = first - timedelta(days=LEAD_IN_DAYS)
     else:
-        start = today.replace(year=today.year - 1)
+        start = today - timedelta(days=365)
 
     history = prices.price_history(symbol, start, today)
 

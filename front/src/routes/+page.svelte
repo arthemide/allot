@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AssetChart from '$lib/components/AssetChart.svelte';
 	import GlobalSummary from '$lib/components/GlobalSummary.svelte';
+	import OpeningPosition from '$lib/components/OpeningPosition.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
 	import { getAssets, getChart, getEnvelopes } from '$lib/services/api';
@@ -14,6 +15,7 @@
 	let envelopes = $state<Envelope[]>([]);
 	let selected = $state<string>(ALL);
 	let chart = $state<Chart | null>(null);
+	let window_ = $state('tx');
 	let loading = $state(true);
 	let error = $state('');
 
@@ -37,7 +39,7 @@
 			chart = null;
 			return;
 		}
-		chart = await getChart(selected);
+		chart = await getChart(selected, window_);
 	}
 
 	async function refresh() {
@@ -53,6 +55,7 @@
 
 	$effect(() => {
 		selected;
+		window_;
 		loadChart();
 	});
 </script>
@@ -85,7 +88,20 @@
 			<PositionBanner {position} />
 
 			{#if chart}
-				<div class="rounded-lg border p-4">
+				<div class="space-y-3 rounded-lg border p-4">
+					<div class="flex flex-wrap items-center gap-2">
+						{#each [['tx', 'Since first buy'], ['1y', '1 year'], ['3y', '3 years'], ['5y', '5 years'], ['max', 'Max']] as [value, label] (value)}
+							<button
+								type="button"
+								class="rounded-md border px-2 py-1 text-xs {window_ === value
+									? 'bg-primary text-primary-foreground'
+									: 'hover:bg-muted'}"
+								onclick={() => (window_ = value)}
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
 					<AssetChart
 						transactions={chart.transactions}
 						priceHistory={chart.prices}
@@ -96,6 +112,8 @@
 			{/if}
 
 			<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh} />
+
+			<OpeningPosition {position} onChange={refresh} />
 		{/if}
 	{/if}
 </div>

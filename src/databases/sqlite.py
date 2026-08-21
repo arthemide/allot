@@ -88,6 +88,26 @@ def update_asset(symbol: str, label: str, envelope: str, weight: float) -> None:
     )
 
 
+def set_opening_position(
+    symbol: str, quantity: float, invested: float | None
+) -> None:
+    """Record a holding that predates tracking: a quantity and what it cost.
+
+    A statement gives the number of units and the total paid, so the PRUM is
+    derived rather than asked for. Passing a quantity of 0 clears it.
+    """
+    if quantity <= 0 or not invested:
+        execute(
+            "UPDATE asset SET base_quantity = 0, base_prum = NULL WHERE symbol = ?",
+            (symbol,),
+        )
+        return
+    execute(
+        "UPDATE asset SET base_quantity = ?, base_prum = ? WHERE symbol = ?",
+        (quantity, invested / quantity, symbol),
+    )
+
+
 def delete_asset(symbol: str) -> None:
     """Transactions go with it, through ON DELETE CASCADE."""
     execute("DELETE FROM asset WHERE symbol = ?", (symbol,))
