@@ -12,13 +12,34 @@ import type {
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';
 
+/** Surface what the API actually said, not just the status code. */
+async function errorMessage(response: Response, path: string, method: string) {
+	try {
+		const body = await response.json();
+		// FastAPI puts a plain string in `detail`, or a list of field errors
+		// when the payload failed validation.
+		if (typeof body.detail === 'string') return body.detail;
+		if (Array.isArray(body.detail)) {
+			return body.detail
+				.map((issue: { loc?: unknown[]; msg?: string }) => {
+					const field = issue.loc?.slice(1).join('.') ?? '';
+					return field ? `${field}: ${issue.msg}` : issue.msg;
+				})
+				.join(', ');
+		}
+	} catch {
+		// No JSON body: fall through to the generic message.
+	}
+	return `${method} ${path} failed (${response.status})`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(`${BASE}${path}`, {
 		headers: { 'Content-Type': 'application/json' },
 		...init
 	});
 	if (!response.ok) {
-		throw new Error(`${init?.method ?? 'GET'} ${path} failed: ${response.status}`);
+		throw new Error(await errorMessage(response, path, init?.method ?? 'GET'));
 	}
 	return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }

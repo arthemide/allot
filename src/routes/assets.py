@@ -25,8 +25,14 @@ def list_assets():
 @router.post("", response_model=Position, status_code=status.HTTP_201_CREATED)
 def create_asset(payload: AssetCreate):
     """Add an asset, normally picked from the ticker search."""
-    if db.get_asset(payload.symbol) is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Asset already tracked")
+    existing = db.get_asset(payload.symbol)
+    if existing is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{payload.symbol} is already tracked, in envelope "
+            f"{existing['envelope']}. Change its envelope from the * page "
+            f"instead of adding it again.",
+        )
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)
     db.add_asset(
@@ -55,7 +61,7 @@ def get_summary():
 def get_asset(symbol: str):
     asset = db.get_asset(symbol)
     if asset is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     return portfolio.position_of(asset)
 
 
@@ -63,7 +69,7 @@ def get_asset(symbol: str):
 def update_asset(symbol: str, payload: AssetUpdate):
     """Change the label, the envelope or the weight inside the envelope."""
     if db.get_asset(symbol) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)
     db.update_asset(symbol, payload.label, payload.envelope, payload.weight)
@@ -74,7 +80,7 @@ def update_asset(symbol: str, payload: AssetUpdate):
 def delete_asset(symbol: str):
     """Deletes the asset and its transactions."""
     if db.get_asset(symbol) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     db.delete_asset(symbol)
 
 
@@ -82,5 +88,5 @@ def delete_asset(symbol: str):
 def get_chart(symbol: str):
     """Price history, transaction markers and the step PRUM curve."""
     if db.get_asset(symbol) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown asset")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     return portfolio.chart_data(symbol)

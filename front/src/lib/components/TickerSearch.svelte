@@ -7,9 +7,11 @@
 
 	let {
 		envelopes,
+		tracked = [],
 		onAdded
 	}: {
 		envelopes: Envelope[];
+		tracked?: string[];
 		onAdded: () => void;
 	} = $props();
 
@@ -107,7 +109,15 @@
 						{:else}
 							<span class="tabular-nums">{formatMoney(hit.price, hit.currency)}</span>
 						{/if}
-						<Button size="sm" variant="outline" onclick={() => add(hit)} disabled={hit.price === null}>
+						{#if tracked.includes(hit.symbol)}
+							<span class="text-muted-foreground text-xs">already tracked</span>
+						{/if}
+						<Button
+							size="sm"
+							variant="outline"
+							onclick={() => add(hit)}
+							disabled={hit.price === null || tracked.includes(hit.symbol)}
+						>
 							Add
 						</Button>
 					</div>

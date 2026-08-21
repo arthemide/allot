@@ -79,7 +79,7 @@
 
 		{#if showingAll}
 			<GlobalSummary {positions} onChange={refresh} />
-			<TickerSearch {envelopes} onAdded={refresh} />
+			<TickerSearch {envelopes} tracked={positions.map((p) => p.symbol)} onAdded={refresh} />
 		{:else if position}
 			<PositionBanner {position} />
 

@@ -24,9 +24,11 @@ def upsert_envelope(name: str, payload: Envelope):
 def delete_envelope(name: str):
     """Refused while assets still point at it, to avoid orphaning them."""
     if db.get_envelope(name) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown envelope")
-    if db.envelope_asset_count(name):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No envelope named {name}")
+    count = db.envelope_asset_count(name)
+    if count:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, "Envelope still holds assets"
+            status.HTTP_409_CONFLICT,
+            f"{name} still holds {count} asset(s). Move or delete them first.",
         )
     db.delete_envelope(name)
