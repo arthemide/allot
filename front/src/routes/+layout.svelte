@@ -8,6 +8,7 @@
 	import { toggleMode } from "mode-watcher";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import MonthlyNote from "$lib/components/MonthlyNote.svelte";
+	import TickerSearch from "$lib/components/TickerSearch.svelte";
 
 	let { children } = $props();
 </script>
@@ -21,6 +22,7 @@
 <nav class="flex items-center justify-between border-b px-6 py-3">
 	<div class="text-sm font-semibold">Allot</div>
 	<div class="flex items-center gap-2">
+	<TickerSearch />
 	<MonthlyNote />
 	<Button onclick={toggleMode} variant="outline" size="icon">
 		<SunIcon

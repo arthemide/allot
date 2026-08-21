@@ -1,20 +1,17 @@
 <script lang="ts">
-	import { createAsset, searchTickers } from '$lib/services/api';
+	import { createAsset, getAssets, getEnvelopes, searchTickers } from '$lib/services/api';
+	import { refresh } from '$lib/state/refresh.svelte';
 	import type { Envelope, SearchHit } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { formatMoney } from '$lib/utils';
 
-	let {
-		envelopes,
-		tracked = [],
-		onAdded
-	}: {
-		envelopes: Envelope[];
-		tracked?: string[];
-		onAdded: () => void;
-	} = $props();
+	// Lives in the header, so it fetches what it needs instead of taking props.
+	let envelopes = $state<Envelope[]>([]);
+	let tracked = $state<string[]>([]);
 
+	let open = $state(false);
 	let query = $state('');
 	let hits = $state<SearchHit[]>([]);
 	let searching = $state(false);
@@ -23,6 +20,18 @@
 	// Envelope the next added asset lands in; free text so a new one can be
 	// created on the spot.
 	let envelope = $state('');
+
+	$effect(() => {
+		if (!open) return;
+		Promise.all([getEnvelopes(), getAssets()])
+			.then(([e, assets]) => {
+				envelopes = e;
+				tracked = assets.map((a) => a.symbol);
+			})
+			.catch(() => {
+				/* the dialog still works without the hints */
+			});
+	});
 
 	async function run(event: SubmitEvent) {
 		event.preventDefault();
@@ -54,21 +63,31 @@
 				weight: 1
 			});
 			hits = hits.filter((h) => h.symbol !== hit.symbol);
-			onAdded();
+			refresh.bump();
+			open = false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not add the asset.';
 		}
 	}
 </script>
 
-<div class="space-y-3 rounded-lg border p-4">
-	<h2 class="font-semibold">Find a ticker</h2>
-	<p class="text-muted-foreground text-sm">
-		Exchange suffixes matter (WPEA.PA, VWCE.DE, ETH-USD). Search by name or symbol; a result with
-		no price does not answer and should not be picked.
-	</p>
+<Dialog.Root bind:open>
+	<Dialog.Trigger>
+		{#snippet child({ props })}
+			<Button {...props} variant="outline" size="sm">Add an asset</Button>
+		{/snippet}
+	</Dialog.Trigger>
 
-	<form class="flex flex-wrap items-end gap-3" onsubmit={run}>
+	<Dialog.Content class="max-w-2xl">
+		<Dialog.Header>
+			<Dialog.Title>Add an asset</Dialog.Title>
+			<Dialog.Description>
+				Exchange suffixes matter (WPEA.PA, VWCE.DE, ETH-USD). Search by name or symbol; a result
+				with no price does not answer and should not be picked.
+			</Dialog.Description>
+		</Dialog.Header>
+
+		<form class="flex flex-wrap items-end gap-3" onsubmit={run}>
 		<div class="space-y-1">
 			<label for="q" class="text-muted-foreground block text-xs uppercase">Name or symbol</label>
 			<Input id="q" bind:value={query} placeholder="msci world" class="w-64" />
@@ -89,13 +108,13 @@
 			</datalist>
 		</div>
 		<Button type="submit" disabled={searching}>{searching ? 'Searching...' : 'Search'}</Button>
-	</form>
+		</form>
 
-	{#if error}
+		{#if error}
 		<p class="text-sm text-red-600">{error}</p>
-	{/if}
+		{/if}
 
-	{#if hits.length > 0}
+		{#if hits.length > 0}
 		<ul class="divide-y rounded-md border">
 			{#each hits as hit (hit.symbol)}
 				<li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
@@ -124,9 +143,10 @@
 				</li>
 			{/each}
 		</ul>
-	{:else if searched && !searching}
-		<p class="text-muted-foreground text-sm">
-			Nothing found. Yahoo's search is literal: try the bare symbol, like WPEA or VWCE.
-		</p>
-	{/if}
-</div>
+		{:else if searched && !searching}
+			<p class="text-muted-foreground text-sm">
+				Nothing found. Yahoo's search is literal: try the bare symbol, like WPEA or VWCE.
+			</p>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>

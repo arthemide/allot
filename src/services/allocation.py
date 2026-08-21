@@ -50,6 +50,7 @@ def plan() -> list[dict]:
                 "assets": [
                     {
                         "symbol": asset["symbol"],
+                        "weight": asset["weight"],
                         "amount": line_amount,
                         "multiplier": multiplier,
                         "currency": asset["currency"],

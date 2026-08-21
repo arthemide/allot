@@ -2,9 +2,9 @@
 	import AssetChart from '$lib/components/AssetChart.svelte';
 	import GlobalSummary from '$lib/components/GlobalSummary.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
-	import TickerSearch from '$lib/components/TickerSearch.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
 	import { getAssets, getChart, getEnvelopes } from '$lib/services/api';
+	import { refresh as refreshSignal } from '$lib/state/refresh.svelte';
 	import type { Chart, Envelope, Position } from '$lib/types/api';
 
 	// Sentinel value of the selector: totals and settings instead of one asset.
@@ -46,6 +46,8 @@
 	}
 
 	$effect(() => {
+		// Re-reads when the header's search adds an asset.
+		refreshSignal.tick;
 		loadPositions();
 	});
 
@@ -79,7 +81,6 @@
 
 		{#if showingAll}
 			<GlobalSummary {positions} onChange={refresh} />
-			<TickerSearch {envelopes} tracked={positions.map((p) => p.symbol)} onAdded={refresh} />
 		{:else if position}
 			<PositionBanner {position} />
 

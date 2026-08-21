@@ -14,6 +14,7 @@ PLAN = [
         "assets": [
             {
                 "symbol": "WPEA.PA",
+                "weight": 1.0,
                 "amount": 440.0,
                 "multiplier": 1.0,
                 "currency": "EUR",
@@ -29,6 +30,7 @@ PLAN = [
         "assets": [
             {
                 "symbol": "ETH-USD",
+                "weight": 1.0,
                 "amount": 123.75,
                 "multiplier": 1.5,
                 "currency": "USD",
@@ -37,6 +39,7 @@ PLAN = [
             },
             {
                 "symbol": "BTC-USD",
+                "weight": 1.0,
                 "amount": 41.25,
                 "multiplier": 0.5,
                 "currency": "USD",
@@ -96,6 +99,27 @@ class TestNote:
         # An envelope with nothing in it yet still states what goes into it
         text = note.render(date(2026, 9, 15))
         assert "CTO - 80 €" in text
+
+    def test_zero_weight_asset_is_left_out(self, offline, monkeypatch):
+        # Given a held asset that is never topped up
+        plan = [dict(e) for e in PLAN]
+        plan[1] = dict(plan[1])
+        plan[1]["assets"] = plan[1]["assets"] + [
+            {
+                "symbol": "SOL-USD",
+                "weight": 0.0,
+                "amount": 0.0,
+                "multiplier": 1.0,
+                "currency": "USD",
+                "price": 88.0,
+                "prum": 90.0,
+            }
+        ]
+        monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: plan)
+        # When the note is rendered
+        text = note.render(date(2026, 9, 15))
+        # Then it says nothing about it: there is no money going its way
+        assert "SOL-USD" not in text
 
     def test_uses_plain_ascii_dashes(self, offline):
         text = note.render(date(2026, 9, 15))

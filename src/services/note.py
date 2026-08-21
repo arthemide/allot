@@ -80,6 +80,10 @@ def render(today: date | None = None) -> str:
     for envelope in envelopes:
         lines.append(f"{envelope['envelope']} - {_money(envelope['amount'])}")
         for asset in envelope["assets"]:
+            # A weight of 0 means the asset is held but never topped up: it has
+            # nothing to say in a note about where this month's money goes.
+            if not asset["weight"]:
+                continue
             lines.append(_asset_line(asset))
 
     lines.append("")

@@ -123,6 +123,26 @@ def envelope_asset_count(name: str) -> int:
     return query("SELECT count(*) AS n FROM asset WHERE envelope = ?", (name,))[0]["n"]
 
 
+def prune_empty_envelopes() -> list[str]:
+    """Drop envelopes that no longer hold anything.
+
+    Envelopes are only ever created by adding an asset to them, so one left
+    empty is a leftover, never a deliberate placeholder.
+    """
+    empty = [
+        row["name"]
+        for row in query(
+            """
+            SELECT name FROM envelope
+            WHERE name NOT IN (SELECT DISTINCT envelope FROM asset)
+            """
+        )
+    ]
+    for name in empty:
+        delete_envelope(name)
+    return empty
+
+
 # --- transactions ---------------------------------------------------------
 
 

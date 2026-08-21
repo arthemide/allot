@@ -73,6 +73,7 @@ def update_asset(symbol: str, payload: AssetUpdate):
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)
     db.update_asset(symbol, payload.label, payload.envelope, payload.weight)
+    db.prune_empty_envelopes()
     return portfolio.position_of(db.get_asset(symbol))
 
 
@@ -82,6 +83,7 @@ def delete_asset(symbol: str):
     if db.get_asset(symbol) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     db.delete_asset(symbol)
+    db.prune_empty_envelopes()
 
 
 @router.get("/{symbol}/chart", response_model=Chart)

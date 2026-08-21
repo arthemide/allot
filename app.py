@@ -40,6 +40,9 @@ def _check_tickers() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init()
+    pruned = db.prune_empty_envelopes()
+    if pruned:
+        logger.info("removed empty envelopes: %s", ", ".join(pruned))
     _check_tickers()
     yield
 
