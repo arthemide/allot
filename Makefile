@@ -2,7 +2,6 @@
 .DEFAULT_GOAL := help
 
 FRONT_DIR := front
-CSV_DIR := ../migration-csv
 
 help:
 	echo "Please use \`make \033[36m<target>\033[0m\`"
@@ -48,10 +47,6 @@ lint:
 format:
 	uv run ruff format .
 	uv run ruff check --fix .
-
-.PHONY: migrate ## 🗄️ Rebuild data/allot.db from the CSV export
-migrate:
-	uv run migrate.py --csv-dir $(CSV_DIR)
 
 .PHONY: note ## 📚 Print the monthly note (needs the app running)
 note:

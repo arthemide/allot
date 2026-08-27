@@ -1,121 +1,109 @@
-# Stock alerting
+# Allot
 
-This project is a simple stock alerting system that sends an email when a stock price is above or below a certain threshold.
+> Per-asset PRUM tracking and a monthly allocation note.
 
-## Project Structure
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-- **api/** - FastAPI backend for stock alerting
-- **front/** - Svelte frontend
-- **bot/dca/** - Binance DCA (Dollar Cost Averaging) bot for automated crypto purchases
+## Overview
 
-## Launch the stock alerting system
+Allot tracks what you hold, what it cost you, and tells you where this month's
+money should go.
 
-Setup the environment variables by creating a `.env` file based on the `.env.template` file on the api folder.
+Positions are never stored. Quantity and PRUM (*prix de revient unitaire
+moyen*, the weighted average price paid) are recomputed on every read from the
+transactions plus an optional opening position — the holding that predates
+tracking. There is no state to keep in sync and no reconciliation step.
 
-Then you can launch the project with the following command:
+Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope
+carries its own monthly amount and stands on its own: one envelope never draws
+from another. Inside an envelope the amount is split across assets by their
+relative weight, modulated by how far the current price sits from the PRUM —
+1.5x when the price is more than 10% below it, 0.5x when it is more than 10%
+above, 1x in between. The envelope total stays invariant.
+
+## Features
+
+- Per-asset position, PRUM, gain and gain percentage, recomputed from history
+- Envelopes with a monthly amount and a per-asset split
+- Ticker search, so the exchange suffix (`WPEA.PA`, `VWCE.DE`, `ETH-USD`) does
+  not have to be guessed
+- Price chart with transaction markers and the step PRUM curve
+- A plain-text monthly note, ready to paste into a reminder
+
+## Getting started
+
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) and Python 3.12+
+- Node 22+
+
+No configuration file, no environment variable, no external service: the whole
+state lives in a SQLite file at `data/allot.db`, created on first run.
+
+### Installation
+
 ```bash
-make up-debug
+git clone https://github.com/arthemide/stock-alerting.git
+cd stock-alerting
+make install
 ```
 
-If you do not need to make the db migration, you can launch the project with:
-```bash
-make up-debug-no-mig
-```
+### Usage
 
-## Run the tests
+Build the front and serve everything on <http://127.0.0.1:8000>:
 
 ```bash
-cd api
-make tests
+make start
 ```
 
-## 🤖 DCA Bot - Automated Binance Trading
+For development, run the API and the front dev server side by side:
 
-The DCA (Dollar Cost Averaging) bot automates cryptocurrency purchases on Binance.
-
-### Quick Start
-
-1. **Install dependencies:**
 ```bash
-make dca-install
+make dev-api      # :8000, auto-reload
+make dev-front    # :5173, calls the API on :8000 directly
 ```
 
-2. **Configure the bot:**
+Print the monthly note while the app is running:
+
 ```bash
-cd bot/dca
-cp .env.template .env
-# Edit .env with your Binance API keys and preferences
+make note
 ```
 
-3. **Test configuration (recommended):**
-```bash
-make dca-test
+Run `make` on its own to list every target.
+
+## HTTP API
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` | `/assets` | Every tracked asset with its recomputed position |
+| `POST` | `/assets` | Track a new asset, normally picked from the search |
+| `GET` | `/assets/search?q=` | Ticker search |
+| `GET` | `/assets/summary` | Totals per envelope, converted to EUR |
+| `GET`/`PUT`/`DELETE` | `/assets/{symbol}` | Read, edit, or stop tracking |
+| `PUT` | `/assets/{symbol}/opening` | Set the holding that predates tracking |
+| `GET` | `/assets/{symbol}/chart` | Prices, transactions and the step PRUM |
+| `GET`/`PUT`/`DELETE` | `/envelopes` | Envelopes and their monthly amount |
+| `GET`/`POST`/`DELETE` | `/transactions` | Buys and sells |
+| `GET` | `/note` | The monthly note, as plain text |
+
+Interactive docs are served at `/docs`.
+
+## Layout
+
+```
+app.py              entry point: the API, and the built front alongside it
+schema.sql          the whole database schema
+src/calc.py         pure calculations — no I/O, the only module worth unit-testing
+src/services/       positions, allocation, prices, note rendering
+src/databases/      SQLite access, plain dicts, no ORM
+src/routes/         HTTP surface
+front/              SvelteKit front, built statically into front/dist
 ```
 
-4. **Run once manually:**
-```bash
-make dca-once
-```
+## Contributing
 
-5. **Start the scheduler:**
-```bash
-make dca-start
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
 
-### Available Commands
+## License
 
-- `make dca-install` - Install bot dependencies
-- `make dca-test` - Test configuration without real purchases
-- `make dca-once` - Execute one DCA purchase
-- `make dca-now` - Execute immediately then start scheduler
-- `make dca-start` - Start scheduler (runs every 2 weeks)
-- `make dca-logs` - View bot logs
-- `make dca-install-service` - **macOS: Install as background service (recommended)**
-- `make dca-uninstall-service` - macOS: Remove background service
-- `make dca-status` - macOS: Check service status
-
-### Deployment Options
-
-**Recommandé pour macOS : Service automatique**
-```bash
-make dca-install-service
-```
-Le bot démarre automatiquement à chaque ouverture de session et se relance en cas de crash.
-
-**Alternative : Lancement manuel**
-```bash
-make dca-start
-```
-Nécessite de garder le terminal ouvert.
-
-### Configuration
-
-All configuration is done via environment variables in `bot/dca/.env`:
-
-- `BINANCE_API_KEY` - Your Binance API key
-- `BINANCE_API_SECRET` - Your Binance API secret
-- `DCA_AMOUNT_USDC` - Amount in USDC per purchase (e.g., 50.0)
-- `DCA_DAYS_OF_MONTH` - Days of month to execute (e.g., 1,15)
-- `DCA_SYMBOL` - Trading pair (default: ETHUSDC)
-
-See `bot/dca/.env.template` for all available options.
-
-### Page Bot (`/bot`)
-
-The `/bot` page provides a visual interface for DCA bot transactions recorded in the database:
-
-- **Fund selector** — filter transactions by fund
-- **Cumulative investment chart** — line chart showing cumulative investment per asset over time (Chart.js)
-- **Transaction timeline** — bar chart of transaction amounts, color-coded by type (buy/sell)
-- **Transactions table** — detailed list with date, asset, type badge, quantity, price, and total
-
-### Features
-
-✅ Automatic balance checking (spot + earn)  
-✅ Automatic transfer from Binance Earn if needed  
-✅ Market orders for immediate execution  
-✅ Retry with exponential backoff  
-✅ Detailed logging with rotation  
-✅ Configurable scheduling  
-
-For detailed documentation, see `bot/dca/README.md`.
+Apache 2.0 — see [LICENSE](LICENSE).
