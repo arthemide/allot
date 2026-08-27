@@ -65,7 +65,9 @@ class TestPosition:
 class TestPrumAfterBuy:
     def test_buying_below_prum_lowers_it(self):
         # Given 1 unit held at 200, buying 100 worth at 100
-        bought, new_prum = prum_after_buy(quantity=1.0, prum=200.0, price=100.0, amount=100.0)
+        bought, new_prum = prum_after_buy(
+            quantity=1.0, prum=200.0, price=100.0, amount=100.0
+        )
         assert bought == pytest.approx(1.0)
         assert new_prum == pytest.approx(150.0)
 
@@ -83,7 +85,9 @@ class TestPrumAfterBuy:
 class TestQuantityForTargetPrum:
     def test_reachable_target(self):
         # Given 1 unit at a PRUM of 100 and a price of 80, targeting 90
-        result = quantity_for_target_prum(quantity=1.0, prum=100.0, price=80.0, target=90.0)
+        result = quantity_for_target_prum(
+            quantity=1.0, prum=100.0, price=80.0, target=90.0
+        )
         assert result is not None
         needed, amount = result
         assert needed == pytest.approx(1.0)

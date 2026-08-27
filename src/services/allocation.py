@@ -36,9 +36,7 @@ def plan() -> list[dict]:
             )
             weighted.append((asset, multiplier))
 
-        amounts = calc.renormalize(
-            amount, [(a["weight"], m) for a, m in weighted]
-        )
+        amounts = calc.renormalize(amount, [(a["weight"], m) for a, m in weighted])
 
         envelopes.append(
             {
