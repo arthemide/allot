@@ -1,70 +1,59 @@
-.PHONY: tests
 .SILENT:
-.DEFAULT_GOAL: help
+.DEFAULT_GOAL := help
+
+FRONT_DIR := front
+
 help:
-	echo "GLOBAL"
-	grep -E '^\.PHONY: (up|up-debug|up-debug-no-mig) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
-	echo ""
-	echo "BOT"
-	grep -E '^\.PHONY: (dca-start|dca-logs|dca-stop) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
-	echo ""
-	echo "DATABASE"
-	grep -E '^\.PHONY: (db-backup|db-restore) .*?## .*$$' $(MAKEFILE_LIST) \
-		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "  \033[36m%-45s\033[0m %s\n", $$2, $$3}'
-	echo ""
-.PHONY: up ## 🚀 up
-up:
-	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml up --build --force-recreate -d
+	echo "Please use \`make \033[36m<target>\033[0m\`"
+	echo "\t where \033[36m<target>\033[0m is one of"
+	grep -E '^\.PHONY: [a-zA-Z_-]+ .*?## .*$$' $(MAKEFILE_LIST) \
+		| sort | awk 'BEGIN {FS = "(: |##)"}; {printf "• \033[36m%-30s\033[0m %s\n", $$2, $$3}'
 
-.PHONY: up-debug ## 🚀 up-debug
-up-debug:
-	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml -f shared-volumes.yaml up --build --force-recreate
+.PHONY: install ## 📦 Install backend and front dependencies
+install:
+	uv sync
+	cd $(FRONT_DIR) && npm ci
 
-.PHONY: up-debug-no-mig ## 🚀 up-debug-no-mig (no migrations)
-up-debug-no-mig:
-	docker-compose -f docker-compose.yaml -f shared-volumes.yaml up --build --force-recreate db api front
+.PHONY: start ## 🚀 Build the front and serve everything on :8000
+start: build
+	uv run app.py
 
-.PHONY: down ## 🛑 down
-down:
-	docker-compose -f docker-compose.yaml -f docker-compose.with-migrations.yaml down
+.PHONY: dev-api ## 🚀 Run the API alone with auto-reload on :8000
+dev-api:
+	uv run uvicorn app:app --reload --port 8000
 
-.PHONY: dca-start ## 🤖 start DCA bot detached
-dca-start:
-	docker-compose -f docker-compose.yaml --profile dca up --build -d dca-bot
+.PHONY: dev-front ## 🚀 Run the front dev server on :5173 (needs dev-api)
+dev-front:
+	cd $(FRONT_DIR) && npm run dev
 
-.PHONY: dca-logs ## 📋 view DCA bot logs
-dca-logs:
-	docker-compose -f docker-compose.yaml --profile dca logs -f dca-bot
+.PHONY: build ## 🏗️ Build the static front into front/dist
+build:
+	cd $(FRONT_DIR) && npm run build
 
-.PHONY: dca-stop ## 🛑 stop DCA bot
-dca-stop:
-	docker-compose -f docker-compose.yaml --profile dca stop dca-bot
+.PHONY: preview ## 👁️ Preview the built front on its own
+preview:
+	cd $(FRONT_DIR) && npm run preview
 
-.PHONY: db-backup ## 💾 backup postgres to ./backups
-db-backup:
-	mkdir -p ./backups
-	docker exec stock-alerting-db pg_dump -U romeo stock_alerting > ./backups/db-export-$$(date +%Y%m%d-%H%M%S).sql
-	docker run --rm -v stock_alerting_postgres_data:/data -v $(PWD)/backups:/backup alpine tar czf /backup/postgres-backup-$$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
-	@echo "✅ Backups saved to ./backups/"
-	@ls -lh ./backups/
+.PHONY: test ## 🧪 Run the unit tests
+test:
+	uv run pytest -q
 
-.PHONY: db-restore ## 💾 restore from ./backups/postgres-backup-*.tar.gz
-db-restore:
-	@if [ -z "$(FILE)" ]; then \
-		echo "❌ Usage: make db-restore FILE=./backups/postgres-backup-YYYYMMDD-HHMMSS.tar.gz"; \
-		echo ""; \
-		echo "Available backups:"; \
-		ls -lh ./backups/*.tar.gz 2>/dev/null || echo "No backups found"; \
-		exit 1; \
-	fi
-	@echo "⚠️  This will REPLACE all current database data!"
-	@echo "Backup file: $(FILE)"
-	@read -p "Continue? (yes/no): " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled" && exit 1)
-	docker-compose down
-	docker volume rm stock_alerting_postgres_data 2>/dev/null || true
-	docker volume create stock_alerting_postgres_data
-	docker run --rm -v stock_alerting_postgres_data:/data -v $(PWD)/backups:/backup alpine tar xzf /backup/$$(basename $(FILE)) -C /data
-	docker-compose up -d db
-	@echo "✅ Database restored from $(FILE)"
+.PHONY: lint ## 🔍 Check Python and Svelte
+lint:
+	uv run ruff check .
+	cd $(FRONT_DIR) && npm run check
+
+.PHONY: format ## 🔍 Format Python and fix what can be fixed
+format:
+	uv run ruff format .
+	uv run ruff check --fix .
+
+.PHONY: note ## 📚 Print the monthly note (needs the app running)
+note:
+	curl -s http://127.0.0.1:8000/note
+
+.PHONY: clean ## 🧹 Remove build output and caches
+clean:
+	rm -rf $(FRONT_DIR)/dist $(FRONT_DIR)/.svelte-kit
+	rm -rf .pytest_cache .ruff_cache
+	find . -name __pycache__ -type d -not -path "./.venv/*" -exec rm -rf {} +

@@ -1,266 +1,39 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+.venv/
 .pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
+.ruff_cache/
 .mypy_cache/
-.dmypy.json
-dmypy.json
+.coverage
+htmlcov/
 
-# Pyre type checker
-.pyre/
+# Node / front build
+node_modules/
+front/dist/
+front/.svelte-kit/
+front/.vite/
+*.log
+*-logs/
+.fuse_hidden*
 
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
-
-
-# VsCode
-.vscode
-
-.env
-
-api-logs/
-**/logs
-
-CLAUDE.md
-
-!/memory/agents/README.md
-!/memory/sessions/README.md
-# Binaries
-# Build outputs
-
-*$py.class
+# Local state
+data/
 *.db
 *.db-journal
 *.db-wal
-*.egg
-*.egg-info/
-*.exe
-*.lcov
-*.log
-*.pid
-*.pid.lock
-*.py[cod]
-*.seed
-*.so
-*.sqlite
-*.sqlite-journal
-*.sqlite-wal
-*.swo
-*.swp
-*.temp
-*.tmp
-*.tsbuildinfo
-*~
-./claude/checkpoints/
-.DS_Store
-.Python
-.agentic-flow/
-.cache/
-.claude/settings.local.json
-**/settings.local.json
-.deno/
 .env
-.env.*.local
 .env.local
-.hive-mind/
-.hive-mind/hive.db*
-.idea/
-.mcp.json
-.nyc_output/
-.pnpm-debug.log*
-.research/
-.roo/
-.roomodes
-.ruv-swarm/
-.swarm/
-.swarm/memory.db*
-.turbo/
+
+# Editors and OS
 .vscode/
-/coordination/
-/memory/
-/memory/agents/*
-/memory/sessions/*
+.idea/
+.DS_Store
 Thumbs.db
-__pycache__/
-analyzing
-api-project/
-build/
-coordination/memory_bank/*
-coordination/orchestration/*
-coordination/subtasks/*
-coverage/
-dist-cjs/
-dist/
-hive-mind-prompt-*.txt
-init-output.log
-lerna-debug.log*
-logs/
-mcp-server.log
-memory/backups/
-node_modules/
-npm-debug.log*
-out/
-output/
-package
-pnpm-debug.log*
-swarm-debug.log
-swarm-runs
-test-full-init
-test-init
-test-output/
-test-reports/
-tests/logs/
-tests/results/
-the
-tmp/
-ui_*.log
-yarn-debug.log*
-yarn-error.log*
 
-# Removed Windows wrapper files per user request
-hive-mind-prompt-*.txt
-
-.fuse_hidden*
-
-# Local database data
-data/
+# Agent tooling — local overrides only
+.claude/settings.local.json
+.claude/memory.db
+.mcp.json
+CLAUDE.md

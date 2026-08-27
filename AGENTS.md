@@ -1,43 +1,26 @@
+# Agent instructions
 
-<!-- BACKLOG.MD MCP GUIDELINES START -->
+## Project
 
-<CRITICAL_INSTRUCTION>
+Allot tracks positions and PRUM and renders a monthly allocation note. See [README.md](README.md) for what it does and [CONTRIBUTING.md](CONTRIBUTING.md) for setup, commands and conventions.
 
-## BACKLOG WORKFLOW INSTRUCTIONS
+## Language
 
-This project uses Backlog.md MCP for all task and project management activities.
+Everything committed here is written in English — code, comments, docstrings, commit messages, branch names. The one exception is the text rendered by `src/services/note.py`, which is French on purpose because that is what gets pasted into a reminder.
 
-**CRITICAL GUIDANCE**
+## Layers
 
-- If your client supports MCP resources, read `backlog://workflow/overview` to understand when and how to use Backlog for this project.
-- If your client only supports tools or the above request fails, call `backlog.get_workflow_overview()` tool to load the tool-oriented overview (it lists the matching guide tools).
+- `src/calc.py` is pure: no database, no network, no I/O. Calculations belong here, and this is the module tests must cover.
+- `src/services/` composes stored rows and market prices into positions, allocations and the note.
+- `src/databases/sqlite.py` is the only place SQL lives. It returns plain dicts; no ORM, no derived state stored.
+- `src/routes/` is the HTTP surface only: validate, delegate, translate errors into status codes.
 
-- **First time working here?** Read the overview resource IMMEDIATELY to learn the workflow
-- **Already familiar?** You should have the overview cached ("## Backlog.md Overview (MCP)")
-- **When to read it**: BEFORE creating tasks, or when you're unsure whether to track work
+Never store a figure that can be recomputed. Positions, PRUM and totals are always derived from the transactions plus the asset's opening position.
 
-These guides cover:
-- Decision framework for when to create tasks
-- Search-first workflow to avoid duplicates
-- Links to detailed guides for task creation, execution, and completion
-- MCP tools reference
+## Testing
 
-You MUST read the overview resource to understand the complete workflow. The information is NOT summarized here.
+Run `make test`. When you mock, use `pytest-mock` rather than `unittest.mock`.
 
-</CRITICAL_INSTRUCTION>
+## Makefile
 
-<!-- BACKLOG.MD MCP GUIDELINES END -->
-
----
-
-## TESTING INSTRUCTIONS
-
-**When you mock, you MUST use `pytest-mock` instead of `unittest.mock`.**
-
----
-
-## MAKEFILE COMMANDS
-
-**When you feel the need to add new commands to Makefiles, follow the existing style and conventions.**
-
----
+When adding a command, follow the existing `.PHONY: name ## description` pattern so it shows up in `make help`.
