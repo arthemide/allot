@@ -107,9 +107,7 @@ def price_history(symbol: str, start: date, end: date | None = None) -> list[dic
 
 
 def _within(points: list[dict], start: date, end: date) -> list[dict]:
-    return [
-        p for p in points if start.isoformat() <= p["date"] <= end.isoformat()
-    ]
+    return [p for p in points if start.isoformat() <= p["date"] <= end.isoformat()]
 
 
 def _covers(cached: list[dict], start: date, end: date) -> bool:

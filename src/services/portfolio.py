@@ -33,9 +33,7 @@ def position_of(asset: dict) -> dict:
     market_value = result.quantity * price if price is not None else None
     gain = market_value - result.invested if market_value is not None else None
     gain_percent = (
-        gain / result.invested * 100
-        if gain is not None and result.invested
-        else None
+        gain / result.invested * 100 if gain is not None and result.invested else None
     )
 
     return {
@@ -134,7 +132,6 @@ def chart_data(symbol: str, window: str = DEFAULT_RANGE) -> dict:
     }
 
 
-
 def to_eur(value: float | None, currency: str, rate: float | None) -> float:
     """Convert to EUR at the very last moment, for totals only.
 
@@ -196,6 +193,8 @@ def summary() -> dict:
         "invested": invested,
         "market_value": market_value,
         "gain": market_value - invested,
-        "gain_percent": (market_value - invested) / invested * 100 if invested else None,
+        "gain_percent": (market_value - invested) / invested * 100
+        if invested
+        else None,
         "envelopes": sorted(envelopes.values(), key=lambda b: b["envelope"]),
     }

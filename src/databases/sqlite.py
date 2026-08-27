@@ -88,9 +88,7 @@ def update_asset(symbol: str, label: str, envelope: str, weight: float) -> None:
     )
 
 
-def set_opening_position(
-    symbol: str, quantity: float, invested: float | None
-) -> None:
+def set_opening_position(symbol: str, quantity: float, invested: float | None) -> None:
     """Record a holding that predates tracking: a quantity and what it cost.
 
     A statement gives the number of units and the total paid, so the PRUM is

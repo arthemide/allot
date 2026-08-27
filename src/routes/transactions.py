@@ -17,7 +17,9 @@ def list_transactions(symbol: str | None = None):
 @router.post("", response_model=Transaction, status_code=status.HTTP_201_CREATED)
 def add_transaction(payload: TransactionCreate):
     if db.get_asset(payload.symbol) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {payload.symbol}")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"No asset named {payload.symbol}"
+        )
     transaction_id = db.add_transaction(
         payload.symbol,
         payload.date,

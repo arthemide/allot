@@ -64,9 +64,7 @@ class TestPriceHistory:
         mocker.patch.object(prices, "_covers", return_value=True)
         ticker = mocker.patch.object(prices.yf, "Ticker")
         # When a narrower window is asked for
-        points = prices.price_history(
-            "WPEA.PA", date(2026, 2, 1), date(2026, 2, 28)
-        )
+        points = prices.price_history("WPEA.PA", date(2026, 2, 1), date(2026, 2, 28))
         # Then only that window comes back, without a network call
         assert [p["date"] for p in points] == ["2026-02-10"]
         ticker.assert_not_called()
@@ -76,9 +74,7 @@ class TestPriceHistory:
         mocker.patch.object(prices.db, "cached_prices", return_value=HISTORY)
         mocker.patch.object(prices.yf, "Ticker", side_effect=RuntimeError("down"))
         # When the chart asks for one month
-        points = prices.price_history(
-            "WPEA.PA", date(2026, 2, 1), date(2026, 2, 28)
-        )
+        points = prices.price_history("WPEA.PA", date(2026, 2, 1), date(2026, 2, 28))
         # Then the fallback is clipped like the nominal path, so the chart
         # never silently spans a different range than the one requested
         assert [p["date"] for p in points] == ["2026-02-10"]

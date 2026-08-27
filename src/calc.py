@@ -128,7 +128,9 @@ def multiplier(price: float, prum: float) -> float:
     return MULTIPLIER_NEUTRAL
 
 
-def renormalize(envelope_amount: float, weighted: list[tuple[float, float]]) -> list[float]:
+def renormalize(
+    envelope_amount: float, weighted: list[tuple[float, float]]
+) -> list[float]:
     """Split an envelope across its assets, applying the multipliers.
 
     amount_i = envelope_amount * (weight_i * mult_i) / sum(weight_j * mult_j)
