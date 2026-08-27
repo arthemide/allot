@@ -32,8 +32,8 @@ No configuration file, no environment variable, no external service: the whole s
 ### Installation
 
 ```bash
-git clone https://github.com/arthemide/stock-alerting.git
-cd stock-alerting
+git clone https://github.com/arthemide/allot.git
+cd allot
 make install
 ```
 
