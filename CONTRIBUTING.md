@@ -1,7 +1,6 @@
 # Contributing to Allot
 
-Thanks for your interest in contributing! This document explains how to set up
-the project and the workflow we follow.
+Thanks for your interest in contributing! This document explains how to set up the project and the workflow we follow.
 
 ## Setup
 
@@ -11,8 +10,7 @@ cd stock-alerting
 make install
 ```
 
-You need [uv](https://docs.astral.sh/uv/) for the Python side and Node 22 for
-the front. `make install` runs `uv sync` and `npm ci`.
+You need [uv](https://docs.astral.sh/uv/) for the Python side and Node 22 for the front. `make install` runs `uv sync` and `npm ci`.
 
 ## Running
 
@@ -47,18 +45,13 @@ Run `make lint` and `make test` before pushing; CI runs the same commands.
 
 - Keep changes focused and small; one logical change per pull request.
 - Follow the existing style of the surrounding code.
-- Add or update tests for any behavior change. `src/calc.py` is pure and must
-  stay covered; anything doing I/O belongs in `src/services` or
-  `src/databases`.
+- Add or update tests for any behavior change. `src/calc.py` is pure and must stay covered; anything doing I/O belongs in `src/services` or `src/databases`.
 - Update documentation when you change user-facing behavior.
-- Everything in the repository — code, comments, commits, branches — is written
-  in English. The monthly note rendered by `src/services/note.py` is the one
-  exception: its output is French on purpose.
+- Everything in the repository — code, comments, commits, branches — is written in English. The monthly note rendered by `src/services/note.py` is the one exception: its output is French on purpose.
 
 ## Commits
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `ci:`.
+Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `ci:`.
 
 ## Pull requests
 

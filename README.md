@@ -6,27 +6,17 @@
 
 ## Overview
 
-Allot tracks what you hold, what it cost you, and tells you where this month's
-money should go.
+Allot tracks what you hold, what it cost you, and tells you where this month's money should go.
 
-Positions are never stored. Quantity and PRUM (*prix de revient unitaire
-moyen*, the weighted average price paid) are recomputed on every read from the
-transactions plus an optional opening position — the holding that predates
-tracking. There is no state to keep in sync and no reconciliation step.
+Positions are never stored. Quantity and PRUM (*prix de revient unitaire moyen*, the weighted average price paid) are recomputed on every read from the transactions plus an optional opening position — the holding that predates tracking. There is no state to keep in sync and no reconciliation step.
 
-Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope
-carries its own monthly amount and stands on its own: one envelope never draws
-from another. Inside an envelope the amount is split across assets by their
-relative weight, modulated by how far the current price sits from the PRUM —
-1.5x when the price is more than 10% below it, 0.5x when it is more than 10%
-above, 1x in between. The envelope total stays invariant.
+Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope carries its own monthly amount and stands on its own: one envelope never draws from another. Inside an envelope the amount is split across assets by their relative weight, modulated by how far the current price sits from the PRUM — 1.5x when the price is more than 10% below it, 0.5x when it is more than 10% above, 1x in between. The envelope total stays invariant.
 
 ## Features
 
 - Per-asset position, PRUM, gain and gain percentage, recomputed from history
 - Envelopes with a monthly amount and a per-asset split
-- Ticker search, so the exchange suffix (`WPEA.PA`, `VWCE.DE`, `ETH-USD`) does
-  not have to be guessed
+- Ticker search, so the exchange suffix (`WPEA.PA`, `VWCE.DE`, `ETH-USD`) does not have to be guessed
 - Price chart with transaction markers and the step PRUM curve
 - A plain-text monthly note, ready to paste into a reminder
 
@@ -37,8 +27,7 @@ above, 1x in between. The envelope total stays invariant.
 - [uv](https://docs.astral.sh/uv/) and Python 3.12+
 - Node 22+
 
-No configuration file, no environment variable, no external service: the whole
-state lives in a SQLite file at `data/allot.db`, created on first run.
+No configuration file, no environment variable, no external service: the whole state lives in a SQLite file at `data/allot.db`, created on first run.
 
 ### Installation
 
