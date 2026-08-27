@@ -7,6 +7,7 @@ guessing the exchange suffix (WPEA.PA, VWCE.DE, IUSN.DE, ETH-USD...).
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date, datetime, timedelta
 
 import yfinance as yf
@@ -17,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 EUR_USD_TICKER = "EURUSD=X"
 CACHE_MAX_AGE_DAYS = 1
+
+# A single page draws positions, totals and the note, and each of those walks
+# every asset. Without this, one page load is one network round-trip per asset
+# per view. Quotes are delayed anyway, so a few minutes of staleness costs
+# nothing.
+QUOTE_TTL_SECONDS = 300
+_quotes: dict[str, tuple[float, float | None]] = {}
+
+
+def forget_quotes() -> None:
+    """Drop the in-memory quote cache. Only useful to tests."""
+    _quotes.clear()
 
 
 def _metadata(symbol: str) -> dict | None:
@@ -32,12 +45,20 @@ def _metadata(symbol: str) -> dict | None:
 
 
 def current_price(symbol: str) -> float | None:
-    """Latest market price, or None if the ticker does not answer."""
+    """Latest market price, or None if the ticker does not answer.
+
+    Memoised for QUOTE_TTL_SECONDS, misses included: a symbol that does not
+    answer must not be retried once per asset per request.
+    """
+    cached = _quotes.get(symbol)
+    if cached is not None and time.monotonic() - cached[0] < QUOTE_TTL_SECONDS:
+        return cached[1]
+
     metadata = _metadata(symbol)
-    if metadata is None:
-        return None
-    price = metadata.get("regularMarketPrice")
-    return round(price, 2) if price is not None else None
+    price = metadata.get("regularMarketPrice") if metadata else None
+    price = round(price, 2) if price is not None else None
+    _quotes[symbol] = (time.monotonic(), price)
+    return price
 
 
 def check_tickers(symbols: list[str]) -> list[str]:
@@ -63,15 +84,18 @@ def price_history(symbol: str, start: date, end: date | None = None) -> list[dic
     end = end or date.today()
     cached = db.cached_prices(symbol)
     if cached and _covers(cached, start, end):
-        return [p for p in cached if start.isoformat() <= p["date"] <= end.isoformat()]
+        return _within(cached, start, end)
 
     try:
         frame = yf.Ticker(symbol).history(
             start=start.isoformat(), end=(end + timedelta(days=1)).isoformat()
         )
     except Exception as error:
+        # Fall back on whatever was cached, still clipped to the requested
+        # window: a chart drawn from stale data must not silently span a
+        # different range than the one asked for.
         logger.warning("%s: history fetch failed - %s", symbol, error)
-        return cached
+        return _within(cached, start, end)
 
     points = [
         (index.date().isoformat(), float(row["Close"]))
@@ -80,6 +104,12 @@ def price_history(symbol: str, start: date, end: date | None = None) -> list[dic
     if points:
         db.cache_prices(symbol, iter(points))
     return [{"date": d, "price": p} for d, p in points]
+
+
+def _within(points: list[dict], start: date, end: date) -> list[dict]:
+    return [
+        p for p in points if start.isoformat() <= p["date"] <= end.isoformat()
+    ]
 
 
 def _covers(cached: list[dict], start: date, end: date) -> bool:

@@ -1,7 +1,10 @@
--- Allot schema. Single file, versioned by PRAGMA user_version.
--- No migration framework: bump the version and add the DDL below when the
--- schema changes.
-PRAGMA user_version = 2;
+-- Allot schema, in one file. Replayed on every boot, which is why every
+-- statement is CREATE ... IF NOT EXISTS.
+--
+-- There is no migration framework and no schema versioning: this creates a
+-- missing table, and nothing else. Changing an existing column means writing
+-- the ALTER by hand against your own database, or deleting data/allot.db and
+-- letting it be rebuilt.
 
 PRAGMA foreign_keys = ON;
 

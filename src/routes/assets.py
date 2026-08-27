@@ -31,8 +31,8 @@ def create_asset(payload: AssetCreate):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             f"{payload.symbol} is already tracked, in envelope "
-            f"{existing['envelope']}. Change its envelope from the * page "
-            f"instead of adding it again.",
+            f"{existing['envelope']}. Move it from there instead of adding "
+            f"it again.",
         )
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)

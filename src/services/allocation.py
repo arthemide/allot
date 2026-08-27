@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from src import calc
 from src.databases import sqlite as db
-from src.services import portfolio
+from src.services import portfolio, prices
 
 
 def plan() -> list[dict]:
     """One entry per envelope, with the amount each of its assets should get."""
     positions = {p["symbol"]: p for p in portfolio.all_positions()}
     assets = db.all_assets()
+    rate = prices.eur_usd_rate()
 
     envelopes = []
     for envelope in db.all_envelopes():
@@ -43,8 +44,15 @@ def plan() -> list[dict]:
             {
                 "envelope": name,
                 "amount": amount,
+                # In EUR, converted asset by asset, like portfolio.summary()
+                # does: an envelope holding both EUR and USD lines must not end
+                # up as the sum of the two.
                 "market_value": sum(
-                    positions.get(a["symbol"], {}).get("market_value") or 0.0
+                    portfolio.to_eur(
+                        positions.get(a["symbol"], {}).get("market_value"),
+                        a["currency"],
+                        rate,
+                    )
                     for a in members
                 ),
                 "assets": [

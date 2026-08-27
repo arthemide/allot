@@ -8,6 +8,7 @@ Nothing else needs to run.
 from __future__ import annotations
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,7 +29,10 @@ DEV_ORIGIN = "http://localhost:5173"
 
 
 def _check_tickers() -> None:
-    """List tickers that do not answer. Never blocks startup."""
+    """List tickers that do not answer, and warm the quote cache on the way.
+
+    One network round-trip per asset, so it runs off the startup path.
+    """
     symbols = [a["symbol"] for a in db.all_assets()]
     failing = prices.check_tickers(symbols)
     if failing:
@@ -43,7 +47,7 @@ async def lifespan(_: FastAPI):
     pruned = db.prune_empty_envelopes()
     if pruned:
         logger.info("removed empty envelopes: %s", ", ".join(pruned))
-    _check_tickers()
+    threading.Thread(target=_check_tickers, daemon=True).start()
     yield
 
 

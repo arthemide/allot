@@ -1,4 +1,8 @@
-"""The monthly note must stay pasteable into a reminder description field."""
+"""The monthly note must stay pasteable into a reminder description field.
+
+`allocation.plan()` is stubbed out here: it already hands the note its
+market values in EUR, so nothing in this module converts anything.
+"""
 
 from datetime import date
 
@@ -26,7 +30,8 @@ PLAN = [
     {
         "envelope": "CRYPTO",
         "amount": 165.0,
-        "market_value": 2000.0,
+        # 2000 USD at 1.08 USD per EUR, converted by allocation.plan()
+        "market_value": 1851.85,
         "assets": [
             {
                 "symbol": "ETH-USD",
@@ -60,7 +65,6 @@ PLAN = [
 @pytest.fixture
 def offline(monkeypatch):
     monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: PLAN)
-    monkeypatch.setattr(note.prices, "eur_usd_rate", lambda: 1.08)
     monkeypatch.setattr(note.db, "last_transaction_date", lambda: "2026-07-12")
 
 
@@ -137,8 +141,16 @@ class TestNote:
         text = note.render(date(2026, 7, 20))
         assert "Aucune transaction saisie" not in text
 
-    def test_excel_block_converts_usd_envelopes_to_eur(self, offline):
+    def test_excel_block_lists_envelope_values(self, offline):
         text = note.render(date(2026, 9, 15))
-        # 2000 USD at 1.08 USD per EUR is about 1852 EUR
         assert "CRYPTO 1 852 €" in text
         assert "PEA 1 000 €" in text
+
+    def test_excel_block_says_so_when_nothing_is_held(self, offline, monkeypatch):
+        # Given envelopes that hold nothing yet
+        plan = [{**e, "market_value": 0.0} for e in PLAN]
+        monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: plan)
+        # When the note is rendered
+        text = note.render(date(2026, 9, 15))
+        # Then the line is still there, saying there is nothing to copy
+        assert "- À recopier dans l'Excel : rien" in text

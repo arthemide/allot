@@ -135,8 +135,13 @@ def chart_data(symbol: str, window: str = DEFAULT_RANGE) -> dict:
 
 
 
-def _to_eur(value: float | None, currency: str, rate: float | None) -> float:
-    """Convert to EUR at the very last moment, for totals only."""
+def to_eur(value: float | None, currency: str, rate: float | None) -> float:
+    """Convert to EUR at the very last moment, for totals only.
+
+    Native currencies stay untouched everywhere else. Every total that mixes
+    currencies goes through here, so a figure is never the sum of euros and
+    dollars.
+    """
     if not value:
         return 0.0
     if currency == "USD" and rate:
@@ -152,11 +157,7 @@ def _percent(invested: float, market_value: float) -> float | None:
 
 
 def summary() -> dict:
-    """Totals across every asset, in EUR, grouped by envelope.
-
-    Native currencies stay untouched everywhere else; conversion happens here
-    and nowhere else, because only totals mix currencies.
-    """
+    """Totals across every asset, in EUR, grouped by envelope."""
     rate = prices.eur_usd_rate()
     positions = all_positions()
 
@@ -167,8 +168,8 @@ def summary() -> dict:
             name, {"envelope": name, "invested": 0.0, "market_value": 0.0, "assets": []}
         )
         currency = position["currency"]
-        invested = _to_eur(position["invested"], currency, rate)
-        market_value = _to_eur(position["market_value"], currency, rate)
+        invested = to_eur(position["invested"], currency, rate)
+        market_value = to_eur(position["market_value"], currency, rate)
         bucket["invested"] += invested
         bucket["market_value"] += market_value
         bucket["assets"].append(

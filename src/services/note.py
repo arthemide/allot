@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from src.databases import sqlite as db
-from src.services import allocation, prices
+from src.services import allocation
 
 WIDTH = 78
 STALE_DAYS = 45
@@ -68,7 +68,6 @@ def _stale_warning(today: date) -> str | None:
 def render(today: date | None = None) -> str:
     today = today or date.today()
     envelopes = allocation.plan()
-    rate = prices.eur_usd_rate()
 
     total = sum(e["amount"] for e in envelopes)
     lines = [
@@ -91,21 +90,12 @@ def render(today: date | None = None) -> str:
     if warning:
         lines.append(warning)
 
+    # market_value already comes back in EUR from allocation.plan().
     excel = ", ".join(
-        f"{e['envelope']} {_money(_to_eur(e['market_value'], e, rate))}"
+        f"{e['envelope']} {_money(e['market_value'])}"
         for e in envelopes
         if e["market_value"]
     )
     lines.append(f"- À recopier dans l'Excel : {excel or 'rien'}")
 
     return "\n".join(line[:WIDTH] for line in lines) + "\n"
-
-
-def _to_eur(value: float, envelope: dict, rate: float | None) -> float:
-    """Convert an envelope's market value to EUR, at the very last moment."""
-    if not value:
-        return 0.0
-    currencies = {a["currency"] for a in envelope["assets"]}
-    if currencies == {"USD"} and rate:
-        return value / rate
-    return value
