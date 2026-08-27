@@ -5,8 +5,8 @@ Thanks for your interest in contributing! This document explains how to set up t
 ## Setup
 
 ```bash
-git clone https://github.com/arthemide/stock-alerting.git
-cd stock-alerting
+git clone https://github.com/arthemide/allot.git
+cd allot
 make install
 ```
 
