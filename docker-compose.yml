@@ -1,0 +1,49 @@
+# On-premise Allot: the app, and a sidecar that backs the database up.
+#
+#   docker compose up -d
+#
+# The image comes from GHCR, built by CI on every release -- the target is a
+# Raspberry Pi, which has no business compiling a front end. ALLOT_VERSION is
+# pinned in .env rather than floating on `latest`, so what runs is readable in
+# a file and a rollback is a one-line edit.
+#
+# State lives in the allot-data volume, replicated off-site by Litestream.
+
+services:
+  app:
+    image: ghcr.io/arthemide/allot:${ALLOT_VERSION:-latest}
+    container_name: allot
+    restart: unless-stopped
+    # Reachable from the LAN. There is no authentication in front of it, so
+    # keep this on a trusted network, or put a proxy in front.
+    ports:
+      - "${ALLOT_PORT:-8000}:8000"
+    volumes:
+      - allot-data:/data
+    env_file:
+      - path: .env
+        required: false
+
+  # Litestream streams the SQLite WAL to object storage continuously, so the
+  # worst case is seconds of loss rather than a day. Leave LITESTREAM_BUCKET
+  # empty in .env and this container simply idles.
+  #
+  # The official image is published for amd64 and arm64 only. On a 32-bit ARM
+  # host (Raspberry Pi 2/3 on a 32-bit OS), install the armv7 .deb from the
+  # Litestream releases on the host instead, and skip this service.
+  litestream:
+    image: litestream/litestream:0.5.16
+    container_name: allot-litestream
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - allot-data:/data
+      - ./litestream.yml:/etc/litestream.yml:ro
+    command: replicate -config /etc/litestream.yml
+    env_file:
+      - path: .env
+        required: false
+
+volumes:
+  allot-data:

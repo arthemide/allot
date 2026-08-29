@@ -1,0 +1,29 @@
+# Continuous replication of the SQLite database to S3-compatible storage.
+# Defaults target Scaleway Object Storage; any provider works by changing the
+# endpoint and region.
+#
+# Values come from the environment, so this file carries no secret and can live
+# in the repository. See .env.example.
+#
+# Restore (the database must not be running):
+#   litestream restore -config litestream.yml /data/allot.db
+
+access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+
+dbs:
+  - path: /data/allot.db
+    replica:
+      url: s3://${LITESTREAM_BUCKET}/allot?endpoint=${LITESTREAM_ENDPOINT}&region=${LITESTREAM_REGION}
+
+# A full snapshot a day, kept twelve weeks. Between snapshots the raw stream is
+# what makes a point-in-time restore possible, so l0-retention is what actually
+# bounds "how far back, how precisely".
+snapshot:
+  interval: 24h
+  retention: 2160h
+
+l0-retention: 24h
+
+logging:
+  level: info

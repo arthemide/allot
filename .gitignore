@@ -32,7 +32,7 @@ data/
 .DS_Store
 Thumbs.db
 
-# Agent tooling — local overrides only
+# Agent tooling - local overrides only
 .claude/settings.local.json
 .claude/memory.db
 .mcp.json

@@ -6,12 +6,15 @@ so there is nothing to keep in sync.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any, Iterator
 
 ROOT = Path(__file__).parent.parent.parent
-DB_PATH = ROOT / "data" / "allot.db"
+
+# Overridable so the database can live on a mounted volume, outside the tree.
+DB_PATH = Path(os.getenv("ALLOT_DB_PATH", ROOT / "data" / "allot.db"))
 SCHEMA_PATH = ROOT / "schema.sql"
 
 

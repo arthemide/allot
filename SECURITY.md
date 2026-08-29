@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the tip of `main` is maintained. There is no released version yet.
+Only the latest release is maintained. Older tags receive no fixes; upgrade to the newest version before reporting an issue.
 
 ## Reporting a vulnerability
 
