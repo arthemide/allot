@@ -23,6 +23,13 @@ services:
       - "${ALLOT_PORT:-8000}:8000"
     volumes:
       - allot-data:/data
+    # Litestream logs a line every couple of seconds, and the default json-file
+    # driver never rotates. On an SD card that fills the disk eventually.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - path: .env
         required: false
