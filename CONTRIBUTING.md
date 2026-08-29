@@ -33,13 +33,13 @@ Run `make lint` and `make test` before pushing; CI runs the same commands.
 ## Workflow
 
 1. Branch from `main` using a descriptive name:
-   - `feat/short-description` — new feature
-   - `fix/short-description` — bug fix
-   - `docs/short-description` — documentation
-   - `refactor/short-description` — refactoring
+   - `feat/short-description` - new feature
+   - `fix/short-description` - bug fix
+   - `docs/short-description` - documentation
+   - `refactor/short-description` - refactoring
 2. Make your changes and add tests.
 3. Run the linter and test suite locally before pushing.
-4. Open a pull request against `main` — never push directly to `main`.
+4. Open a pull request against `main` - never push directly to `main`.
 
 ## Code conventions
 
@@ -47,7 +47,7 @@ Run `make lint` and `make test` before pushing; CI runs the same commands.
 - Follow the existing style of the surrounding code.
 - Add or update tests for any behavior change. `src/calc.py` is pure and must stay covered; anything doing I/O belongs in `src/services` or `src/databases`.
 - Update documentation when you change user-facing behavior.
-- Everything in the repository — code, comments, commits, branches — is written in English. The monthly note rendered by `src/services/note.py` is the one exception: its output is French on purpose.
+- Everything in the repository - code, comments, commits, branches - is written in English. The monthly note rendered by `src/services/note.py` is the one exception: its output is French on purpose.
 
 ## Commits
 
@@ -58,6 +58,13 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:
 - Describe what the change does and why.
 - Link any related issues (e.g. `Closes #123`).
 - Make sure CI passes before requesting review.
+
+## Releases and deployment
+
+There is no manual tagging step. The version in `pyproject.toml` is the source of truth: bump it in a pull request, and when that lands on `main` the CI notices no tag matches it, generates `CHANGELOG.md` with [git-cliff](https://git-cliff.org), tags `vX.Y.Z`, publishes the container image to `ghcr.io/arthemide/allot`, and opens a GitHub Release.
+
+`front/package.json` carries the same version, and CI fails if the two drift.
+
 
 ## Reporting bugs and requesting features
 

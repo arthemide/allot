@@ -6,7 +6,7 @@ Allot tracks positions and PRUM and renders a monthly allocation note. See [READ
 
 ## Language
 
-Everything committed here is written in English — code, comments, docstrings, commit messages, branch names. The one exception is the text rendered by `src/services/note.py`, which is French on purpose because that is what gets pasted into a reminder.
+Everything committed here is written in English - code, comments, docstrings, commit messages, branch names. The one exception is the text rendered by `src/services/note.py`, which is French on purpose because that is what gets pasted into a reminder.
 
 ## Layers
 

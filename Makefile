@@ -52,6 +52,31 @@ format:
 note:
 	curl -s http://127.0.0.1:8000/note
 
+.PHONY: up ## 🐳 Start the on-premise stack from the published image
+up:
+	docker compose up -d
+
+.PHONY: up-local ## 🐳 Same, but build the image from this checkout
+up-local:
+	docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+
+.PHONY: down ## 🐳 Stop the on-premise stack
+down:
+	docker compose down
+
+.PHONY: update ## 🚀 Pull the pinned version and restart
+update:
+	docker compose pull
+	docker compose up -d
+
+.PHONY: logs ## 🐳 Follow the container logs
+logs:
+	docker compose logs -f
+
+.PHONY: replication ## 💾 Show what Litestream has replicated off-site
+replication:
+	docker compose exec litestream litestream snapshots -config /etc/litestream.yml /data/allot.db
+
 .PHONY: clean ## 🧹 Remove build output and caches
 clean:
 	rm -rf $(FRONT_DIR)/dist $(FRONT_DIR)/.svelte-kit

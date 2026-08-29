@@ -8,6 +8,7 @@ Nothing else needs to run.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -26,6 +27,11 @@ logger = logging.getLogger("app")
 
 FRONT_DIST = Path(__file__).parent / "front" / "dist"
 DEV_ORIGIN = "http://localhost:5173"
+
+# 127.0.0.1 by default: nothing is exposed unless it is asked for. The
+# container sets 0.0.0.0 so the app is reachable from the LAN.
+HOST = os.getenv("ALLOT_HOST", "127.0.0.1")
+PORT = int(os.getenv("ALLOT_PORT", "8000"))
 
 
 def _check_tickers() -> None:
@@ -75,4 +81,4 @@ else:
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=HOST, port=PORT)
