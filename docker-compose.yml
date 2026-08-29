@@ -1,4 +1,5 @@
-# On-premise Allot: the app, and a sidecar that backs the database up.
+# On-premise Allot: one container. It carries Litestream and supervises
+# itself with it whenever a bucket is configured.
 #
 #   docker compose up -d
 #

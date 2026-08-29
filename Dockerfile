@@ -36,6 +36,9 @@ FROM --platform=$BUILDPLATFORM alpine:3.21 AS litestream
 ARG LITESTREAM_VERSION=0.5.16
 ARG TARGETARCH
 ARG TARGETVARIANT
+# The alpine base carries no CA bundle, and busybox wget over HTTPS fails
+# without one -- with a message that says nothing about certificates.
+RUN apk add --no-cache ca-certificates
 RUN set -eu; \
     case "${TARGETARCH}${TARGETVARIANT}" in \
         amd64) asset=x86_64 ;; \
