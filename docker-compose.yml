@@ -7,7 +7,9 @@
 # pinned in .env rather than floating on `latest`, so what runs is readable in
 # a file and a rollback is a one-line edit.
 #
-# State lives in the allot-data volume, replicated off-site by Litestream.
+# State lives in the allot-data volume. When LITESTREAM_BUCKET is set, the
+# container replicates it off-site continuously and restores from the replica
+# if the volume is ever empty.
 
 services:
   app:
@@ -31,19 +33,5 @@ services:
   # The official image is published for amd64 and arm64 only. On a 32-bit ARM
   # host (Raspberry Pi 2/3 on a 32-bit OS), install the armv7 .deb from the
   # Litestream releases on the host instead, and skip this service.
-  litestream:
-    image: litestream/litestream:0.5.16
-    container_name: allot-litestream
-    restart: unless-stopped
-    depends_on:
-      - app
-    volumes:
-      - allot-data:/data
-      - ./litestream.yml:/etc/litestream.yml:ro
-    command: replicate -config /etc/litestream.yml
-    env_file:
-      - path: .env
-        required: false
-
 volumes:
   allot-data:

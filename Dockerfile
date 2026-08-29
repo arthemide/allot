@@ -1,4 +1,4 @@
-# Four builds, one image. Two of them are pinned to $BUILDPLATFORM so they run
+# Five builds, one image. Two of them are pinned to $BUILDPLATFORM so they run
 # natively on the CI runner instead of under emulation: the front compiles to
 # static files and uv only resolves a lockfile, so neither output depends on the
 # target architecture. Only the runtime stage is built for the target -- which
@@ -29,12 +29,33 @@ RUN apt-get update \
 COPY --from=deps /app/requirements.txt ./
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
 
+# Litestream publishes a binary per architecture but an image for only two of
+# them, so the binary is what gets used. Fetched on the build platform and
+# picked by target, which keeps this stage off the emulator.
+FROM --platform=$BUILDPLATFORM alpine:3.21 AS litestream
+ARG LITESTREAM_VERSION=0.5.16
+ARG TARGETARCH
+ARG TARGETVARIANT
+RUN set -eu; \
+    case "${TARGETARCH}${TARGETVARIANT}" in \
+        amd64) asset=x86_64 ;; \
+        arm64) asset=arm64  ;; \
+        armv7) asset=armv7  ;; \
+        armv6) asset=armv6  ;; \
+        *) echo "no Litestream build for ${TARGETARCH}${TARGETVARIANT}" >&2; exit 1 ;; \
+    esac; \
+    wget -qO /tmp/litestream.tar.gz \
+        "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-${asset}.tar.gz"; \
+    tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream
+
 FROM python:3.12-slim
 WORKDIR /app
 
 COPY --from=wheels /install /usr/local
+COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 
-COPY app.py schema.sql ./
+COPY app.py schema.sql docker-entrypoint.sh ./
+COPY litestream.yml /etc/litestream.yml
 COPY src/ ./src/
 COPY --from=front /front/dist ./front/dist
 
@@ -47,7 +68,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 VOLUME ["/data"]
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
+HEALTHCHECK --interval=120s --timeout=20s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"
 
-CMD ["python", "app.py"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
