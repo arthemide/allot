@@ -1,0 +1,10 @@
+# Development overlay: build the image from this checkout instead of pulling
+# the published one.
+#
+#   make up-local
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+
+services:
+  app:
+    build: .
+    image: allot:local

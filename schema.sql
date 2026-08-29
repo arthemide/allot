@@ -8,6 +8,13 @@
 
 PRAGMA foreign_keys = ON;
 
+-- Litestream replicates the write-ahead log, so WAL is not optional when
+-- off-site replication is on. It also lets reads and writes overlap, which the
+-- per-request connections in src/databases/sqlite.py benefit from either way.
+-- Unlike the rest of this file, journal_mode is persistent: it is stored in the
+-- database header and survives every later connection.
+PRAGMA journal_mode = WAL;
+
 -- An envelope groups assets and carries the amount invested into it every
 -- month, in EUR. There is no global savings figure: each envelope stands on
 -- its own, and one never draws from another.

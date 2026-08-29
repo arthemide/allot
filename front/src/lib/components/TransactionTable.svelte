@@ -85,7 +85,7 @@
 				<Dialog.Header>
 					<Dialog.Title>Add a transaction</Dialog.Title>
 					<Dialog.Description>
-						The unit price is prefilled with the current quote and stays editable.
+						One order: the price you paid per unit on that day.
 					</Dialog.Description>
 				</Dialog.Header>
 
@@ -114,7 +114,7 @@
 						</div>
 						<div class="space-y-1">
 							<label for="tx-price" class="text-muted-foreground block text-xs uppercase">
-								Unit price
+								Price paid / unit
 							</label>
 							<Input id="tx-price" type="number" step="any" bind:value={unitPrice} class="w-36" />
 						</div>
@@ -144,7 +144,7 @@
 				<Table.Head class="w-32 text-left">Date</Table.Head>
 				<Table.Head class="w-20 text-left">Side</Table.Head>
 				<Table.Head class="text-right">Quantity</Table.Head>
-				<Table.Head class="text-right">Unit price</Table.Head>
+				<Table.Head class="text-right">Price paid / unit</Table.Head>
 				<Table.Head class="text-right">Fees</Table.Head>
 				<Table.Head class="text-right">Total</Table.Head>
 				<Table.Head class="w-24 text-right">Actions</Table.Head>

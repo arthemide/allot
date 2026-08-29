@@ -1,16 +1,33 @@
-"""Market prices, via yfinance, with the SQLite cache in front.
+"""Market prices, straight off the Yahoo Finance JSON endpoints, with the
+SQLite cache in front.
 
 Also fronts the ticker search, so a symbol can be found by name instead of
 guessing the exchange suffix (WPEA.PA, VWCE.DE, IUSN.DE, ETH-USD...).
+
+Two endpoints carry everything:
+
+    /v8/finance/chart/{symbol}   quote metadata *and* daily closes
+    /v1/finance/search           ticker lookup by name
+
+Neither is documented by Yahoo, and both fingerprint the TLS handshake: a
+plain HTTP client is answered 429 no matter what User-Agent it sends, which is
+why curl_cffi is used to present a real browser's handshake. That is also the
+one piece yfinance was worth keeping -- the rest of it drags pandas and numpy
+along, and neither has ever published an armv7 wheel, for any version. The
+deployment target is a 32-bit Raspberry Pi.
+
+Every call is wrapped: a failure degrades to a stale value or an empty list,
+never to a 500.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
-import yfinance as yf
+from curl_cffi import requests
 
 from src.databases import sqlite as db
 
@@ -18,6 +35,28 @@ logger = logging.getLogger(__name__)
 
 EUR_USD_TICKER = "EURUSD=X"
 CACHE_MAX_AGE_DAYS = 1
+
+CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+SEARCH_URL = "https://query1.finance.yahoo.com/v1/finance/search"
+
+# Yahoo answers 429 to anything whose TLS handshake is not a browser's, so the
+# User-Agent alone is not enough: `impersonate` is what actually gets through.
+IMPERSONATE = "chrome"
+TIMEOUT_SECONDS = 15
+
+# One session per thread rather than one shared: the startup ticker check runs
+# on its own thread alongside request handling, and a curl session is not
+# documented as safe to share.
+_local = threading.local()
+
+
+def _session():
+    session = getattr(_local, "session", None)
+    if session is None:
+        session = requests.Session(impersonate=IMPERSONATE, timeout=TIMEOUT_SECONDS)
+        _local.session = session
+    return session
+
 
 # A single page draws positions, totals and the note, and each of those walks
 # every asset. Without this, one page load is one network round-trip per asset
@@ -32,12 +71,27 @@ def forget_quotes() -> None:
     _quotes.clear()
 
 
-def _metadata(symbol: str) -> dict | None:
+def _chart(symbol: str, **params) -> dict | None:
+    """One chart call, returning `result[0]` or None. Never raises."""
     try:
-        metadata = yf.Ticker(symbol).get_history_metadata()
-    except Exception as error:  # yfinance raises a wide range of exceptions
-        logger.warning("%s: metadata fetch failed - %s", symbol, error)
+        response = _session().get(CHART_URL.format(symbol=symbol), params=params)
+        response.raise_for_status()
+        payload = response.json()
+    except Exception as error:  # network, HTTP status, malformed JSON
+        logger.warning("%s: chart fetch failed - %s", symbol, error)
         return None
+
+    chart = (payload or {}).get("chart") or {}
+    if chart.get("error"):
+        logger.warning("%s: %s", symbol, chart["error"])
+        return None
+    results = chart.get("result") or []
+    return results[0] if results else None
+
+
+def _metadata(symbol: str) -> dict | None:
+    result = _chart(symbol, range="1d", interval="1d")
+    metadata = (result or {}).get("meta")
     if not metadata:
         logger.warning("%s: no data, symbol may be delisted or unsupported", symbol)
         return None
@@ -75,6 +129,37 @@ def eur_usd_rate() -> float | None:
     return current_price(EUR_USD_TICKER)
 
 
+def _epoch(day: date) -> int:
+    return int(datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp())
+
+
+def _closes(result: dict) -> list[tuple[str, float]]:
+    """Flatten a chart result into (ISO date, close) pairs.
+
+    Adjusted closes are preferred, matching what yfinance returned before:
+    its `history()` auto-adjusts for splits and dividends by default, and the
+    stored cache must stay comparable across the change.
+
+    Timestamps are UTC epochs; the exchange's own offset turns them back into
+    the calendar day the session belongs to, which is the day the chart labels.
+    """
+    timestamps = result.get("timestamp") or []
+    indicators = result.get("indicators") or {}
+    adjusted = (indicators.get("adjclose") or [{}])[0].get("adjclose")
+    raw = (indicators.get("quote") or [{}])[0].get("close")
+    closes = adjusted or raw or []
+
+    offset = (result.get("meta") or {}).get("gmtoffset") or 0
+
+    points = []
+    for stamp, close in zip(timestamps, closes):
+        if stamp is None or close is None:  # holidays and half-sessions
+            continue
+        day = datetime.fromtimestamp(stamp + offset, tz=timezone.utc).date()
+        points.append((day.isoformat(), float(close)))
+    return points
+
+
 def price_history(symbol: str, start: date, end: date | None = None) -> list[dict]:
     """Daily closes between `start` and `end`, cached in price_cache.
 
@@ -86,20 +171,24 @@ def price_history(symbol: str, start: date, end: date | None = None) -> list[dic
     if cached and _covers(cached, start, end):
         return _within(cached, start, end)
 
-    try:
-        frame = yf.Ticker(symbol).history(
-            start=start.isoformat(), end=(end + timedelta(days=1)).isoformat()
-        )
-    except Exception as error:
+    # A day of slack on each side absorbs the timezone edges: the window is
+    # clipped exactly afterwards.
+    result = _chart(
+        symbol,
+        period1=_epoch(start - timedelta(days=1)),
+        period2=_epoch(end + timedelta(days=2)),
+        interval="1d",
+    )
+    if result is None:
         # Fall back on whatever was cached, still clipped to the requested
         # window: a chart drawn from stale data must not silently span a
         # different range than the one asked for.
-        logger.warning("%s: history fetch failed - %s", symbol, error)
         return _within(cached, start, end)
 
     points = [
-        (index.date().isoformat(), float(row["Close"]))
-        for index, row in frame.iterrows()
+        (day, price)
+        for day, price in _closes(result)
+        if start.isoformat() <= day <= end.isoformat()
     ]
     if points:
         db.cache_prices(symbol, iter(points))
@@ -127,13 +216,18 @@ def search(query: str, limit: int = 10) -> list[dict]:
     see before picking one.
     """
     try:
-        quotes = yf.Search(query).quotes[:limit]
+        response = _session().get(
+            SEARCH_URL,
+            params={"q": query, "quotesCount": limit, "newsCount": 0},
+        )
+        response.raise_for_status()
+        quotes = (response.json() or {}).get("quotes") or []
     except Exception as error:
         logger.warning("search %r failed - %s", query, error)
         return []
 
     results = []
-    for quote in quotes:
+    for quote in quotes[:limit]:
         symbol = quote.get("symbol", "")
         if not symbol:
             continue

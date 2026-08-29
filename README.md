@@ -8,9 +8,9 @@
 
 Allot tracks what you hold, what it cost you, and tells you where this month's money should go.
 
-Positions are never stored. Quantity and PRUM (*prix de revient unitaire moyen*, the weighted average price paid) are recomputed on every read from the transactions plus an optional opening position — the holding that predates tracking. There is no state to keep in sync and no reconciliation step.
+Positions are never stored. Quantity and PRUM (*prix de revient unitaire moyen*, the weighted average price paid) are recomputed on every read from the transactions plus an optional opening position - the holding that predates tracking. There is no state to keep in sync and no reconciliation step.
 
-Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope carries its own monthly amount and stands on its own: one envelope never draws from another. Inside an envelope the amount is split across assets by their relative weight, modulated by how far the current price sits from the PRUM — 1.5x when the price is more than 10% below it, 0.5x when it is more than 10% above, 1x in between. The envelope total stays invariant.
+Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope carries its own monthly amount and stands on its own: one envelope never draws from another. Inside an envelope the amount is split across assets by their relative weight, modulated by how far the current price sits from the PRUM - 1.5x when the price is more than 10% below it, 0.5x when it is more than 10% above, 1x in between. The envelope total stays invariant.
 
 ## Features
 
@@ -27,7 +27,9 @@ Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope carri
 - [uv](https://docs.astral.sh/uv/) and Python 3.12+
 - Node 22+
 
-No configuration file, no environment variable, no external service: the whole state lives in a SQLite file at `data/allot.db`, created on first run.
+Only for developing on it. To just run it, see [Self-hosting](#self-hosting) - Docker is the single requirement there.
+
+No configuration file and no external service: the whole state lives in a SQLite file at `data/allot.db`, created on first run. Three environment variables exist for the container, all optional - `ALLOT_HOST`, `ALLOT_PORT`, `ALLOT_DB_PATH`.
 
 ### Installation
 
@@ -60,6 +62,62 @@ make note
 
 Run `make` on its own to list every target.
 
+## Self-hosting
+
+To run Allot on a machine of your own - a Raspberry Pi, a NAS, a spare box - without installing Python or Node:
+
+```bash
+git clone https://github.com/arthemide/allot.git
+cd allot
+cp .env.example .env
+make up
+```
+
+`make up` pulls the image published by CI rather than building it, so the machine compiles nothing. The image is built for `linux/amd64`, `linux/arm64` and `linux/arm/v7`.
+
+> A GHCR package is private until it is made public, even on a public repository. If the pull fails with `denied`, open the package's settings on GitHub and switch its visibility once.
+
+It listens on `:8000` and is reachable from the LAN. There is **no authentication**: keep it on a network you trust, or put a reverse proxy with a password in front of it.
+
+The database lives in the `allot-data` Docker volume, so `docker compose down` and an upgrade lose nothing. To build from the checkout instead, for development, use `make up-local`.
+
+### Staying up to date
+
+`ALLOT_VERSION` in `.env` pins what runs, so the running version is readable in a file:
+
+```bash
+make update    # pull the pinned version and restart
+```
+
+To move to a newer release, set `ALLOT_VERSION` to its tag and run `make update` again; to roll back, set it to the previous tag and do the same. Automating that is deliberately left out of this repository — it depends on your machine, your secrets and your appetite for unattended updates.
+
+### Off-site replication
+
+A Litestream sidecar streams the SQLite write-ahead log to S3-compatible object storage continuously, so a lost disk costs seconds of data rather than a day. Leave `LITESTREAM_BUCKET` empty in `.env` and it idles.
+
+`.env.example` targets Scaleway Object Storage; any S3-compatible provider works by changing `LITESTREAM_ENDPOINT` and `LITESTREAM_REGION`.
+
+1. In the Scaleway console, create a bucket (Object Storage) and an API key. The secret key is shown once, at creation.
+2. Fill the `LITESTREAM_*` lines in `.env`.
+3. `make replication` should list the snapshots being kept.
+
+Restoring, with the app stopped so nothing writes underneath it:
+
+```bash
+docker compose stop app
+docker compose run --rm litestream \
+  litestream restore -config /etc/litestream.yml /data/allot.db
+docker compose up -d
+```
+
+Replication requires WAL mode, which `schema.sql` turns on. It is stored in the database header, so an existing database picks it up on the next start.
+
+> The official Litestream image is published for amd64 and arm64 only. On a 32-bit ARM host, install the `armv7` package from the [Litestream releases](https://github.com/benbjohnson/litestream/releases) on the host and drop this service.
+
+## Releases
+
+The version in `pyproject.toml` is the source of truth. Bumping it and merging to `main` is the whole release process: CI writes `CHANGELOG.md`, tags `vX.Y.Z`, publishes `ghcr.io/arthemide/allot` with a provenance attestation, and opens a GitHub Release. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## HTTP API
 
 | Method | Path | Purpose |
@@ -82,7 +140,7 @@ Interactive docs are served at `/docs`.
 ```
 app.py              entry point: the API, and the built front alongside it
 schema.sql          the whole database schema
-src/calc.py         pure calculations — no I/O, the only module worth unit-testing
+src/calc.py         pure calculations - no I/O, the only module worth unit-testing
 src/services/       positions, allocation, prices, note rendering
 src/databases/      SQLite access, plain dicts, no ORM
 src/routes/         HTTP surface
@@ -95,4 +153,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0 - see [LICENSE](LICENSE).
