@@ -101,7 +101,7 @@ Set `LITESTREAM_BUCKET` in `.env` and the container replicates the SQLite write-
 
 1. In the Scaleway console, create a bucket (Object Storage) and an API key. The secret key is shown once, at creation.
 2. Fill the `LITESTREAM_*` lines in `.env`, then `make up`.
-3. `make replication` lists what has been replicated.
+3. `make replication` lists the LTX files held off-site; snapshots are level 9.
 
 Recovery needs no command at all: the entrypoint passes `-restore-if-db-not-exists`, so a container started against an empty volume rebuilds the database from the replica. Moving to a new machine is installing Docker, cloning, writing the same `.env`, and `make up`.
 

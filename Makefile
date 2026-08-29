@@ -75,7 +75,7 @@ logs:
 
 .PHONY: replication ## 💾 Show what Litestream has replicated off-site
 replication:
-	docker compose exec app litestream snapshots -config /etc/litestream.yml /data/allot.db
+	docker compose exec app litestream ltx -level all -config /etc/litestream.yml /data/allot.db
 
 .PHONY: clean ## 🧹 Remove build output and caches
 clean:
