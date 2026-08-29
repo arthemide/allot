@@ -93,26 +93,28 @@ To move to a newer release, set `ALLOT_VERSION` to its tag and run `make update`
 
 ### Off-site replication
 
-A Litestream sidecar streams the SQLite write-ahead log to S3-compatible object storage continuously, so a lost disk costs seconds of data rather than a day. Leave `LITESTREAM_BUCKET` empty in `.env` and it idles.
+Set `LITESTREAM_BUCKET` in `.env` and the container replicates the SQLite write-ahead log to S3-compatible object storage continuously, so a lost disk costs seconds of data rather than a day. Leave it empty and the app runs on its own.
+
+[Litestream](https://litestream.io) ships inside the image and supervises the application process, which is the arrangement its documentation recommends: replication is running before the first write, and it stops cleanly with the app. There is no sidecar to start and nothing to install on the host.
 
 `.env.example` targets Scaleway Object Storage; any S3-compatible provider works by changing `LITESTREAM_ENDPOINT` and `LITESTREAM_REGION`.
 
 1. In the Scaleway console, create a bucket (Object Storage) and an API key. The secret key is shown once, at creation.
-2. Fill the `LITESTREAM_*` lines in `.env`.
-3. `make replication` should list the snapshots being kept.
+2. Fill the `LITESTREAM_*` lines in `.env`, then `make up`.
+3. `make replication` lists what has been replicated.
 
-Restoring, with the app stopped so nothing writes underneath it:
+Recovery needs no command at all: the entrypoint passes `-restore-if-db-not-exists`, so a container started against an empty volume rebuilds the database from the replica. Moving to a new machine is installing Docker, cloning, writing the same `.env`, and `make up`.
+
+To restore by hand over an existing volume:
 
 ```bash
-docker compose stop app
-docker compose run --rm litestream \
-  litestream restore -config /etc/litestream.yml /data/allot.db
+docker compose stop
+docker compose run --rm --entrypoint litestream app \
+  restore -config /etc/litestream.yml /data/allot.db
 docker compose up -d
 ```
 
 Replication requires WAL mode, which `schema.sql` turns on. It is stored in the database header, so an existing database picks it up on the next start.
-
-> The official Litestream image is published for amd64 and arm64 only. On a 32-bit ARM host, install the `armv7` package from the [Litestream releases](https://github.com/benbjohnson/litestream/releases) on the host and drop this service.
 
 ## Releases
 
