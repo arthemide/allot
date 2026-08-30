@@ -77,7 +77,25 @@ make up
 
 > A GHCR package is private until it is made public, even on a public repository. If the pull fails with `denied`, open the package's settings on GitHub and switch its visibility once.
 
-It listens on `:8000` and is reachable from the LAN. There is **no authentication**: keep it on a network you trust, or put a reverse proxy with a password in front of it.
+It listens on `:8000` and is reachable from the LAN.
+
+### Authentication
+
+Out of the box there is **no authentication**: anyone who can reach the port can read and delete everything. That is the LAN arrangement, and it stays the default.
+
+Before putting Allot on a domain, give it a password:
+
+```bash
+docker compose run --rm --entrypoint python app -m src.services.auth
+docker compose run --rm --entrypoint python app -c \
+    'import secrets; print("ALLOT_SECRET_KEY=" + secrets.token_urlsafe(32))'
+```
+
+Put both lines in `.env` and restart. The API then answers only a browser that has logged in; `/health` stays open, because the container health check and the deployment wait on it. The session is a signed, `HttpOnly` cookie reissued on every request, so it lasts 30 days from the last visit rather than from the login: the password is typed once per browser and effectively not again. Changing `ALLOT_SECRET_KEY` logs every browser out.
+
+Behind a proxy, set `ALLOT_COOKIE_SECURE=0` only if the instance is reached over plain HTTP, and `ALLOT_FORWARDED_ALLOW_IPS` to the proxy's address so the rate limit on the Yahoo-facing endpoints counts real callers rather than the proxy.
+
+TLS, the domain and the tunnel are not this repository's business - they belong to whatever runs in front.
 
 The database lives in the `allot-data` Docker volume, so `docker compose down` and an upgrade lose nothing. To build from the checkout instead, for development, use `make up-local`.
 
@@ -135,7 +153,9 @@ The version in `pyproject.toml` is the source of truth. Bumping it and merging t
 | `GET`/`POST`/`DELETE` | `/transactions` | Buys and sells |
 | `GET` | `/note` | The monthly note, as plain text |
 
-Interactive docs are served at `/docs`.
+`GET /session` says whether a password is required, and `POST /login` exchanges one for a session cookie.
+
+Interactive docs are off - they publish the whole surface. `make dev-api` turns them back on at `/docs`.
 
 ## Layout
 

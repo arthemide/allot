@@ -102,3 +102,9 @@ export interface NewAsset {
 	currency: string;
 	weight: number;
 }
+
+/** Whether this instance asks for a password, and whether we gave it one. */
+export type Session = {
+	required: boolean;
+	authenticated: boolean;
+};
