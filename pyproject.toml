@@ -1,6 +1,6 @@
 [project]
 name = "allot"
-version = "0.2.1"
+version = "0.2.2"
 description = "Allot - per-asset PRUM tracking and monthly allocation note"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,11 +10,20 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.0.0", "pytest-mock>=3.14.0", "ruff>=0.14.0"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
+    "pytest-cov>=6.0.0",
+    # TestClient speaks to the app through httpx; the app itself uses
+    # curl_cffi, so this belongs to the tests only.
+    "httpx>=0.28.0",
+    "ruff>=0.14.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "--cov=src --cov=app --cov-report=term-missing --cov-fail-under=90"
 
 [tool.ruff]
 line-length = 88
