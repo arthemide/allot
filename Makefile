@@ -38,6 +38,11 @@ preview:
 test:
 	uv run pytest -q
 
+.PHONY: coverage ## 📊 Run the tests and write the HTML coverage report
+coverage:
+	uv run pytest -q --cov-report=html
+	echo "report written to htmlcov/index.html"
+
 .PHONY: lint ## 🔍 Check Python and Svelte
 lint:
 	uv run ruff check .
@@ -80,5 +85,5 @@ replication:
 .PHONY: clean ## 🧹 Remove build output and caches
 clean:
 	rm -rf $(FRONT_DIR)/dist $(FRONT_DIR)/.svelte-kit
-	rm -rf .pytest_cache .ruff_cache
+	rm -rf .pytest_cache .ruff_cache .coverage htmlcov
 	find . -name __pycache__ -type d -not -path "./.venv/*" -exec rm -rf {} +
