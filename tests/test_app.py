@@ -61,3 +61,22 @@ class TestStartup:
             application._check_tickers()
         # Then it only says how many were checked
         assert "all 2 tickers answered" in caplog.text
+
+
+class TestExposedSurface:
+    def test_the_interactive_docs_are_off(self, client):
+        # Given the default configuration
+        # When the docs are asked for
+        # Then they are not published, and neither is the schema behind them
+        assert client.get("/docs").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
+        assert client.get("/redoc").status_code == 404
+
+    def test_cors_is_not_wired_in_by_default(self):
+        # Given the default configuration
+        # When the middleware stack is inspected
+        names = [
+            middleware.cls.__name__ for middleware in application.app.user_middleware
+        ]
+        # Then no permissive policy sits next to the session cookie
+        assert "CORSMiddleware" not in names

@@ -1,6 +1,6 @@
 """Asset, chart and ticker search endpoints."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from src.databases import sqlite as db
 from src.models.schema import (
@@ -12,9 +12,21 @@ from src.models.schema import (
     SearchHit,
     Summary,
 )
-from src.services import portfolio, prices
+from src.services import portfolio, prices, ratelimit
 
 router = APIRouter(prefix="/assets", tags=["assets"])
+
+
+def rate_limited(request: Request) -> None:
+    """Refuse a caller hammering an endpoint that reaches out to Yahoo."""
+    key = request.client.host if request.client else "unknown"
+    if not ratelimit.allow(key):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many requests. This endpoint reaches out to Yahoo on every "
+            "call, so it is capped.",
+            headers={"Retry-After": str(ratelimit.retry_after(key))},
+        )
 
 
 @router.get("", response_model=list[Position])
@@ -46,7 +58,11 @@ def create_asset(payload: AssetCreate):
     return portfolio.position_of(db.get_asset(payload.symbol))
 
 
-@router.get("/search", response_model=list[SearchHit])
+@router.get(
+    "/search",
+    response_model=list[SearchHit],
+    dependencies=[Depends(rate_limited)],
+)
 def search_tickers(q: str, limit: int = 10):
     """Find a ticker by name, so the exchange suffix does not have to be guessed."""
     return prices.search(q, limit)
@@ -105,7 +121,11 @@ def set_opening_position(symbol: str, payload: OpeningPosition):
     return portfolio.position_of(db.get_asset(symbol))
 
 
-@router.get("/{symbol}/chart", response_model=Chart)
+@router.get(
+    "/{symbol}/chart",
+    response_model=Chart,
+    dependencies=[Depends(rate_limited)],
+)
 def get_chart(symbol: str, window: str = portfolio.DEFAULT_RANGE):
     """Price history, transaction markers and the step PRUM curve.
 

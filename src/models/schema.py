@@ -126,3 +126,16 @@ class Summary(BaseModel):
     gain: float
     gain_percent: float | None
     envelopes: list[SummaryEnvelope]
+
+
+class Login(BaseModel):
+    """The one credential this app knows about."""
+
+    password: str
+
+
+class Session(BaseModel):
+    """What the front needs at boot to decide between login screen and app."""
+
+    required: bool
+    authenticated: bool
