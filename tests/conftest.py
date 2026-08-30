@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 
 from app import app
 from src.databases import sqlite as db
-from src.services import prices
+from src.services import auth, prices, ratelimit
 
 # The real database, captured before anything rebinds it: it is what the
 # bound defaults of connect() and init() still point at.
@@ -57,6 +57,14 @@ def no_network(mocker):
     mocker.patch.object(prices, "_session", side_effect=refuse)
 
 
+@pytest.fixture(autouse=True)
+def fresh_rate_limit():
+    """The window is a module-level dict; one test must not fill another's."""
+    ratelimit.reset()
+    yield
+    ratelimit.reset()
+
+
 @pytest.fixture
 def offline(mocker):
     """Every price entry point, stubbed with something deterministic."""
@@ -82,3 +90,28 @@ def portfolio_data(database):
     db.add_asset("ESE.PA", "BNP S&P 500", "PEA", "EUR", 1.0)
     db.add_transaction("WPEA.PA", "2026-01-10", "buy", 10.0, 5.0, 1.0)
     db.add_transaction("WPEA.PA", "2026-02-10", "sell", 4.0, 6.0)
+
+
+@pytest.fixture
+def password(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Turn authentication on, with a known password."""
+    secret = "correct horse battery staple"
+    monkeypatch.setenv("ALLOT_PASSWORD_HASH", auth.hash_password(secret))
+    monkeypatch.setenv("ALLOT_SECRET_KEY", "a-test-key-that-is-not-a-real-one")
+    monkeypatch.setenv("ALLOT_COOKIE_SECURE", "0")
+    return secret
+
+
+@pytest.fixture
+def guarded_client(database, offline, password):
+    """The app with authentication on, and nobody logged in."""
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def authenticated_client(guarded_client, password):
+    """The same, with the session cookie already in the jar."""
+    response = guarded_client.post("/login", json={"password": password})
+    assert response.status_code == 204
+    return guarded_client

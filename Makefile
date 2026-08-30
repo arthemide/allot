@@ -20,7 +20,7 @@ start: build
 
 .PHONY: dev-api ## 🚀 Run the API alone with auto-reload on :8000
 dev-api:
-	uv run uvicorn app:app --reload --port 8000
+	ALLOT_DOCS=1 ALLOT_DEV_CORS=1 uv run uvicorn app:app --reload --port 8000
 
 .PHONY: dev-front ## 🚀 Run the front dev server on :5173 (needs dev-api)
 dev-front:
@@ -52,6 +52,10 @@ lint:
 format:
 	uv run ruff format .
 	uv run ruff check --fix .
+
+.PHONY: password ## 🔑 Hash a password for ALLOT_PASSWORD_HASH in .env
+password:
+	uv run python -m src.services.auth
 
 .PHONY: note ## 📚 Print the monthly note (needs the app running)
 note:

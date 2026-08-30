@@ -1,3 +1,4 @@
+import { session } from '$lib/state/session.svelte';
 import type {
 	Chart,
 	Envelope,
@@ -5,6 +6,7 @@ import type {
 	NewTransaction,
 	Position,
 	SearchHit,
+	Session,
 	Summary,
 	Transaction
 } from '$lib/types/api';
@@ -36,8 +38,16 @@ async function errorMessage(response: Response, path: string, method: string) {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(`${BASE}${path}`, {
 		headers: { 'Content-Type': 'application/json' },
+		// The dev server is cross-origin (:5173 -> :8000), where the browser
+		// will not send the session cookie on its own.
+		credentials: 'include',
 		...init
 	});
+	// A 401 from /login itself is a wrong password, and has to reach the form.
+	if (response.status === 401 && path !== '/login') {
+		session.expired();
+		throw new Error('Session expired.');
+	}
 	if (!response.ok) {
 		throw new Error(await errorMessage(response, path, init?.method ?? 'GET'));
 	}
@@ -79,10 +89,20 @@ export const deleteTransaction = (id: number) =>
 
 
 export async function getNote(): Promise<string> {
-	const response = await fetch(`${BASE}/note`);
+	// Plain text, so it does not go through request().
+	const response = await fetch(`${BASE}/note`, { credentials: 'include' });
+	if (response.status === 401) {
+		session.expired();
+		throw new Error('Session expired.');
+	}
 	if (!response.ok) throw new Error(`GET /note failed: ${response.status}`);
 	return response.text();
 }
+
+export const getSession = () => request<Session>('/session');
+
+export const login = (password: string) =>
+	request<void>('/login', { method: 'POST', body: JSON.stringify({ password }) });
 
 export const searchTickers = (query: string) =>
 	request<SearchHit[]>(`/assets/search?q=${encodeURIComponent(query)}`);

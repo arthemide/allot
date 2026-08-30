@@ -9,8 +9,26 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import MonthlyNote from "$lib/components/MonthlyNote.svelte";
 	import TickerSearch from "$lib/components/TickerSearch.svelte";
+	import Login from "$lib/components/Login.svelte";
+	import { getSession } from "$lib/services/api";
+	import { session } from "$lib/state/session.svelte";
 
 	let { children } = $props();
+
+	// An instance with no password never shows a login screen.
+	$effect(() => {
+		getSession()
+			.then((state) => {
+				session.required = state.required;
+				session.authenticated = state.authenticated;
+			})
+			.catch(() => {
+				// Unreachable API: the form is the one thing that might help.
+				session.required = true;
+				session.authenticated = false;
+			})
+			.finally(() => (session.ready = true));
+	});
 </script>
 
 <svelte:head>
@@ -19,6 +37,11 @@
 
 <ModeWatcher />
 
+{#if !session.ready}
+	<!-- No flash of the app before the answer comes back. -->
+{:else if session.required && !session.authenticated}
+	<Login />
+{:else}
 <nav class="flex items-center justify-between border-b px-6 py-3">
 	<div class="text-sm font-semibold">Allot</div>
 	<div class="flex items-center gap-2">
@@ -37,3 +60,4 @@
 </nav>
 
 {@render children()}
+{/if}
