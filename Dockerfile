@@ -22,7 +22,7 @@ RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt
 # curl_cffi ships an armv7 wheel; its own dependency cffi does not, and has to
 # be compiled. Doing it in a throwaway stage keeps gcc and the headers out of
 # the image that actually ships.
-FROM python:3.12-slim AS wheels
+FROM python:3.14-slim AS wheels
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libffi-dev python3-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -51,7 +51,7 @@ RUN set -eu; \
         "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-${asset}.tar.gz"; \
     tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 WORKDIR /app
 
 COPY --from=wheels /install /usr/local
