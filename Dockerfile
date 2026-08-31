@@ -4,7 +4,7 @@
 # target architecture. Only the runtime stage is built for the target -- which
 # matters, because that target is a 32-bit Raspberry Pi.
 
-FROM --platform=$BUILDPLATFORM node:22-alpine AS front
+FROM --platform=$BUILDPLATFORM node:26-alpine AS front
 WORKDIR /front
 COPY front/package.json front/package-lock.json ./
 RUN npm ci
