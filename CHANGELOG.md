@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.4.0] - 2026-09-01
+
+### Other
+
+- bump the actions group across 1 directory with 10 updates (#23)
+- bump ruff from 0.16.3 to 0.16.4 in the python group across 1 directory (#22)
+- bump node from 22-alpine to 26-alpine (#21)
+- bump the front group in /front with 8 updates (#24)
+- bump @lucide/svelte from 0.561.0 to 1.35.0 in /front (#25)
+- bump python from 3.12-slim to 3.14-slim (#20)
+- bump vite to 8.2.2 and vite-plugin-svelte to 7.3.0 (#32)
+
 ## [0.3.0] - 2026-08-30
 
 ### Added
