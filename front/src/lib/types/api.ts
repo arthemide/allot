@@ -93,6 +93,22 @@ export interface SearchHit {
 export interface Envelope {
 	name: string;
 	monthly_amount: number;
+	/** Only set when the envelope tracks its cash; null otherwise. */
+	started_on: string | null;
+	opening_cash: number | null;
+	available: number | null;
+}
+
+/** Where a strategy starts, or where it is recalibrated against a statement. */
+export interface EnvelopeStart {
+	started_on: string;
+	opening_cash: number;
+}
+
+/** The address a calendar subscribes to, and whether it carries a token. */
+export interface FeedUrl {
+	url: string;
+	token: boolean;
 }
 
 export interface NewAsset {
@@ -100,6 +116,12 @@ export interface NewAsset {
 	label: string;
 	envelope: string;
 	currency: string;
+	weight: number;
+}
+
+export interface AssetUpdate {
+	label: string;
+	envelope: string;
 	weight: number;
 }
 

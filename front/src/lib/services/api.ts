@@ -1,7 +1,10 @@
 import { session } from '$lib/state/session.svelte';
 import type {
+	AssetUpdate,
 	Chart,
 	Envelope,
+	EnvelopeStart,
+	FeedUrl,
 	NewAsset,
 	NewTransaction,
 	Position,
@@ -99,6 +102,9 @@ export async function getNote(): Promise<string> {
 	return response.text();
 }
 
+/** The address a calendar subscribes to, token included. */
+export const getFeedUrl = () => request<FeedUrl>('/note/feed-url');
+
 export const getSession = () => request<Session>('/session');
 
 export const login = (password: string) =>
@@ -110,10 +116,7 @@ export const searchTickers = (query: string) =>
 export const createAsset = (asset: NewAsset) =>
 	request<Position>('/assets', { method: 'POST', body: JSON.stringify(asset) });
 
-export const updateAsset = (
-	symbol: string,
-	body: { label: string; envelope: string; weight: number }
-) =>
+export const updateAsset = (symbol: string, body: AssetUpdate) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`, {
 		method: 'PUT',
 		body: JSON.stringify(body)
@@ -129,3 +132,12 @@ export const setEnvelopeAmount = (name: string, monthlyAmount: number) =>
 		method: 'PUT',
 		body: JSON.stringify({ name, monthly_amount: monthlyAmount })
 	});
+
+export const setEnvelopeStart = (name: string, body: EnvelopeStart) =>
+	request<Envelope>(`/envelopes/${encodeURIComponent(name)}/start`, {
+		method: 'PUT',
+		body: JSON.stringify(body)
+	});
+
+export const clearEnvelopeStart = (name: string) =>
+	request<Envelope>(`/envelopes/${encodeURIComponent(name)}/start`, { method: 'DELETE' });
