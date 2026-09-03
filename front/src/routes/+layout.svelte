@@ -32,6 +32,7 @@
 </script>
 
 <svelte:head>
+	<title>Allot</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
@@ -43,7 +44,9 @@
 	<Login />
 {:else}
 <nav class="flex items-center justify-between border-b px-6 py-3">
-	<div class="text-sm font-semibold">Allot</div>
+	<a href="/" class="hover:text-primary text-sm font-semibold" title="Back to the overview">
+		Allot
+	</a>
 	<div class="flex items-center gap-2">
 	<TickerSearch />
 	<MonthlyNote />
