@@ -21,10 +21,11 @@ from datetime import date, datetime
 
 from src import calc
 from src.databases import sqlite as db
+from src.models.schema import CashBalance
 from src.services import portfolio, prices
 
 
-def available(envelope: dict, today: date | None = None) -> dict | None:
+def available(envelope: dict, today: date | None = None) -> CashBalance | None:
     """The envelope's cash, with the terms it is made of.
 
     The terms come back with it so the figure can be argued with against a
@@ -50,17 +51,17 @@ def available(envelope: dict, today: date | None = None) -> dict | None:
             returned += portfolio.to_eur(gross - row["fees"], row["currency"], rate)
 
     amount = start["opening_cash"] + paid_in - spent + returned
-    return {
-        "started_on": start["started_on"],
-        "opening_cash": start["opening_cash"],
-        "months": months,
-        "paid_in": paid_in,
-        "spent": spent,
-        "returned": returned,
+    return CashBalance(
+        started_on=start["started_on"],
+        opening_cash=start["opening_cash"],
+        months=months,
+        paid_in=paid_in,
+        spent=spent,
+        returned=returned,
         # More spent than paid in means the strategy was not followed; a debt
         # here would only propagate the error.
-        "available": max(amount, 0.0),
-    }
+        available=max(amount, 0.0),
+    )
 
 
 def months_to_afford(price: float, current: float, monthly_amount: float) -> int | None:

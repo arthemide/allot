@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from src.models.schema import Candidate, Lot, PositionResult, Trade
 
 # Relative gap to the PRUM beyond which the monthly amount is modulated.
 MODULATION_BAND = 0.10
@@ -19,33 +19,11 @@ MULTIPLIER_BELOW = 1.5
 MULTIPLIER_ABOVE = 0.5
 MULTIPLIER_NEUTRAL = 1.0
 
-
-class Trade(BaseModel):
-    """A single buy or sell."""
-
-    model_config = ConfigDict(frozen=True)
-
-    side: str  # "buy" or "sell"
-    quantity: float
-    unit_price: float
-    fees: float = 0.0
-
-
-class Position(BaseModel):
-    """A holding, recomputed from trades. Never stored."""
-
-    model_config = ConfigDict(frozen=True)
-
-    quantity: float
-    prum: float
-    invested: float
-
-
 def position(
     trades: list[Trade],
     base_quantity: float = 0.0,
     base_prum: float | None = None,
-) -> Position:
+) -> PositionResult:
     """Recompute quantity and PRUM from an opening position plus trades.
 
     PRUM = (sum(buy_quantity * buy_price) + sum(fees)) / sum(buy_quantity)
@@ -70,11 +48,11 @@ def position(
             raise ValueError(f"unknown side: {trade.side!r}")
 
     if bought_quantity == 0:
-        return Position(quantity=0.0, prum=0.0, invested=0.0)
+        return PositionResult(quantity=0.0, prum=0.0, invested=0.0)
 
     prum = bought_cost / bought_quantity
     quantity = bought_quantity - sold_quantity
-    return Position(quantity=quantity, prum=prum, invested=quantity * prum)
+    return PositionResult(quantity=quantity, prum=prum, invested=quantity * prum)
 
 
 def prum_after_buy(
@@ -177,30 +155,6 @@ def add_months(first_of_month: date, count: int) -> date:
     """The 1st of the month `count` months after the one given."""
     month = first_of_month.month - 1 + count
     return date(first_of_month.year + month // 12, month % 12 + 1, 1)
-
-
-class Candidate(BaseModel):
-    """One asset competing for the envelope's cash, everything in EUR."""
-
-    model_config = ConfigDict(frozen=True)
-
-    symbol: str
-    price: float
-    # Weight times the PRUM multiplier: the share this asset should hold.
-    weight: float
-    # What is already held, so the split follows the drift.
-    held_value: float = 0.0
-
-
-class Lot(BaseModel):
-    """Whole units to buy of one asset."""
-
-    model_config = ConfigDict(frozen=True)
-
-    symbol: str
-    units: int
-    amount: float
-
 
 # One share per pass: a 10 000 EUR budget against a 1 EUR share would
 # otherwise loop ten thousand times.

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Position(BaseModel):
@@ -161,3 +162,123 @@ class Session(BaseModel):
 
     required: bool
     authenticated: bool
+
+
+class Trade(BaseModel):
+    """A single buy or sell."""
+
+    model_config = ConfigDict(frozen=True)
+
+    side: str  # "buy" or "sell"
+    quantity: float
+    unit_price: float
+    fees: float = 0.0
+
+
+class PositionResult(BaseModel):
+    """A holding, recomputed from trades. Never stored."""
+
+    model_config = ConfigDict(frozen=True)
+
+    quantity: float
+    prum: float
+    invested: float
+
+
+
+class Candidate(BaseModel):
+    """One asset competing for the envelope's cash, everything in EUR."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    price: float
+    # Weight times the PRUM multiplier: the share this asset should hold.
+    weight: float
+    # What is already held, so the split follows the drift.
+    held_value: float = 0.0
+
+
+class Lot(BaseModel):
+    """Whole units to buy of one asset."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    units: int
+    amount: float
+
+
+class CashBalance(BaseModel):
+    """What is sitting in cash in an envelope, derived rather than stored."""
+
+    started_on: str
+    opening_cash: float
+    months: int
+    paid_in: float
+    spent: float
+    returned: float
+    available: float
+
+
+class PlanAsset(BaseModel):
+    """One asset line in the monthly plan: what to buy or how much to put in."""
+
+    symbol: str
+    weight: float
+    fractional: bool
+    currency: str
+    price: float | None
+    price_eur: float | None
+    prum: float | None
+    multiplier: float
+    held_eur: float
+    amount: float
+    units: int | None = None
+
+
+class WaitingAsset(BaseModel):
+    """An asset the envelope is saving up for but cannot afford yet."""
+
+    symbol: str
+    weight: float
+    fractional: bool
+    currency: str
+    price: float | None
+    price_eur: float | None
+    prum: float | None
+    multiplier: float
+    held_eur: float
+    missing: float = 0.0
+    months_left: int | None = None
+
+
+class PlanEntry(BaseModel):
+    """One envelope's plan for the month."""
+
+    envelope: str
+    amount: float
+    cash: CashBalance | None
+    market_value: float
+    assets: list[PlanAsset]
+    waiting: list[WaitingAsset]
+    budget: float
+    carry: float
+
+
+class ProjectionEntry(BaseModel):
+    """One envelope's projected plan for a future month."""
+
+    envelope: str
+    tracked: bool
+    budget: float
+    assets: list[PlanAsset]
+    carry: float
+
+
+class ProjectionStep(BaseModel):
+    """One month of projection: every envelope's planned state."""
+
+    month: date
+    envelopes: list[ProjectionEntry]
+

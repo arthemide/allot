@@ -17,6 +17,13 @@ from datetime import date
 
 from src import calc
 from src.databases import sqlite as db
+from src.models.schema import (
+    PlanAsset,
+    PlanEntry,
+    ProjectionEntry,
+    ProjectionStep,
+    WaitingAsset,
+)
 from src.services import cash, portfolio, prices
 
 
@@ -110,7 +117,7 @@ def _spend(members: list[dict], budget: float, held: dict[str, float]) -> dict:
     return {"lines": lines, "waiting": waiting, "carry": carry}
 
 
-def plan(today: date | None = None) -> list[dict]:
+def plan(today: date | None = None) -> list[PlanEntry]:
     """One entry per envelope, with what to do with this month's money."""
     today = today or date.today()
     positions = {p["symbol"]: p for p in portfolio.all_positions()}
@@ -137,8 +144,8 @@ def plan(today: date | None = None) -> list[dict]:
                 "carry": 0.0,
             }
         else:
-            entry = _spend(members, balance["available"], {})
-            entry["budget"] = balance["available"]
+            entry = _spend(members, balance.available, {})
+            entry["budget"] = balance.available
 
         # Measured against what was left for whole shares, not against the
         # envelope's whole cash: the fractional lines took their part already.
@@ -149,24 +156,24 @@ def plan(today: date | None = None) -> list[dict]:
             )
 
         envelopes.append(
-            {
-                "envelope": name,
-                "amount": monthly,
-                "cash": balance,
+            PlanEntry(
+                envelope=name,
+                amount=monthly,
+                cash=balance,
                 # In EUR, converted asset by asset, like portfolio.summary()
                 # does: an envelope holding both EUR and USD lines must not end
                 # up as the sum of the two.
-                "market_value": sum(m["held_eur"] for m in members),
-                "assets": entry["lines"],
-                "waiting": entry["waiting"],
-                "budget": entry["budget"],
-                "carry": entry["carry"],
-            }
+                market_value=sum(m["held_eur"] for m in members),
+                assets=[PlanAsset(**a) for a in entry["lines"]],
+                waiting=[WaitingAsset(**w) for w in entry["waiting"]],
+                budget=entry["budget"],
+                carry=entry["carry"],
+            )
         )
     return envelopes
 
 
-def projection(today: date | None = None, months: int = 11) -> list[dict]:
+def projection(today: date | None = None, months: int = 11) -> list[ProjectionStep]:
     """What the next months look like if nothing changes, month by month.
 
     At today's prices: the point is to know when the next share becomes
@@ -191,7 +198,7 @@ def projection(today: date | None = None, months: int = 11) -> list[dict]:
             "tracked": balance is not None,
             # What this month leaves behind, so the first projected month
             # follows on from the note rather than from a clean slate.
-            "carry": _spend(members, balance["available"], held)["carry"]
+            "carry": _spend(members, balance.available, held)["carry"]
             if balance
             else 0.0,
         }
@@ -216,13 +223,13 @@ def projection(today: date | None = None, months: int = 11) -> list[dict]:
                 state["carry"] = carry = spent["carry"]
                 lines = spent["lines"]
             entries.append(
-                {
-                    "envelope": state["envelope"],
-                    "tracked": state["tracked"],
-                    "budget": budget,
-                    "assets": lines,
-                    "carry": carry,
-                }
+                ProjectionEntry(
+                    envelope=state["envelope"],
+                    tracked=state["tracked"],
+                    budget=budget,
+                    assets=[PlanAsset(**a) for a in lines],
+                    carry=carry,
+                )
             )
-        future.append({"month": month, "envelopes": entries})
+        future.append(ProjectionStep(month=month, envelopes=entries))
     return future

@@ -19,9 +19,9 @@ def _with_cash(envelope: dict) -> dict:
         return envelope
     return {
         **envelope,
-        "started_on": balance["started_on"],
-        "opening_cash": balance["opening_cash"],
-        "available": balance["available"],
+        "started_on": balance.started_on,
+        "opening_cash": balance.opening_cash,
+        "available": balance.available,
     }
 
 
@@ -47,7 +47,7 @@ def upsert_envelope(name: str, payload: Envelope):
     ):
         balance = cash.available(existing)
         next_month = calc.add_months(date.today().replace(day=1), 1)
-        db.set_envelope_start(name, next_month.isoformat(), balance["available"])
+        db.set_envelope_start(name, next_month.isoformat(), balance.available)
 
     db.upsert_envelope(name, payload.monthly_amount)
     return _with_cash(db.get_envelope(name))
