@@ -46,6 +46,21 @@ CREATE TABLE IF NOT EXISTS asset (
 
 CREATE INDEX IF NOT EXISTS idx_asset_envelope ON asset (envelope);
 
+-- Where a strategy starts, and where it is recalibrated. The cash in an
+-- envelope is never stored: it is recomputed from this row, the monthly amount
+-- and the transactions. An envelope without a row here knows nothing about
+-- cash and just splits its monthly amount.
+CREATE TABLE IF NOT EXISTS envelope_start (
+    envelope     TEXT PRIMARY KEY
+                 REFERENCES envelope(name) ON UPDATE CASCADE ON DELETE CASCADE,
+
+    -- Start of the strategy, or the date of the last recalibration.
+    started_on   TEXT NOT NULL,
+
+    -- Cash already there on that date; 0 for a strategy starting from nothing.
+    opening_cash REAL NOT NULL DEFAULT 0 CHECK (opening_cash >= 0)
+);
+
 -- Every buy and sell. Positions are never stored: quantity and PRUM are
 -- recomputed from this table plus the asset's opening position.
 CREATE TABLE IF NOT EXISTS "transaction" (
