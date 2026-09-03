@@ -4,12 +4,19 @@
 	import OpeningPosition from '$lib/components/OpeningPosition.svelte';
 	import PositionBanner from '$lib/components/PositionBanner.svelte';
 	import TransactionTable from '$lib/components/TransactionTable.svelte';
+	import { browser } from '$app/environment';
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { getAssets, getChart, getEnvelopes } from '$lib/services/api';
 	import { refresh as refreshSignal } from '$lib/state/refresh.svelte';
 	import type { Chart, Envelope, Position } from '$lib/types/api';
 
 	// Sentinel value of the selector: totals and settings instead of one asset.
 	const ALL = '*';
+
+	// The address is the selection: the note links to ?asset=SYMBOL, and going
+	// back or clicking the title lands here rather than in a second state.
+	const inUrl = $derived(page.url.searchParams.get('asset') ?? ALL);
 
 	let positions = $state<Position[]>([]);
 	let envelopes = $state<Envelope[]>([]);
@@ -25,8 +32,8 @@
 	async function loadPositions() {
 		try {
 			[positions, envelopes] = await Promise.all([getAssets(), getEnvelopes()]);
-			// The selected asset may have just been deleted.
-			if (!showingAll && !positions.some((p) => p.symbol === selected)) selected = ALL;
+			// Deleted since, or a link naming something untracked.
+			if (!showingAll && !positions.some((p) => p.symbol === selected)) select(ALL);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Could not reach the API.';
 		} finally {
@@ -58,6 +65,19 @@
 		window_;
 		loadChart();
 	});
+
+	$effect(() => {
+		selected = inUrl;
+	});
+
+	// replaceState rather than pushState: picking an asset is browsing.
+	function select(symbol: string) {
+		if (!browser) return;
+		const url = new URL(page.url);
+		if (symbol === ALL) url.searchParams.delete('asset');
+		else url.searchParams.set('asset', symbol);
+		replaceState(url, page.state);
+	}
 </script>
 
 <svelte:head><title>Allot</title></svelte:head>
@@ -72,7 +92,8 @@
 			<label for="asset" class="text-sm font-medium">Asset</label>
 			<select
 				id="asset"
-				bind:value={selected}
+				value={selected}
+				onchange={(e) => select(e.currentTarget.value)}
 				class="border-input bg-background h-9 min-w-64 rounded-md border px-3 text-sm"
 			>
 				<option value={ALL}>* All assets (totals and settings)</option>
@@ -83,7 +104,7 @@
 		</div>
 
 		{#if showingAll}
-			<GlobalSummary {positions} onChange={refresh} onSelect={(symbol) => (selected = symbol)} />
+			<GlobalSummary {positions} onChange={refresh} onSelect={select} />
 		{:else if position}
 			<PositionBanner {position} />
 

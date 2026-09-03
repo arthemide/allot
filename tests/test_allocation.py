@@ -4,14 +4,26 @@ An envelope amount is invariant: multipliers only move money between the
 assets of a single envelope, never across envelopes.
 """
 
+from datetime import date
+
 import pytest
 
 from src.services import allocation
 
+
+def _asset(symbol, envelope, currency, weight):
+    return {
+        "symbol": symbol,
+        "envelope": envelope,
+        "currency": currency,
+        "weight": weight,
+    }
+
+
 ASSETS = [
-    {"symbol": "WPEA.PA", "envelope": "PEA", "currency": "EUR", "weight": 1.0},
-    {"symbol": "ETH-USD", "envelope": "CRYPTO", "currency": "USD", "weight": 3.0},
-    {"symbol": "CW8.PA", "envelope": "CRYPTO", "currency": "EUR", "weight": 1.0},
+    _asset("WPEA.PA", "PEA", "EUR", 1.0),
+    _asset("ETH-USD", "CRYPTO", "USD", 3.0),
+    _asset("CW8.PA", "CRYPTO", "EUR", 1.0),
 ]
 
 ENVELOPES = [
@@ -90,3 +102,195 @@ class TestPlan:
         # in the envelope's market value
         assert multipliers["ETH-USD"] == 1.0
         assert crypto["market_value"] == pytest.approx(500.0)
+
+
+class TestCashRegime:
+    """An envelope that declares a start buys whole shares out of its cash."""
+
+    @pytest.fixture
+    def cto(self, mocker):
+        # A 100 EUR/month CTO holding one 600 EUR share, nothing fractional
+        mocker.patch.object(
+            allocation.db,
+            "all_assets",
+            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0)],
+        )
+        mocker.patch.object(
+            allocation.db,
+            "all_envelopes",
+            return_value=[{"name": "CTO", "monthly_amount": 100.0}],
+        )
+        mocker.patch.object(
+            allocation.portfolio,
+            "all_positions",
+            return_value=[
+                {"symbol": "MC.PA", "price": 600.0, "prum": 600.0, "market_value": 0.0}
+            ],
+        )
+        mocker.patch.object(allocation.prices, "eur_usd_rate", return_value=1.08)
+
+    def _with_cash(self, mocker, amount):
+        mocker.patch.object(
+            allocation.cash,
+            "available",
+            return_value={"available": amount, "started_on": "2026-01-01"},
+        )
+
+    def test_a_cagnotte_too_small_buys_nothing_and_waits(self, cto, mocker):
+        # Given 320 EUR saved against a 600 EUR share
+        self._with_cash(mocker, 320.0)
+        # When the month is planned
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then no order is produced, and the whole cagnotte is carried over
+        assert envelope["assets"] == []
+        assert envelope["carry"] == 320.0
+        assert envelope["waiting"][0]["symbol"] == "MC.PA"
+
+    def test_it_says_what_is_missing_and_when(self, cto, mocker):
+        self._with_cash(mocker, 320.0)
+        waiting = _by_name(allocation.plan())["CTO"]["waiting"][0]
+        # 280 missing at 100 a month
+        assert waiting["missing"] == pytest.approx(280.0)
+        assert waiting["months_left"] == 3
+
+    def test_a_full_cagnotte_buys_the_share_and_carries_the_change(self, cto, mocker):
+        # Given six months of saving
+        self._with_cash(mocker, 650.0)
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then one share is bought, and the rest waits for next month
+        assert (envelope["assets"][0]["symbol"], envelope["assets"][0]["units"]) == (
+            "MC.PA",
+            1,
+        )
+        assert envelope["assets"][0]["amount"] == 600.0
+        assert envelope["carry"] == 50.0
+        assert envelope["waiting"] == []
+
+    def test_a_weightless_asset_waits_for_nothing(self, cto, mocker):
+        # Given a second asset held but never topped up
+        mocker.patch.object(
+            allocation.db,
+            "all_assets",
+            return_value=[
+                _asset("MC.PA", "CTO", "EUR", 1.0),
+                _asset("OLD.PA", "CTO", "EUR", 0.0),
+            ],
+        )
+        mocker.patch.object(
+            allocation.portfolio,
+            "all_positions",
+            return_value=[
+                {"symbol": "MC.PA", "price": 600.0, "prum": 600.0, "market_value": 0.0},
+                {"symbol": "OLD.PA", "price": 20.0, "prum": 20.0, "market_value": 0.0},
+            ],
+        )
+        self._with_cash(mocker, 320.0)
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then it is not listed as something the envelope is saving up for:
+        # no money was ever going its way
+        assert [m["symbol"] for m in envelope["waiting"]] == ["MC.PA"]
+
+    def test_what_is_missing_counts_the_money_left_for_shares(self, cto, mocker):
+        # Given an envelope whose cash is shared with a fractional line
+        mocker.patch.object(
+            allocation.db,
+            "all_assets",
+            return_value=[
+                _asset("MC.PA", "CTO", "EUR", 1.0),
+                _asset("ETH-USD", "CTO", "USD", 1.0),
+            ],
+        )
+        mocker.patch.object(
+            allocation.portfolio,
+            "all_positions",
+            return_value=[
+                {"symbol": "MC.PA", "price": 600.0, "prum": 600.0, "market_value": 0.0},
+                {
+                    "symbol": "ETH-USD",
+                    "price": 100.0,
+                    "prum": 100.0,
+                    "market_value": 0.0,
+                },
+            ],
+        )
+        self._with_cash(mocker, 400.0)
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then the 200 that went to the crypto line are not counted as
+        # available for the share: 600 - 200 left, not 600 - 400
+        assert envelope["waiting"][0]["missing"] == pytest.approx(400.0)
+
+    def test_a_fractional_asset_keeps_its_euro_amount(self, cto, mocker):
+        # Given a line already traded by the tenth: the broker has settled it
+        mocker.patch.object(
+            allocation.db, "symbols_traded_in_fractions", return_value={"MC.PA"}
+        )
+        self._with_cash(mocker, 320.0)
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then the whole cagnotte goes in, no rounding involved
+        assert envelope["assets"][0]["amount"] == 320.0
+        assert envelope["assets"][0]["units"] is None
+
+    def test_without_a_start_the_monthly_amount_is_split_as_before(self, cto, mocker):
+        # Given an envelope that tracks no cash, holding a 600 EUR share
+        mocker.patch.object(allocation.cash, "available", return_value=None)
+        envelope = _by_name(allocation.plan())["CTO"]
+        # Then nothing changed: the euro split, and no notion of shares
+        assert envelope["assets"][0]["amount"] == 100.0
+        assert envelope["assets"][0]["units"] is None
+        assert envelope["waiting"] == []
+
+
+class TestProjection:
+    @pytest.fixture
+    def cto(self, mocker):
+        mocker.patch.object(
+            allocation.db,
+            "all_assets",
+            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0)],
+        )
+        mocker.patch.object(
+            allocation.db,
+            "all_envelopes",
+            return_value=[{"name": "CTO", "monthly_amount": 100.0}],
+        )
+        mocker.patch.object(
+            allocation.portfolio,
+            "all_positions",
+            return_value=[
+                {"symbol": "MC.PA", "price": 600.0, "prum": 600.0, "market_value": 0.0}
+            ],
+        )
+        mocker.patch.object(allocation.prices, "eur_usd_rate", return_value=1.08)
+        mocker.patch.object(
+            allocation.cash,
+            "available",
+            return_value={"available": 320.0, "started_on": "2026-01-01"},
+        )
+
+    def test_it_walks_the_months_forward(self, cto):
+        months = allocation.projection(date(2026, 9, 15), 4)
+        assert [m["month"] for m in months] == [
+            date(2026, 10, 1),
+            date(2026, 11, 1),
+            date(2026, 12, 1),
+            date(2027, 1, 1),
+        ]
+
+    def test_the_cagnotte_keeps_growing_until_it_can_buy(self, cto):
+        months = allocation.projection(date(2026, 9, 15), 4)
+        bought = {
+            month["month"].month: month["envelopes"][0]["assets"] for month in months
+        }
+        # 320 now, then 420, 520, 620: the share lands in the third month
+        assert bought[10] == [] and bought[11] == []
+        assert bought[12][0]["units"] == 1
+        # And what is left starts over from the change
+        assert months[3]["envelopes"][0]["budget"] == pytest.approx(120.0)
+
+    def test_an_envelope_without_cash_repeats_the_same_split(self, cto, mocker):
+        mocker.patch.object(allocation.cash, "available", return_value=None)
+        months = allocation.projection(date(2026, 9, 15), 2)
+        # It has nothing to accumulate, but it still has something to do
+        for month in months:
+            assert month["envelopes"][0]["assets"][0]["amount"] == 100.0
+            assert month["envelopes"][0]["carry"] == 0.0

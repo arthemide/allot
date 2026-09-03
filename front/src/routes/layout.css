@@ -119,3 +119,13 @@
     @apply bg-background text-foreground;
   }
 }
+/* Tailwind's reset gives buttons the default arrow. */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+summary,
+label:has(> input[type='checkbox']),
+input[type='checkbox'],
+select,
+a[href] {
+  cursor: pointer;
+}

@@ -95,6 +95,21 @@ class OpeningPosition(BaseModel):
 class Envelope(BaseModel):
     name: str
     monthly_amount: float = Field(ge=0)
+    # Only set when the envelope tracks its cash; see EnvelopeStart.
+    started_on: str | None = None
+    opening_cash: float | None = None
+    available: float | None = None
+
+
+class EnvelopeStart(BaseModel):
+    """Where a strategy starts, or where it is recalibrated.
+
+    `opening_cash` is what is actually sitting in the envelope on that date -
+    0 for a strategy that starts from nothing.
+    """
+
+    started_on: str
+    opening_cash: float = Field(default=0.0, ge=0)
 
 
 class SummaryAsset(BaseModel):
@@ -126,6 +141,13 @@ class Summary(BaseModel):
     gain: float
     gain_percent: float | None
     envelopes: list[SummaryEnvelope]
+
+
+class FeedUrl(BaseModel):
+    """Where a calendar subscribes, and whether that address carries a token."""
+
+    url: str
+    token: bool
 
 
 class Login(BaseModel):

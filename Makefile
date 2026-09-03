@@ -14,13 +14,15 @@ install:
 	uv sync
 	cd $(FRONT_DIR) && npm ci
 
+ENV_FILE := $(if $(wildcard .env),--env-file .env,)
+
 .PHONY: start ## 🚀 Build the front and serve everything on :8000
 start: build
-	uv run app.py
+	uv run $(ENV_FILE) app.py
 
 .PHONY: dev-api ## 🚀 Run the API alone with auto-reload on :8000
 dev-api:
-	ALLOT_DOCS=1 ALLOT_DEV_CORS=1 uv run uvicorn app:app --reload --port 8000
+	ALLOT_DOCS=1 ALLOT_DEV_CORS=1 uv run $(ENV_FILE) uvicorn app:app --reload --port 8000
 
 .PHONY: dev-front ## 🚀 Run the front dev server on :5173 (needs dev-api)
 dev-front:

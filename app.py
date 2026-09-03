@@ -87,6 +87,11 @@ app = FastAPI(
 app.include_router(router)
 
 
+# A calendar client cannot log in, so this one route also opens with a token
+# in the query string when ALLOT_FEED_TOKEN is set.
+FEED_PATH = "/note.ics"
+
+
 @app.middleware("http")
 async def require_session(request: Request, call_next):
     """Guard the API when a password is configured.
@@ -95,6 +100,11 @@ async def require_session(request: Request, call_next):
     it, and it says nothing about the portfolio.
     """
     if not auth.enabled() or not request.url.path.startswith(GUARDED_PREFIXES):
+        return await call_next(request)
+
+    if request.url.path == FEED_PATH and auth.feed_token_valid(
+        request.query_params.get("feed", "")
+    ):
         return await call_next(request)
 
     token = request.cookies.get(auth.COOKIE_NAME, "")

@@ -300,3 +300,21 @@ class TestPriceCache:
         db.cache_prices("WPEA.PA", iter([]))
         # When the cache is read
         assert db.cached_prices("WPEA.PA") == []
+
+
+class TestFractionalTrading:
+    def test_a_whole_quantity_says_nothing(self, portfolio_data):
+        # Given only whole quantities traded
+        # Then no asset is known to trade in fractions
+        assert db.symbols_traded_in_fractions() == set()
+
+    def test_a_fractional_quantity_settles_it(self, portfolio_data):
+        # Given a tenth of a unit bought
+        db.add_transaction("ESE.PA", "2026-03-10", "buy", 0.1, 20.0)
+        # Then the broker has answered the question: no setting needed
+        assert db.symbols_traded_in_fractions() == {"ESE.PA"}
+
+    def test_a_fractional_sell_counts_too(self, portfolio_data):
+        db.add_transaction("ESE.PA", "2026-03-10", "buy", 2.0, 20.0)
+        db.add_transaction("ESE.PA", "2026-04-10", "sell", 0.5, 25.0)
+        assert "ESE.PA" in db.symbols_traded_in_fractions()

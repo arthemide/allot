@@ -12,13 +12,16 @@ Positions are never stored. Quantity and PRUM (*prix de revient unitaire moyen*,
 
 Assets are grouped into **envelopes** (PEA, CTO, CRYPTO…). Each envelope carries its own monthly amount and stands on its own: one envelope never draws from another. Inside an envelope the amount is split across assets by their relative weight, modulated by how far the current price sits from the PRUM - 1.5x when the price is more than 10% below it, 0.5x when it is more than 10% above, 1x in between. The envelope total stays invariant.
 
+An envelope can also **track its cash**, which is what makes a 600 € share reachable from an envelope funded with 100 € a month. Tell it where the strategy starts - a date, and the cash already there - and the balance is derived from then on: the monthly amount, month after month, minus what was bought. Nothing is stored, exactly as with the PRUM. Assets that only trade in whole units are then bought by the share, most under-weighted first, and what cannot be spent waits for next month. There is nothing to declare about that: a fractional quantity already recorded settles it, and until then the ticker is the clue (`ETH-USD` is bought by the amount, `MC.PA` by the share). When the figure drifts from the statement - a fee, a dividend, a month skipped - record what is really there today and the derivation restarts from that point.
+
 ## Features
 
 - Per-asset position, PRUM, gain and gain percentage, recomputed from history
 - Envelopes with a monthly amount and a per-asset split
 - Ticker search, so the exchange suffix (`WPEA.PA`, `VWCE.DE`, `ETH-USD`) does not have to be guessed
 - Price chart with transaction markers and the step PRUM curve
-- A plain-text monthly note, ready to paste into a reminder
+- Envelope cash: an envelope can save up month after month and be told to buy whole shares when it can afford them, rather than to place an amount that no broker will take
+- A monthly note, as a checklist with a link per line, and a calendar feed to subscribe to
 
 ## Getting started
 
@@ -97,6 +100,21 @@ Behind a proxy, set `ALLOT_COOKIE_SECURE=0` only if the instance is reached over
 
 TLS, the domain and the tunnel are not this repository's business - they belong to whatever runs in front.
 
+### The calendar feed
+
+`/note.ics` is a rolling twelve months of events, rebuilt on every fetch: the current month carries the checklist, the ones after it carry what today's prices say is coming. A calendar subscribes to it once - it is plain ICS, so Google, Apple, Thunderbird and the rest all take it - and nothing ever goes stale, since nothing is copied.
+
+A calendar client cannot log in. Set `ALLOT_FEED_TOKEN` to a long random string and that one route answers a request carrying `?feed=<token>`, while everything else stays behind the session:
+
+```bash
+docker compose run --rm --entrypoint python app -c \
+    'import secrets; print("ALLOT_FEED_TOKEN=" + secrets.token_urlsafe(32))'
+```
+
+The dialog behind **Monthly note** hands you the full address to paste. **That URL is a credential**: whoever holds it reads the tickers and the amounts. Leave `ALLOT_FEED_TOKEN` empty and the feed stays behind the session like every other route - which also means no calendar can reach it.
+
+Note that a hosted calendar fetches from its own servers, not from the phone: Google Calendar can only subscribe to an address reachable from the internet. On a LAN-only instance, a client that fetches from the device - Apple Calendar, Thunderbird - works without exposing anything.
+
 The database lives in the `allot-data` Docker volume, so `docker compose down` and an upgrade lose nothing. To build from the checkout instead, for development, use `make up-local`.
 
 ### Staying up to date
@@ -151,7 +169,10 @@ The version in `pyproject.toml` is the source of truth. Bumping it and merging t
 | `GET` | `/assets/{symbol}/chart` | Prices, transactions and the step PRUM |
 | `GET`/`PUT`/`DELETE` | `/envelopes` | Envelopes and their monthly amount |
 | `GET`/`POST`/`DELETE` | `/transactions` | Buys and sells |
+| `PUT`/`DELETE` | `/envelopes/{name}/start` | Start tracking an envelope's cash, or stop |
 | `GET` | `/note` | The monthly note, as plain text |
+| `GET` | `/note.ics` | Twelve months of events, for a calendar to subscribe to |
+| `GET` | `/note/feed-url` | The address to hand to a calendar, token included |
 
 `GET /session` says whether a password is required, and `POST /login` exchanges one for a session cookie.
 

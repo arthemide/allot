@@ -140,6 +140,46 @@ def delete_envelope(name: str) -> None:
     execute("DELETE FROM envelope WHERE name = ?", (name,))
 
 
+def get_envelope_start(name: str) -> dict[str, Any] | None:
+    """Where the envelope's strategy starts, or None when it tracks no cash."""
+    rows = query("SELECT * FROM envelope_start WHERE envelope = ?", (name,))
+    return rows[0] if rows else None
+
+
+def set_envelope_start(name: str, started_on: str, opening_cash: float) -> None:
+    execute(
+        """
+        INSERT INTO envelope_start (envelope, started_on, opening_cash)
+        VALUES (?, ?, ?)
+        ON CONFLICT(envelope) DO UPDATE SET
+            started_on = excluded.started_on,
+            opening_cash = excluded.opening_cash
+        """,
+        (name, started_on, opening_cash),
+    )
+
+
+def clear_envelope_start(name: str) -> None:
+    execute("DELETE FROM envelope_start WHERE envelope = ?", (name,))
+
+
+def envelope_transactions(name: str, since: str) -> list[dict[str, Any]]:
+    """Every trade on the envelope's assets from `since` on, oldest first.
+
+    Inclusive: a trade entered the day a start is recorded happened after the
+    cash was counted, so it still has to be subtracted.
+    """
+    return query(
+        """
+        SELECT t.*, a.currency FROM "transaction" t
+        JOIN asset a ON a.symbol = t.symbol
+        WHERE a.envelope = ? AND t.date >= ?
+        ORDER BY t.date, t.id
+        """,
+        (name, since),
+    )
+
+
 def envelope_asset_count(name: str) -> int:
     return query("SELECT count(*) AS n FROM asset WHERE envelope = ?", (name,))[0]["n"]
 
@@ -171,6 +211,21 @@ def transactions_of(symbol: str) -> list[dict[str, Any]]:
     return query(
         'SELECT * FROM "transaction" WHERE symbol = ? ORDER BY date, id', (symbol,)
     )
+
+
+def symbols_traded_in_fractions() -> set[str]:
+    """Assets a fraction of a unit was already bought or sold of.
+
+    The broker answers this better than a setting would: whatever the ticker
+    looks like, a quantity of 0.4 is proof.
+    """
+    rows = query(
+        """
+        SELECT DISTINCT symbol FROM "transaction"
+        WHERE quantity <> CAST(quantity AS INTEGER)
+        """
+    )
+    return {row["symbol"] for row in rows}
 
 
 def all_transactions() -> list[dict[str, Any]]:

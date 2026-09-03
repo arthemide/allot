@@ -9,6 +9,8 @@ All amounts and prices are expressed in the asset's native currency.
 
 from __future__ import annotations
 
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict
 
 # Relative gap to the PRUM beyond which the monthly amount is modulated.
@@ -144,3 +146,106 @@ def renormalize(
     if total == 0:
         return [0.0] * len(products)
     return [envelope_amount * p / total for p in products]
+
+
+# How Yahoo names crypto pairs: BTC-EUR, ETH-USD.
+FRACTIONAL_SUFFIXES = ("-USD", "-EUR", "-GBP")
+
+
+def is_fractional(symbol: str, traded_in_fractions: bool = False) -> bool:
+    """Whether the asset can be bought by the amount rather than by the share.
+
+    Nothing to configure: a fractional quantity already recorded settles it,
+    the ticker is the clue until then. Whole shares is the careful default -
+    it makes an envelope save up rather than produce an order a broker would
+    refuse.
+    """
+    return traded_in_fractions or symbol.upper().endswith(FRACTIONAL_SUFFIXES)
+
+
+def months_elapsed(start: date, today: date) -> int:
+    """How many monthly contributions have landed between the two dates.
+
+    The current month counts: a strategy started on 1 September has paid in
+    once by 15 September. A start in the future counts for nothing.
+    """
+    months = (today.year - start.year) * 12 + (today.month - start.month) + 1
+    return max(months, 0)
+
+
+def add_months(first_of_month: date, count: int) -> date:
+    """The 1st of the month `count` months after the one given."""
+    month = first_of_month.month - 1 + count
+    return date(first_of_month.year + month // 12, month % 12 + 1, 1)
+
+
+class Candidate(BaseModel):
+    """One asset competing for the envelope's cash, everything in EUR."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    price: float
+    # Weight times the PRUM multiplier: the share this asset should hold.
+    weight: float
+    # What is already held, so the split follows the drift.
+    held_value: float = 0.0
+
+
+class Lot(BaseModel):
+    """Whole units to buy of one asset."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    units: int
+    amount: float
+
+
+# One share per pass: a 10 000 EUR budget against a 1 EUR share would
+# otherwise loop ten thousand times.
+MAX_LOTS = 500
+
+
+def buy_lots(budget: float, candidates: list[Candidate]) -> tuple[list[Lot], float]:
+    """Spend `budget` on whole units, most under-weighted asset first.
+
+    One unit per pass, recomputing the shares each time, so the order corrects
+    itself as the money is spent. A budget too small for anything buys nothing
+    at all - which is the point, a third of a share cannot be ordered.
+
+    Returns the lots and what is left to carry to the next month.
+    """
+    usable = [c for c in candidates if c.price > 0 and c.weight > 0]
+    if not usable:
+        return [], budget
+
+    values = {c.symbol: c.held_value for c in usable}
+    units: dict[str, int] = {}
+    total_weight = sum(c.weight for c in usable)
+
+    for _ in range(MAX_LOTS):
+        affordable = [c for c in usable if c.price <= budget]
+        if not affordable:
+            break
+
+        total_value = sum(values.values())
+
+        def drift(candidate: Candidate) -> float:
+            target = candidate.weight / total_weight
+            actual = values[candidate.symbol] / total_value if total_value else 0.0
+            return target - actual
+
+        # Ties settle on the dearer share: the cheap one can still be bought
+        # with what is left, the reverse starves it for another month.
+        pick = max(affordable, key=lambda c: (drift(c), c.price, c.symbol))
+        budget -= pick.price
+        values[pick.symbol] += pick.price
+        units[pick.symbol] = units.get(pick.symbol, 0) + 1
+
+    lots = [
+        Lot(symbol=c.symbol, units=units[c.symbol], amount=units[c.symbol] * c.price)
+        for c in usable
+        if c.symbol in units
+    ]
+    return lots, budget

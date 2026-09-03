@@ -63,8 +63,11 @@
 		}
 	}
 
-	async function remove(id: number) {
-		await deleteTransaction(id);
+	async function remove(tx: Transaction) {
+		// The position is recomputed from these rows: a silent delete would
+		// move the PRUM with no way back.
+		if (!confirm(`Delete the ${tx.side} of ${tx.quantity} on ${tx.date}?`)) return;
+		await deleteTransaction(tx.id);
 		onChange();
 	}
 </script>
@@ -147,7 +150,7 @@
 				<Table.Head class="text-right">Price paid / unit</Table.Head>
 				<Table.Head class="text-right">Fees</Table.Head>
 				<Table.Head class="text-right">Total</Table.Head>
-				<Table.Head class="w-24 text-right">Actions</Table.Head>
+				<Table.Head class="w-16"></Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
@@ -163,8 +166,17 @@
 					<Table.Cell class="text-right tabular-nums">
 						{money(tx.quantity * tx.unit_price + tx.fees)}
 					</Table.Cell>
-					<Table.Cell class="w-24 text-right">
-						<Button variant="destructive" size="sm" onclick={() => remove(tx.id)}>Delete</Button>
+					<Table.Cell class="w-16 text-right">
+						<button
+							type="button"
+							title="Delete this transaction"
+							aria-label="Delete the transaction of {tx.date}"
+							class="text-muted-foreground/40 hover:text-destructive px-2 leading-none
+								transition-colors"
+							onclick={() => remove(tx)}
+						>
+							&times;
+						</button>
 					</Table.Cell>
 				</Table.Row>
 			{:else}

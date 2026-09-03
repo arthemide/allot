@@ -1,12 +1,16 @@
 <script lang="ts">
 	import {
+		clearEnvelopeStart,
 		deleteAsset,
 		getEnvelopes,
 		getSummary,
 		setEnvelopeAmount,
+		setEnvelopeStart,
 		updateAsset
 	} from '$lib/services/api';
 	import type { Envelope, Position, Summary } from '$lib/types/api';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { formatMoney } from '$lib/utils';
@@ -82,6 +86,32 @@
 		onChange();
 	}
 
+	let editing = $state<Envelope | null>(null);
+	let startDate = $state('');
+	let startCash = $state('');
+
+	function editCash(envelope: Envelope) {
+		editing = envelope;
+		startDate = envelope.started_on ?? new Date().toISOString().slice(0, 10);
+		startCash = String(envelope.opening_cash ?? 0);
+	}
+
+	async function saveCash() {
+		if (!editing) return;
+		const cash = Number(startCash || '0');
+		if (!startDate || !Number.isFinite(cash) || cash < 0) return;
+		await setEnvelopeStart(editing.name, { started_on: startDate, opening_cash: cash });
+		editing = null;
+		await load();
+	}
+
+	async function stopTracking() {
+		if (!editing) return;
+		await clearEnvelopeStart(editing.name);
+		editing = null;
+		await load();
+	}
+
 	async function remove(asset: Position) {
 		if (!confirm(`Delete ${asset.symbol} and all its transactions?`)) return;
 		await deleteAsset(asset.symbol);
@@ -122,6 +152,7 @@
 					<Table.Head class="text-left">Envelope / asset</Table.Head>
 					<Table.Head class="w-40 text-right">Monthly / weight</Table.Head>
 					<Table.Head class="w-24 text-right">Share</Table.Head>
+					<Table.Head class="w-32 text-right">Cash</Table.Head>
 					<Table.Head class="text-right">Invested</Table.Head>
 					<Table.Head class="text-right">Market value</Table.Head>
 					<Table.Head class="text-right">Gain / loss</Table.Head>
@@ -144,6 +175,18 @@
 							/>
 						</Table.Cell>
 						<Table.Cell class="text-muted-foreground w-24 text-right text-xs">€ / month</Table.Cell>
+						<Table.Cell class="w-32 text-right">
+							<button
+								type="button"
+								class="hover:text-primary tabular-nums hover:underline"
+								title={envelope.started_on
+									? `Saving since ${envelope.started_on}. Click to recalibrate.`
+									: 'Not tracking cash. Click to start.'}
+								onclick={() => editCash(envelope)}
+							>
+								{envelope.available === null ? '—' : eur(envelope.available)}
+							</button>
+						</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{eur(totals?.invested ?? 0)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{eur(totals?.market_value ?? 0)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums {tone(totals?.gain ?? 0)}">
@@ -180,6 +223,7 @@
 							<Table.Cell class="w-24 text-right tabular-nums">
 								{shareOf(asset).toFixed(0)} %
 							</Table.Cell>
+							<Table.Cell class="w-32"></Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{eur(totals2?.invested ?? 0)}</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">
 								{eur(totals2?.market_value ?? 0)}
@@ -207,9 +251,40 @@
 		</Table.Root>
 	</div>
 
+	<Dialog.Root open={editing !== null} onOpenChange={(value) => (editing = value ? editing : null)}>
+		<Dialog.Content class="max-w-md">
+			<Dialog.Header>
+				<Dialog.Title>{editing?.name} - cash</Dialog.Title>
+				<Dialog.Description>
+					What is actually in the envelope, and since when. Everything after that is derived:
+					the monthly amount, month by month, minus what was bought. Come back here whenever the
+					figure stops matching the statement.
+				</Dialog.Description>
+			</Dialog.Header>
+
+			<label class="text-sm">
+				Cash on that date
+				<Input type="number" step="any" bind:value={startCash} class="mt-1" />
+			</label>
+			<label class="text-sm">
+				Counting from
+				<Input type="date" bind:value={startDate} class="mt-1" />
+			</label>
+
+			<Dialog.Footer>
+				{#if editing?.started_on}
+					<Button variant="ghost" onclick={stopTracking}>Stop tracking</Button>
+				{/if}
+				<Button onclick={saveCash}>Save</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
 	<p class="text-muted-foreground text-xs">
 		Weights are relative: only their share of the envelope matters, so 2 / 1 and 0.67 / 0.33 give
-		the same split. Totals are converted to EUR{summary.eur_usd_rate
+		the same split. An envelope with a cash figure spends it on whole shares and carries what is
+		left to the next month; one showing a dash simply splits its monthly amount every month.
+		Totals are converted to EUR{summary.eur_usd_rate
 			? ` at ${summary.eur_usd_rate.toFixed(4)} USD per EUR`
 			: ''}; every other figure stays in the asset's own currency.
 	</p>
