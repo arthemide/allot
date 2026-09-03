@@ -44,6 +44,21 @@ def enabled() -> bool:
     return bool(password_hash())
 
 
+def feed_token() -> str:
+    """The token that opens the calendar feed, or empty when there is none.
+
+    A calendar client cannot log in, so the feed is opened by a secret carried
+    in the URL - which makes that URL the credential. Unset: the feed stays
+    behind the session like every other route.
+    """
+    return os.getenv("ALLOT_FEED_TOKEN", "").strip()
+
+
+def feed_token_valid(candidate: str) -> bool:
+    token = feed_token()
+    return bool(token) and secrets.compare_digest(candidate, token)
+
+
 def session_days() -> int:
     return int(os.getenv("ALLOT_SESSION_DAYS", "30"))
 
