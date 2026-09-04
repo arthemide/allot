@@ -8,7 +8,21 @@ from datetime import date
 
 import pytest
 
+from src.models.schema import CashBalance
 from src.services import allocation
+
+
+def _cash(amount: float) -> CashBalance:
+    """A tracked envelope holding `amount`, the terms being beside the point."""
+    return CashBalance(
+        started_on="2026-01-01",
+        opening_cash=0.0,
+        months=0,
+        paid_in=0.0,
+        spent=0.0,
+        returned=0.0,
+        available=amount,
+    )
 
 
 def _asset(symbol, envelope, currency, weight):
@@ -130,20 +144,7 @@ class TestCashRegime:
         mocker.patch.object(allocation.prices, "eur_usd_rate", return_value=1.08)
 
     def _with_cash(self, mocker, amount):
-        from src.models.schema import CashBalance
-        mocker.patch.object(
-            allocation.cash,
-            "available",
-            return_value=CashBalance(
-                started_on="2026-01-01",
-                opening_cash=0.0,
-                months=0,
-                paid_in=0.0,
-                spent=0.0,
-                returned=0.0,
-                available=amount,
-            ),
-        )
+        mocker.patch.object(allocation.cash, "available", return_value=_cash(amount))
 
     def test_cash_too_small_buys_nothing_and_waits(self, cto, mocker):
         # Given 320 EUR saved against a 600 EUR share
@@ -270,20 +271,7 @@ class TestProjection:
             ],
         )
         mocker.patch.object(allocation.prices, "eur_usd_rate", return_value=1.08)
-        from src.models.schema import CashBalance
-        mocker.patch.object(
-            allocation.cash,
-            "available",
-            return_value=CashBalance(
-                started_on="2026-01-01",
-                opening_cash=0.0,
-                months=0,
-                paid_in=0.0,
-                spent=0.0,
-                returned=0.0,
-                available=320.0,
-            ),
-        )
+        mocker.patch.object(allocation.cash, "available", return_value=_cash(320.0))
 
     def test_it_walks_the_months_forward(self, cto):
         months = allocation.projection(date(2026, 9, 15), 4)
@@ -296,9 +284,7 @@ class TestProjection:
 
     def test_the_cash_keeps_growing_until_it_can_buy(self, cto):
         months = allocation.projection(date(2026, 9, 15), 4)
-        bought = {
-            m.month.month: m.envelopes[0].assets for m in months
-        }
+        bought = {m.month.month: m.envelopes[0].assets for m in months}
         # 320 now, then 420, 520, 620: the share lands in the third month
         assert bought[10] == [] and bought[11] == []
         assert bought[12][0].units == 1

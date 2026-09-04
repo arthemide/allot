@@ -32,7 +32,7 @@ def _line(symbol, amount, units=None, weight=1.0, fractional=True, price=None):
         fractional=fractional,
         currency="EUR",
         price=price,
-        price_eur=price,
+        price_eur=price or 0.0,  # what to_eur() gives back with no quote
         prum=None,
         multiplier=1.0,
         held_eur=0.0,
@@ -142,7 +142,9 @@ class TestNote:
 
     def test_a_line_without_a_quote_says_so(self, offline, monkeypatch):
         # Given an asset whose quote did not come back
-        plan = [PLAN[1].model_copy(update={"assets": [_line("ETH-USD", 165.0, price=None)]})]
+        plan = [
+            PLAN[1].model_copy(update={"assets": [_line("ETH-USD", 165.0, price=None)]})
+        ]
         monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: plan)
         # When the note is rendered
         text = note.render(BASE, date(2026, 9, 15))
@@ -157,7 +159,11 @@ class TestNote:
 
     def test_a_link_is_never_truncated(self, offline):
         symbol = "A" * 90
-        plan = [PLAN[0].model_copy(update={"assets": [_line(symbol, 600.0, units=1, price=600.0)]})]
+        plan = [
+            PLAN[0].model_copy(
+                update={"assets": [_line(symbol, 600.0, units=1, price=600.0)]}
+            )
+        ]
         note.allocation.plan = lambda *a, **k: plan
         text = note.render(BASE, date(2026, 9, 15))
         assert f"?asset={symbol}" in text
@@ -202,7 +208,14 @@ class TestNote:
 
     def test_a_dormant_envelope_is_left_out(self, offline, monkeypatch):
         # Given an envelope with no cash tracked and nothing to place
-        dormant = PLAN[1].model_copy(update={"envelope": "AFER", "amount": 0.0, "budget": 0.0, "assets": [_line("AFER-FUND", 0.0)]})
+        dormant = PLAN[1].model_copy(
+            update={
+                "envelope": "AFER",
+                "amount": 0.0,
+                "budget": 0.0,
+                "assets": [_line("AFER-FUND", 0.0)],
+            }
+        )
         monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: [dormant])
         # When the note is rendered
         text = note.render(BASE, date(2026, 9, 15))
@@ -213,7 +226,9 @@ class TestNote:
         self, offline, monkeypatch
     ):
         # Given a funded envelope whose assets all sit at weight 0
-        stuck = PLAN[1].model_copy(update={"budget": 165.0, "assets": [_line("SOL-USD", 0.0, price=88.0)]})
+        stuck = PLAN[1].model_copy(
+            update={"budget": 165.0, "assets": [_line("SOL-USD", 0.0, price=88.0)]}
+        )
         monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: [stuck])
         # When the note is rendered
         text = note.render(BASE, date(2026, 9, 15))
@@ -229,12 +244,14 @@ class TestNote:
 
     def test_zero_weight_and_zero_amount_lines_are_left_out(self, offline, monkeypatch):
         plan = [
-            PLAN[1].model_copy(update={
-                "assets": [
-                    _line("SOL-USD", 0.0, price=88.0),
-                    _line("DOT-USD", 10.0, weight=0.0, price=4.0),
-                ],
-            })
+            PLAN[1].model_copy(
+                update={
+                    "assets": [
+                        _line("SOL-USD", 0.0, price=88.0),
+                        _line("DOT-USD", 10.0, weight=0.0, price=4.0),
+                    ],
+                }
+            )
         ]
         monkeypatch.setattr(note.allocation, "plan", lambda *a, **k: plan)
         text = note.render(BASE, date(2026, 9, 15))
@@ -283,9 +300,7 @@ PROJECTION = [
                 envelope="CTO",
                 tracked=True,
                 budget=620.0,
-                assets=[
-                    _line("MC.PA", 600.0, units=1, fractional=False, price=600.0)
-                ],
+                assets=[_line("MC.PA", 600.0, units=1, fractional=False, price=600.0)],
                 carry=20.0,
             )
         ],
@@ -354,7 +369,9 @@ class TestFeed:
     def test_a_month_with_nothing_to_buy_at_all_says_the_cash_keeps_growing(
         self, offline, monkeypatch
     ):
-        empty = [PROJECTION[1].model_copy(update={"envelopes": [PROJECTION[0].envelopes[0]]})]
+        empty = [
+            PROJECTION[1].model_copy(update={"envelopes": [PROJECTION[0].envelopes[0]]})
+        ]
         monkeypatch.setattr(note.allocation, "projection", lambda *a, **k: empty)
         text = note.feed(BASE, date(2026, 9, 15)).replace("\r\n ", "")
         assert "cash keeps growing" in text

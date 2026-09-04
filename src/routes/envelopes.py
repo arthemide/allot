@@ -12,17 +12,19 @@ from src.services import cash
 router = APIRouter(prefix="/envelopes", tags=["envelopes"])
 
 
-def _with_cash(envelope: dict) -> dict:
-    """The row, plus its derived cash."""
-    balance = cash.available(envelope)
+def _with_cash(row: dict) -> Envelope:
+    """The envelope as the API returns it: the row, plus its derived cash."""
+    envelope = Envelope(**row)
+    balance = cash.available(row)
     if balance is None:
         return envelope
-    return {
-        **envelope,
-        "started_on": balance.started_on,
-        "opening_cash": balance.opening_cash,
-        "available": balance.available,
-    }
+    return envelope.model_copy(
+        update={
+            "started_on": balance.started_on,
+            "opening_cash": balance.opening_cash,
+            "available": balance.available,
+        }
+    )
 
 
 @router.get("", response_model=list[Envelope])
