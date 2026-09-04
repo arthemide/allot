@@ -34,7 +34,10 @@ dev-front:
 
 .PHONY: build ## 🏗️ Build the static front into front/dist
 build:
-	cd $(FRONT_DIR) && npm run build
+	# npm keeps only the native binding of the platform that installed last
+	# (npm/cli#4828), so a node_modules shared with another machine - a
+	# container mounting this checkout - breaks the build. Reinstall and retry.
+	cd $(FRONT_DIR) && npm run build || (npm install && npm run build)
 
 .PHONY: preview ## 👁️ Preview the built front on its own
 preview:
