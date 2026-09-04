@@ -50,7 +50,7 @@
 	function fmtISO(iso: string): string {
 		const [year, month, day] = iso.split('-');
 		const d = new Date(Number(year), Number(month) - 1, Number(day));
-		return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric', year: '2-digit' });
+		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
 	}
 
 	function buildChart() {

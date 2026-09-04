@@ -39,7 +39,7 @@ class TestNote:
         # When the note is read
         text = client.get("/note").text
         # Then it says so rather than failing
-        assert "Aucune transaction saisie." in text
+        assert "No transaction recorded." in text
 
 
 class TestFeed:

@@ -47,7 +47,7 @@ Run `make lint` and `make test` before pushing; CI runs the same commands.
 - Follow the existing style of the surrounding code.
 - Add or update tests for any behavior change. `src/calc.py` is pure and must stay covered; anything doing I/O belongs in `src/services` or `src/databases`.
 - Update documentation when you change user-facing behavior.
-- Everything in the repository - code, comments, commits, branches - is written in English. The monthly note rendered by `src/services/note.py` is the one exception: its output is French on purpose.
+- Everything in the repository is written in English: code, comments, commits, branches, and what the app renders.
 
 ## Commits
 

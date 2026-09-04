@@ -1,10 +1,15 @@
-"""Pydantic models for the HTTP surface."""
+"""The models the app passes around.
+
+Everything above `Trade` is the HTTP surface; everything below it is internal
+and never leaves the process.
+"""
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Position(BaseModel):
@@ -161,3 +166,132 @@ class Session(BaseModel):
 
     required: bool
     authenticated: bool
+
+
+class Trade(BaseModel):
+    """A single buy or sell."""
+
+    model_config = ConfigDict(frozen=True)
+
+    side: str  # "buy" or "sell"
+    quantity: float
+    unit_price: float
+    fees: float = 0.0
+
+
+class PositionResult(BaseModel):
+    """A holding, recomputed from trades. Never stored."""
+
+    model_config = ConfigDict(frozen=True)
+
+    quantity: float
+    prum: float
+    invested: float
+
+
+class Candidate(BaseModel):
+    """One asset competing for the envelope's cash, everything in EUR."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    price: float
+    # Weight times the PRUM multiplier: the share this asset should hold.
+    weight: float
+    # What is already held, so the split follows the drift.
+    held_value: float = 0.0
+
+
+class Lot(BaseModel):
+    """Whole units to buy of one asset."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    units: int
+    amount: float
+
+
+class CashBalance(BaseModel):
+    """What is sitting in cash in an envelope, derived rather than stored.
+
+    The terms travel with the figure so it can be argued with against a
+    statement.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    started_on: str
+    opening_cash: float
+    months: int
+    paid_in: float
+    spent: float
+    returned: float
+    available: float
+
+
+class EnvelopeAsset(BaseModel):
+    """One asset of an envelope, as the split needs it: everything in EUR."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    weight: float
+    fractional: bool
+    currency: str
+    price: float | None
+    # 0.0 when the quote is missing, so the arithmetic never guards for None.
+    price_eur: float
+    prum: float | None
+    multiplier: float
+    held_eur: float
+
+
+class PlanAsset(EnvelopeAsset):
+    """One asset line in the monthly plan: an amount, or a number of shares."""
+
+    amount: float
+    units: int | None = None
+
+
+class WaitingAsset(EnvelopeAsset):
+    """An asset the envelope is saving up for but cannot afford yet."""
+
+    missing: float
+    months_left: int | None
+
+
+class PlanEntry(BaseModel):
+    """One envelope's plan for the month."""
+
+    model_config = ConfigDict(frozen=True)
+
+    envelope: str
+    amount: float
+    cash: CashBalance | None
+    market_value: float
+    assets: list[PlanAsset]
+    waiting: list[WaitingAsset]
+    budget: float
+    carry: float
+
+
+class ProjectionEntry(BaseModel):
+    """One envelope's projected plan for a future month."""
+
+    model_config = ConfigDict(frozen=True)
+
+    envelope: str
+    tracked: bool
+    budget: float
+    assets: list[PlanAsset]
+    carry: float
+
+
+class ProjectionStep(BaseModel):
+    """One month of projection: every envelope's planned state."""
+
+    model_config = ConfigDict(frozen=True)
+
+    month: date
+    envelopes: list[ProjectionEntry]
