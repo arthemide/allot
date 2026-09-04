@@ -252,7 +252,7 @@
 	</div>
 
 	<Dialog.Root open={editing !== null} onOpenChange={(value) => (editing = value ? editing : null)}>
-		<Dialog.Content class="max-w-md">
+		<Dialog.Content class="sm:max-w-md">
 			<Dialog.Header>
 				<Dialog.Title>{editing?.name} - cash</Dialog.Title>
 				<Dialog.Description>

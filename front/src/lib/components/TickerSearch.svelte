@@ -78,7 +78,7 @@
 		{/snippet}
 	</Dialog.Trigger>
 
-	<Dialog.Content class="max-w-2xl">
+	<Dialog.Content class="sm:max-w-2xl">
 		<Dialog.Header>
 			<Dialog.Title>Add an asset</Dialog.Title>
 			<Dialog.Description>
@@ -117,10 +117,12 @@
 		{#if hits.length > 0}
 		<ul class="divide-y rounded-md border">
 			{#each hits as hit (hit.symbol)}
-				<li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-					<div class="min-w-0">
-						<span class="font-mono font-medium">{hit.symbol}</span>
-						<span class="text-muted-foreground ml-2 truncate">{hit.label}</span>
+				<li
+					class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2 text-sm"
+				>
+					<div class="flex min-w-0 flex-1 basis-48 items-baseline gap-2">
+						<span class="shrink-0 font-mono font-medium">{hit.symbol}</span>
+						<span class="text-muted-foreground truncate">{hit.label}</span>
 					</div>
 					<div class="flex shrink-0 items-center gap-3">
 						{#if hit.price === null}

@@ -70,8 +70,8 @@
 		selected = inUrl;
 	});
 
-	// replaceState rather than pushState: picking an asset is browsing.
 	function select(symbol: string) {
+		selected = symbol;
 		if (!browser) return;
 		const url = new URL(page.url);
 		if (symbol === ALL) url.searchParams.delete('asset');
