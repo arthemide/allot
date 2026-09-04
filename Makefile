@@ -14,7 +14,11 @@ install:
 	uv sync
 	cd $(FRONT_DIR) && npm ci
 
-ENV_FILE := $(if $(wildcard .env),--env-file .env,)
+# .env is read by docker compose on its own; uv is told to read it too. Then
+# .env.local, which wins and never leaves this machine: emptying
+# ALLOT_PASSWORD_HASH there is how a local run skips the login screen.
+ENV_FILE := $(if $(wildcard .env),--env-file .env,) \
+            $(if $(wildcard .env.local),--env-file .env.local,)
 
 .PHONY: start ## 🚀 Build the front and serve everything on :8000
 start: build

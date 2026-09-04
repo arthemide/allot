@@ -45,7 +45,7 @@
 		{/snippet}
 	</Dialog.Trigger>
 
-	<Dialog.Content class="max-w-3xl">
+	<Dialog.Content class="sm:max-w-3xl">
 		<Dialog.Header>
 			<Dialog.Title>Monthly note</Dialog.Title>
 			<Dialog.Description>
