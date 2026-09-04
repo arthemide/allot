@@ -94,7 +94,7 @@
 				id="asset"
 				value={selected}
 				onchange={(e) => select(e.currentTarget.value)}
-				class="border-input bg-background h-9 min-w-64 rounded-md border px-3 text-sm"
+				class="border-input bg-background h-9 w-64 max-w-full rounded-md border px-3 text-sm"
 			>
 				<option value={ALL}>* All assets (totals and settings)</option>
 				{#each positions as p (p.symbol)}
