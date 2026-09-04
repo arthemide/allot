@@ -66,12 +66,18 @@
 		loadChart();
 	});
 
+	// Back, forward, or the title link: the address changed on its own. Reading
+	// `selected` here would make the effect depend on it and race with select().
 	$effect(() => {
 		selected = inUrl;
 	});
 
-	// replaceState rather than pushState: picking an asset is browsing.
+	// The selection is applied straight away and the address follows it. Going
+	// through the address alone costs a round trip, and the page renders the
+	// previous asset until it lands. replaceState rather than pushState:
+	// picking an asset is browsing, not navigating.
 	function select(symbol: string) {
+		selected = symbol;
 		if (!browser) return;
 		const url = new URL(page.url);
 		if (symbol === ALL) url.searchParams.delete('asset');
