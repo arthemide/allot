@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.5.0] - 2026-09-04
+
+### Added
+
+- update favicon and enhance layout with title and navigation link
+- envelope cash and calendar feed (#34)
+
 ## [0.4.0] - 2026-09-01
 
 ### Other
