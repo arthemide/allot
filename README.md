@@ -96,6 +96,8 @@ docker compose run --rm --entrypoint python app -c \
 
 Put both lines in `.env` and restart. The API then answers only a browser that has logged in; `/health` stays open, because the container health check and the deployment wait on it. The session is a signed, `HttpOnly` cookie reissued on every request, so it lasts 30 days from the last visit rather than from the login: the password is typed once per browser and effectively not again. Changing `ALLOT_SECRET_KEY` logs every browser out.
 
+Running from the checkout, `make start` and `make dev-api` read `.env`, then `.env.local` if it exists - the second wins and is git-ignored. An `ALLOT_PASSWORD_HASH=` line there is how a local run skips the login screen while `.env` keeps the password for the deployed instance.
+
 Behind a proxy, set `ALLOT_COOKIE_SECURE=0` only if the instance is reached over plain HTTP, and `ALLOT_FORWARDED_ALLOW_IPS` to the proxy's address so the rate limit on the Yahoo-facing endpoints counts real callers rather than the proxy.
 
 TLS, the domain and the tunnel are not this repository's business - they belong to whatever runs in front.
