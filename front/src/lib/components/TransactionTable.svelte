@@ -84,7 +84,7 @@
 				{/snippet}
 			</Dialog.Trigger>
 
-			<Dialog.Content class="max-w-xl">
+			<Dialog.Content class="sm:max-w-xl">
 				<Dialog.Header>
 					<Dialog.Title>Add a transaction</Dialog.Title>
 					<Dialog.Description>
