@@ -34,7 +34,7 @@ dev-front:
 
 .PHONY: build ## 🏗️ Build the static front into front/dist
 build:
-	cd $(FRONT_DIR) && npm run build
+	cd $(FRONT_DIR) && npm run build || (npm install && npm run build)
 
 .PHONY: preview ## 👁️ Preview the built front on its own
 preview:
