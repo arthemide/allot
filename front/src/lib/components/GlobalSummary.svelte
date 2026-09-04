@@ -201,14 +201,16 @@
 							.find((e) => e.envelope === envelope.name)
 							?.assets.find((a) => a.symbol === asset.symbol)}
 						<Table.Row>
-							<Table.Cell class="pl-8 text-left">
+							<Table.Cell class="max-w-0 pl-8 text-left">
 								<button
 									type="button"
-									class="hover:text-primary text-left hover:underline"
+									title={asset.label}
+									class="hover:text-primary flex w-full min-w-0 items-baseline gap-2
+										text-left hover:underline"
 									onclick={() => onSelect(asset.symbol)}
 								>
-									<span class="font-mono">{asset.symbol}</span>
-									<span class="text-muted-foreground ml-2 text-xs">{asset.label}</span>
+									<span class="shrink-0 font-mono">{asset.symbol}</span>
+									<span class="text-muted-foreground truncate text-xs">{asset.label}</span>
 								</button>
 							</Table.Cell>
 							<Table.Cell class="w-40 text-right">
