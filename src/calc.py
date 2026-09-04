@@ -19,6 +19,7 @@ MULTIPLIER_BELOW = 1.5
 MULTIPLIER_ABOVE = 0.5
 MULTIPLIER_NEUTRAL = 1.0
 
+
 def position(
     trades: list[Trade],
     base_quantity: float = 0.0,
@@ -155,6 +156,7 @@ def add_months(first_of_month: date, count: int) -> date:
     """The 1st of the month `count` months after the one given."""
     month = first_of_month.month - 1 + count
     return date(first_of_month.year + month // 12, month % 12 + 1, 1)
+
 
 # One share per pass: a 10 000 EUR budget against a 1 EUR share would
 # otherwise loop ten thousand times.

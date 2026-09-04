@@ -60,10 +60,7 @@ def _asset_line(asset: PlanAsset, box: str = "[ ] ") -> str:
     """What to buy, and nothing else: the reasoning is not a to-do."""
     if asset.units:
         units = "unit" if asset.units == 1 else "units"
-        return (
-            f"{box}{asset.symbol:<9} {asset.units} {units}"
-            f"  {_money(asset.amount)}"
-        )
+        return f"{box}{asset.symbol:<9} {asset.units} {units}  {_money(asset.amount)}"
     line = f"{box}{asset.symbol:<9} {_money(asset.amount, decimals=2)}"
     # Without a quote the amount is still the plan, but it was not checked
     # against a price and cannot be turned into a number of shares.
@@ -89,9 +86,7 @@ def _waiting_lines(envelope: PlanEntry, today: date) -> list[str]:
     if when:
         month = calc.add_months(today.replace(day=1), when)
         tail = f" ({MONTHS[month.month - 1]})"
-    lines.append(
-        f"{_money(target.missing)} short for 1 {target.symbol}{tail}."
-    )
+    lines.append(f"{_money(target.missing)} short for 1 {target.symbol}{tail}.")
     return lines
 
 
@@ -145,9 +140,7 @@ def render(base_url: str | None = None, today: date | None = None) -> str:
             continue
 
         if envelope.cash:
-            lines.append(
-                f"{envelope.envelope} - {_money(envelope.budget)} in cash"
-            )
+            lines.append(f"{envelope.envelope} - {_money(envelope.budget)} in cash")
         else:
             lines.append(f"{envelope.envelope} - {_money(envelope.amount)}")
 
@@ -173,7 +166,9 @@ def _clip(line: str) -> str:
     return line if "://" in line else line[:WIDTH]
 
 
-def _projected(month: date, entries: list[ProjectionEntry], base_url: str | None) -> str:
+def _projected(
+    month: date, entries: list[ProjectionEntry], base_url: str | None
+) -> str:
     """A month that has not happened yet, at today's prices."""
     lines = ["Projected at current pace, at today's prices."]
     for entry in entries:
@@ -264,7 +259,10 @@ def feed(
     events = _event(first, title(today), render(base_url, today), stamp)
     for step in allocation.projection(today, FEED_MONTHS - 1):
         events += _event(
-            step.month, title(step.month), _projected(step.month, step.envelopes, base_url), stamp
+            step.month,
+            title(step.month),
+            _projected(step.month, step.envelopes, base_url),
+            stamp,
         )
 
     lines = [
