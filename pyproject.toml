@@ -1,6 +1,6 @@
 [project]
 name = "allot"
-version = "0.5.0"
+version = "0.5.1"
 description = "Allot - per-asset PRUM tracking and monthly allocation note"
 requires-python = ">=3.12"
 dependencies = [
