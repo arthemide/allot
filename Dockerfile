@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirement
 # Litestream publishes a binary per architecture but an image for only two of
 # them, so the binary is what gets used. Fetched on the build platform and
 # picked by target, which keeps this stage off the emulator.
-FROM --platform=$BUILDPLATFORM alpine:3.21 AS litestream
+FROM --platform=$BUILDPLATFORM alpine:3.24 AS litestream
 ARG LITESTREAM_VERSION=0.5.16
 ARG TARGETARCH
 ARG TARGETVARIANT
