@@ -7,12 +7,14 @@ from src.models.schema import (
     AssetCreate,
     AssetUpdate,
     Chart,
+    ImportCsv,
+    ImportReport,
     OpeningPosition,
     Position,
     SearchHit,
     Summary,
 )
-from src.services import portfolio, prices, ratelimit
+from src.services import boursorama_csv, portfolio, prices, ratelimit
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -66,6 +68,66 @@ def create_asset(payload: AssetCreate):
 def search_tickers(q: str, limit: int = 10):
     """Find a ticker by name, so the exchange suffix does not have to be guessed."""
     return prices.search(q, limit)
+
+
+@router.post(
+    "/import",
+    response_model=ImportReport,
+    dependencies=[Depends(rate_limited)],
+)
+def import_csv(payload: ImportCsv, envelope: str):
+    """Seed opening positions from a broker's portfolio export.
+
+    A snapshot, not a history: each row sets the asset's opening position to
+    what the broker reports, PRUM included, so importing again replaces rather
+    than adds. Manual transactions still stack on top. An asset already tracked
+    keeps its envelope and weight - the import does not reorganise anything.
+    """
+    try:
+        parsed = boursorama_csv.parse(payload.csv)
+    except boursorama_csv.CsvError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(error))
+
+    if db.get_envelope(envelope) is None:
+        db.upsert_envelope(envelope, 0.0)
+
+    imported, unresolved, elsewhere = [], [], []
+    for row in parsed.rows:
+        hits = prices.search(row.isin, limit=1)
+        if not hits:
+            unresolved.append({"isin": row.isin, "name": row.name})
+            continue
+        hit = hits[0]
+        symbol = hit["symbol"]
+        existing = db.get_asset(symbol)
+        if existing is None:
+            db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
+        elif existing["envelope"] != envelope:
+            # Left where the user filed it; the position is still updated below.
+            elsewhere.append(
+                {
+                    "symbol": symbol,
+                    "isin": row.isin,
+                    "label": row.name,
+                    "envelope": existing["envelope"],
+                }
+            )
+        db.set_opening_position(symbol, row.quantity, row.prum * row.quantity)
+        imported.append(
+            {
+                "symbol": symbol,
+                "isin": row.isin,
+                "label": row.name,
+                "quantity": row.quantity,
+                "prum": row.prum,
+            }
+        )
+    return {
+        "imported": imported,
+        "unresolved": unresolved,
+        "elsewhere": elsewhere,
+        "total": len(parsed.rows),
+    }
 
 
 @router.get("/summary", response_model=Summary)
