@@ -13,8 +13,10 @@
 	let csv = $state('');
 	let fileName = $state('');
 	let importing = $state(false);
+	let dragging = $state(false);
 	let error = $state('');
 	let report = $state<ImportReport | null>(null);
+	let fileInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
 		if (!open) return;
@@ -27,12 +29,18 @@
 			});
 	});
 
-	function pick(event: Event) {
-		const file = (event.currentTarget as HTMLInputElement).files?.[0];
+	function load(file: File | undefined) {
 		if (!file) return;
 		fileName = file.name;
+		error = '';
 		// Read here rather than uploaded: the API takes the text as JSON.
 		file.text().then((text) => (csv = text));
+	}
+
+	function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragging = false;
+		load(event.dataTransfer?.files?.[0]);
 	}
 
 	async function run(event: SubmitEvent) {
@@ -42,7 +50,7 @@
 			return;
 		}
 		if (!csv.trim()) {
-			error = 'Choose a file or paste its content.';
+			error = 'Drop a file or paste its content.';
 			return;
 		}
 		error = '';
@@ -69,26 +77,69 @@
 		<Dialog.Header>
 			<Dialog.Title>Import a portfolio export</Dialog.Title>
 			<Dialog.Description>
-				The broker's portfolio CSV, with a quantity and a cost per line - not the account
+				Your broker's portfolio CSV, with a quantity and a cost per line - not the account
 				movements. Each line becomes the asset's opening position, PRUM included; importing
 				again replaces it. Assets already tracked keep their envelope and weight.
 			</Dialog.Description>
 		</Dialog.Header>
 
 		<form class="space-y-3" onsubmit={run}>
+			<!-- The dropzone: click to browse, or drag a file onto it. -->
+			<button
+				type="button"
+				onclick={() => fileInput?.click()}
+				ondragover={(e) => {
+					e.preventDefault();
+					dragging = true;
+				}}
+				ondragleave={() => (dragging = false)}
+				ondrop={onDrop}
+				class="flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors {dragging
+					? 'border-primary bg-primary/5'
+					: 'border-input hover:border-primary/60 hover:bg-muted/40'}"
+			>
+				<svg
+					class="text-muted-foreground mb-1 h-6 w-6"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M12 3v12" />
+					<path d="m8 7 4-4 4 4" />
+					<path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+				</svg>
+				{#if fileName}
+					<span class="text-sm font-medium">{fileName}</span>
+					<span class="text-muted-foreground text-xs">Click or drop to replace</span>
+				{:else}
+					<span class="text-sm font-medium">Drop your CSV here, or click to browse</span>
+					<span class="text-muted-foreground text-xs">.csv from your broker's portfolio</span>
+				{/if}
+			</button>
+			<input
+				bind:this={fileInput}
+				type="file"
+				accept=".csv,text/csv,text/plain"
+				onchange={(e) => load((e.currentTarget as HTMLInputElement).files?.[0])}
+				class="hidden"
+			/>
+
+			<details class="text-sm">
+				<summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs uppercase">
+					Or paste the content
+				</summary>
+				<textarea
+					bind:value={csv}
+					rows="5"
+					placeholder="name;isin;quantity;buyingPrice;..."
+					class="border-input bg-background mt-2 w-full rounded-md border px-3 py-2 font-mono text-xs"
+				></textarea>
+			</details>
+
 			<div class="flex flex-wrap items-end gap-3">
-				<div class="space-y-1">
-					<label for="import-file" class="text-muted-foreground block text-xs uppercase">
-						File
-					</label>
-					<input
-						id="import-file"
-						type="file"
-						accept=".csv,text/csv,text/plain"
-						onchange={pick}
-						class="border-input bg-background h-9 w-64 rounded-md border px-3 py-1.5 text-sm file:mr-2 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-					/>
-				</div>
 				<div class="space-y-1">
 					<label for="import-env" class="text-muted-foreground block text-xs uppercase">
 						Into envelope
@@ -107,19 +158,6 @@
 					</datalist>
 				</div>
 				<Button type="submit" disabled={importing}>{importing ? 'Importing...' : 'Import'}</Button>
-			</div>
-
-			<div class="space-y-1">
-				<label for="import-text" class="text-muted-foreground block text-xs uppercase">
-					{fileName ? `Content of ${fileName}` : 'Or paste the content'}
-				</label>
-				<textarea
-					id="import-text"
-					bind:value={csv}
-					rows="5"
-					placeholder="name;isin;quantity;buyingPrice;..."
-					class="border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-xs"
-				></textarea>
 			</div>
 		</form>
 
