@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.services import broker_csv
-from src.services.broker_csv import CsvError, parse
+from src.services import boursorama_csv
+from src.services.boursorama_csv import CsvError, parse
 
 # BoursoBank's portfolio columns, with made-up holdings.
 BOURSO = (
@@ -114,12 +114,12 @@ class TestRefusals:
             parse("isin;quantity;pru\n;1;10\n")
 
     def test_too_many_rows_are_refused(self, monkeypatch):
-        monkeypatch.setattr(broker_csv, "MAX_ROWS", 2)
+        monkeypatch.setattr(boursorama_csv, "MAX_ROWS", 2)
         text = "isin;quantity;pru\n" + "FR0000000001;1;10\n" * 3
         with pytest.raises(CsvError, match="too many rows"):
             parse(text)
 
     def test_too_large_a_file_is_refused(self, monkeypatch):
-        monkeypatch.setattr(broker_csv, "MAX_BYTES", 10)
+        monkeypatch.setattr(boursorama_csv, "MAX_BYTES", 10)
         with pytest.raises(CsvError, match="too large"):
             parse(BOURSO)

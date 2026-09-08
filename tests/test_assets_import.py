@@ -6,7 +6,7 @@ import pytest
 
 from src.databases import sqlite as db
 from src.services import prices
-from tests.test_broker_csv import BOURSO, MOVEMENTS
+from tests.test_boursorama_csv import BOURSO, MOVEMENTS
 
 HITS = {
     "IE000BI8OT95": {"symbol": "CW8.PA", "label": "Amundi World", "currency": "EUR"},

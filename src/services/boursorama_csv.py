@@ -1,9 +1,11 @@
-"""Read a broker's portfolio export.
+"""Read BoursoBank's "portefeuille" CSV export.
 
-The one format guaranteed is BoursoBank's "portefeuille" CSV, but nothing here
-is keyed on it: columns are recognised by what they hold (an identifier, a
-quantity, a cost basis...) from their header, in French or English, so another
-broker exporting the same three things reads the same way.
+Columns are matched by what they hold (an identifier, a quantity, a cost
+basis...) rather than by exact name, so the reader tolerates BoursoBank
+changing a header or exporting in another language. That tolerance is a
+convenience, not a promise of support for other brokers: only BoursoBank's
+export is validated. A second broker gets its own reader (or this one grows a
+tested signature) rather than being assumed to fit.
 
 What comes out is a snapshot, one row per line held - never a transaction
 stream. A cash-movements export (date, label, amount) is refused by name, since
@@ -17,7 +19,8 @@ from __future__ import annotations
 import csv
 import io
 import unicodedata
-from dataclasses import dataclass
+
+from pydantic import BaseModel, ConfigDict
 
 MAX_BYTES = 256 * 1024
 MAX_ROWS = 500
@@ -70,8 +73,9 @@ class CsvError(ValueError):
         self.line = line
 
 
-@dataclass(frozen=True)
-class Row:
+class Row(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     isin: str
     name: str
     quantity: float
@@ -80,8 +84,9 @@ class Row:
     price: float | None
 
 
-@dataclass(frozen=True)
-class Parsed:
+class Parsed(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     rows: list[Row]
     delimiter: str
     broker: str

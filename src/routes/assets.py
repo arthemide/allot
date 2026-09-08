@@ -14,7 +14,7 @@ from src.models.schema import (
     SearchHit,
     Summary,
 )
-from src.services import broker_csv, portfolio, prices, ratelimit
+from src.services import boursorama_csv, portfolio, prices, ratelimit
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -84,8 +84,8 @@ def import_csv(payload: ImportCsv, envelope: str):
     keeps its envelope and weight - the import does not reorganise anything.
     """
     try:
-        parsed = broker_csv.parse(payload.csv)
-    except broker_csv.CsvError as error:
+        parsed = boursorama_csv.parse(payload.csv)
+    except boursorama_csv.CsvError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(error))
 
     if db.get_envelope(envelope) is None:
