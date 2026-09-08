@@ -97,6 +97,48 @@ class OpeningPosition(BaseModel):
     invested: float | None = Field(default=None, ge=0)
 
 
+class ImportCsv(BaseModel):
+    """A broker's portfolio export, as text: the front reads the file itself."""
+
+    csv: str = Field(min_length=1, max_length=256 * 1024)
+
+
+class ImportedLine(BaseModel):
+    symbol: str
+    isin: str
+    label: str
+    quantity: float
+    prum: float
+
+
+class UnresolvedLine(BaseModel):
+    """A row whose identifier no ticker answers to; nothing was written for it."""
+
+    isin: str
+    name: str
+
+
+class ElsewhereLine(BaseModel):
+    """An imported asset that already lives in a different envelope.
+
+    Its opening position was updated, but the import left it where it was: the
+    envelope and weight are the user's, not the CSV's to reorganise.
+    """
+
+    symbol: str
+    isin: str
+    label: str
+    envelope: str
+
+
+class ImportReport(BaseModel):
+    imported: list[ImportedLine]
+    unresolved: list[UnresolvedLine]
+    # Imported, but already filed under another envelope - a heads-up, not an error.
+    elsewhere: list[ElsewhereLine]
+    total: int
+
+
 class Envelope(BaseModel):
     name: str
     monthly_amount: float = Field(ge=0)
