@@ -17,7 +17,7 @@ dev = [
     # TestClient speaks to the app through httpx; the app itself uses
     # curl_cffi, so this belongs to the tests only.
     "httpx>=0.28.0",
-    "ruff>=0.16.4",
+    "ruff>=0.16.5",
 ]
 
 [tool.pytest.ini_options]
