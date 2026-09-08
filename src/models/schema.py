@@ -118,9 +118,24 @@ class UnresolvedLine(BaseModel):
     name: str
 
 
+class ElsewhereLine(BaseModel):
+    """An imported asset that already lives in a different envelope.
+
+    Its opening position was updated, but the import left it where it was: the
+    envelope and weight are the user's, not the CSV's to reorganise.
+    """
+
+    symbol: str
+    isin: str
+    label: str
+    envelope: str
+
+
 class ImportReport(BaseModel):
     imported: list[ImportedLine]
     unresolved: list[UnresolvedLine]
+    # Imported, but already filed under another envelope - a heads-up, not an error.
+    elsewhere: list[ElsewhereLine]
     total: int
 
 

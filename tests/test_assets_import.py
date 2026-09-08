@@ -63,13 +63,28 @@ class TestImport:
         db.upsert_envelope("CTO", 100.0)
         db.add_asset("CW8.PA", "My world ETF", "CTO", "EUR", 3.0)
         # When an export lands it in PEA
-        post(client, envelope="PEA")
+        body = post(client, envelope="PEA").json()
         # Then only its opening position moved
         asset = db.get_asset("CW8.PA")
         assert asset["envelope"] == "CTO"
         assert asset["weight"] == 3.0
         assert asset["label"] == "My world ETF"
         assert asset["base_quantity"] == 10.0
+        # And the report warns it was left in the other envelope
+        assert {"symbol": "CW8.PA", "envelope": "CTO"}.items() <= body["elsewhere"][
+            0
+        ].items()
+        assert len(body["elsewhere"]) == 1
+
+    def test_reimporting_into_the_same_envelope_raises_no_warning(
+        self, client, resolver
+    ):
+        # Given assets first imported into PEA
+        post(client)
+        # When the same export is imported into PEA again
+        body = post(client).json()
+        # Then nothing is flagged as living elsewhere
+        assert body["elsewhere"] == []
 
     def test_a_row_no_ticker_answers_to_is_reported_not_written(self, client, mocker):
         # Given a search that resolves the ETF and nothing else

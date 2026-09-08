@@ -139,9 +139,18 @@ export interface UnresolvedLine {
 	name: string;
 }
 
+/** An imported asset that already lived in another envelope. */
+export interface ElsewhereLine {
+	symbol: string;
+	isin: string;
+	label: string;
+	envelope: string;
+}
+
 export interface ImportReport {
 	imported: ImportedLine[];
 	unresolved: UnresolvedLine[];
+	elsewhere: ElsewhereLine[];
 	total: number;
 }
 

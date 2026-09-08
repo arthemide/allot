@@ -194,6 +194,20 @@
 						{/each}
 					</ul>
 				{/if}
+				{#if report.elsewhere.length > 0}
+					<p class="text-amber-600">
+						Already tracked in another envelope; the position was updated but
+						{report.elsewhere.length === 1 ? 'it was' : 'they were'} left there:
+					</p>
+					<ul class="text-muted-foreground list-inside list-disc">
+						{#each report.elsewhere as line (line.symbol)}
+							<li>
+								<span class="font-mono">{line.symbol}</span>
+								<span class="ml-1">in {line.envelope}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
 		{/if}
 	</Dialog.Content>

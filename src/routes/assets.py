@@ -91,7 +91,7 @@ def import_csv(payload: ImportCsv, envelope: str):
     if db.get_envelope(envelope) is None:
         db.upsert_envelope(envelope, 0.0)
 
-    imported, unresolved = [], []
+    imported, unresolved, elsewhere = [], [], []
     for row in parsed.rows:
         hits = prices.search(row.isin, limit=1)
         if not hits:
@@ -99,8 +99,19 @@ def import_csv(payload: ImportCsv, envelope: str):
             continue
         hit = hits[0]
         symbol = hit["symbol"]
-        if db.get_asset(symbol) is None:
+        existing = db.get_asset(symbol)
+        if existing is None:
             db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
+        elif existing["envelope"] != envelope:
+            # Left where the user filed it; the position is still updated below.
+            elsewhere.append(
+                {
+                    "symbol": symbol,
+                    "isin": row.isin,
+                    "label": row.name,
+                    "envelope": existing["envelope"],
+                }
+            )
         db.set_opening_position(symbol, row.quantity, row.prum * row.quantity)
         imported.append(
             {
@@ -111,7 +122,12 @@ def import_csv(payload: ImportCsv, envelope: str):
                 "prum": row.prum,
             }
         )
-    return {"imported": imported, "unresolved": unresolved, "total": len(parsed.rows)}
+    return {
+        "imported": imported,
+        "unresolved": unresolved,
+        "elsewhere": elsewhere,
+        "total": len(parsed.rows),
+    }
 
 
 @router.get("/summary", response_model=Summary)
