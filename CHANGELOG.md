@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.6.0] - 2026-09-08
+
+### Other
+
+- bump softprops/action-gh-release from 3.0.2 to 3.0.3 in the actions group (#44)
+- bump ruff from 0.16.4 to 0.16.5 in the python group (#42)
+- bump @lucide/svelte from 1.38.0 to 1.39.0 in /front in the front group (#41)
+- bump alpine from 3.21 to 3.24 (#40)
+- update version to 0.6.0
+
 ## [0.5.1] - 2026-09-04
 
 ### Changed
