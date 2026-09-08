@@ -5,6 +5,7 @@ import type {
 	Envelope,
 	EnvelopeStart,
 	FeedUrl,
+	ImportReport,
 	NewAsset,
 	NewTransaction,
 	Position,
@@ -115,6 +116,13 @@ export const searchTickers = (query: string) =>
 
 export const createAsset = (asset: NewAsset) =>
 	request<Position>('/assets', { method: 'POST', body: JSON.stringify(asset) });
+
+/** The file is read in the browser and sent as text, so this stays JSON. */
+export const importCsv = (envelope: string, csv: string) =>
+	request<ImportReport>(`/assets/import?envelope=${encodeURIComponent(envelope)}`, {
+		method: 'POST',
+		body: JSON.stringify({ csv })
+	});
 
 export const updateAsset = (symbol: string, body: AssetUpdate) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`, {

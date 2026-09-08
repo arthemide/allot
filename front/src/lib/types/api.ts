@@ -125,6 +125,26 @@ export interface AssetUpdate {
 	weight: number;
 }
 
+export interface ImportedLine {
+	symbol: string;
+	isin: string;
+	label: string;
+	quantity: number;
+	prum: number;
+}
+
+/** A row whose identifier no ticker answers to; nothing was written for it. */
+export interface UnresolvedLine {
+	isin: string;
+	name: string;
+}
+
+export interface ImportReport {
+	imported: ImportedLine[];
+	unresolved: UnresolvedLine[];
+	total: number;
+}
+
 /** Whether this instance asks for a password, and whether we gave it one. */
 export type Session = {
 	required: boolean;

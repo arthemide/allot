@@ -9,6 +9,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import MonthlyNote from "$lib/components/MonthlyNote.svelte";
 	import TickerSearch from "$lib/components/TickerSearch.svelte";
+	import ImportCsv from "$lib/components/ImportCsv.svelte";
 	import Login from "$lib/components/Login.svelte";
 	import { getSession } from "$lib/services/api";
 	import { session } from "$lib/state/session.svelte";
@@ -49,6 +50,7 @@
 	</a>
 	<div class="flex items-center gap-2">
 	<TickerSearch />
+	<ImportCsv />
 	<MonthlyNote />
 	<Button onclick={toggleMode} variant="outline" size="icon">
 		<SunIcon
