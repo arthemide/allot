@@ -12,6 +12,11 @@
  * inspection. If calc.py's multiplier or renormalize change, change them here.
  */
 
+// Mirror of boursorama_csv.MAX_BYTES / MAX_ROWS: a runaway file should not
+// freeze the tab.
+export const MAX_CHARS = 256 * 1024;
+export const MAX_ROWS = 500;
+
 // Mirror of calc.MODULATION_BAND / MULTIPLIER_* .
 export const MODULATION_BAND = 0.1;
 const MULTIPLIER_BELOW = 1.5;
@@ -72,6 +77,9 @@ function roleOf(header: string): string | null {
 	const key = strip(header);
 	if (!key) return null;
 	for (const [role, names] of Object.entries(ROLES)) if (names.includes(key)) return role;
+	// A loose match on "amount"/"valuation" would also catch intradayVariation
+	// and amountVariation, and read a percentage as a price.
+	if (key.includes('variation')) return null;
 	for (const [role, names] of Object.entries(ROLES))
 		if (names.some((n) => n.length >= 4 && key.includes(n))) return role;
 	return null;
@@ -125,18 +133,24 @@ function toNumber(text: string | undefined): number | null {
 }
 
 export function parsePortfolioCsv(text: string): ParseResult {
+	if (text.length > MAX_CHARS) return { error: 'File too large (256 KiB at most).' };
 	const clean = text.replace(/^﻿/, '');
 	const firstLine = clean.split(/\r?\n/)[0] ?? '';
-	if (!firstLine.trim()) return { error: 'Fichier vide.' };
+	if (!firstLine.trim()) return { error: 'Empty file.' };
 
 	const delimiter = detectDelimiter(firstLine);
-	const lines = clean.split(/\r?\n/).filter((l) => l.trim());
-	const headers = splitRow(lines[0], delimiter);
+	// Numbered from the file, not from a filtered list, so an error points at
+	// the line the reader actually sees on screen.
+	const lines = clean
+		.split(/\r?\n/)
+		.map((text, index) => ({ text, number: index + 1 }))
+		.filter((line) => line.text.trim());
+	const headers = splitRow(lines[0].text, delimiter);
 	const keys = headers.map(strip);
 	const broker =
 		keys.includes('isin') && keys.includes('quantity') && keys.includes('buyingprice')
 			? 'BoursoBank'
-			: 'inconnu';
+			: 'unknown';
 
 	const column: Record<string, number> = {};
 	headers.forEach((h, i) => {
@@ -149,22 +163,27 @@ export function parsePortfolioCsv(text: string): ParseResult {
 			if (MOVEMENTS.every((k) => keys.includes(k)))
 				return {
 					error:
-						"C'est un export de mouvements (date, libellé, montant). Exporte le portefeuille : il porte la quantité et le prix de revient."
+						'This is an account movements export (date, label, amount). Export the ' +
+						'portfolio instead: it carries the quantity and the cost.'
 				};
-			return { error: `Colonne manquante : ${required}.` };
+			return { error: `No column for: ${required}.` };
 		}
 	}
 
 	const rows: Row[] = [];
 	for (let i = 1; i < lines.length; i++) {
-		const cells = splitRow(lines[i], delimiter);
+		if (rows.length >= MAX_ROWS) return { error: `Too many rows (${MAX_ROWS} at most).` };
+		const { text: line, number } = lines[i];
+		const cells = splitRow(line, delimiter);
 		const at = (role: string) => cells[column[role]];
 		const isin = (at('identifier') ?? '').toUpperCase();
-		if (!isin) continue;
+		if (!isin) return { error: `Line ${number}: empty identifier.` };
 		const quantity = toNumber(at('quantity'));
 		const prum = toNumber(at('cost'));
-		if (quantity == null || quantity <= 0) return { error: `Ligne ${i + 1} : quantité invalide.` };
-		if (prum == null || prum <= 0) return { error: `Ligne ${i + 1} : prix de revient invalide.` };
+		if (quantity == null || quantity <= 0)
+			return { error: `Line ${number}: quantity must be a positive number.` };
+		if (prum == null || prum <= 0)
+			return { error: `Line ${number}: cost must be a positive number.` };
 		const price = 'valuation' in column ? toNumber(at('valuation')) : null;
 		rows.push({
 			isin,
