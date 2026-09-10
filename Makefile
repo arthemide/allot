@@ -50,8 +50,8 @@ coverage:
 	uv run pytest -q --cov-report=html
 	echo "report written to htmlcov/index.html"
 
-.PHONY: lint ## 🔍 Check Python and Svelte
-lint:
+.PHONY: check ## 🔍 Check Python and Svelte
+check:
 	uv run ruff check .
 	cd $(FRONT_DIR) && npm run check
 

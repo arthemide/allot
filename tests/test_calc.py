@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from src import calc
-from src.services import portfolio
 from src.calc import (
     Trade,
     multiplier,
@@ -16,6 +15,7 @@ from src.calc import (
     quantity_for_target_prum,
     renormalize,
 )
+from src.services import portfolio
 
 # Shared with the browser simulator; see TestSharedFixture.
 CASES = json.loads((Path(__file__).parent / "fixtures" / "calc_cases.json").read_text())
@@ -296,7 +296,9 @@ class TestSharedFixture:
         market_value = result.quantity * price if price is not None else None
         gain = market_value - result.invested if market_value is not None else None
         gain_percent = (
-            gain / result.invested * 100 if gain is not None and result.invested else None
+            gain / result.invested * 100
+            if gain is not None and result.invested
+            else None
         )
         assert market_value == pytest.approx(expected["market_value"])
         assert gain == pytest.approx(expected["gain"])
@@ -304,7 +306,9 @@ class TestSharedFixture:
 
     @pytest.mark.parametrize("case", CASES["multiplier"], ids=lambda c: c["name"])
     def test_multiplier(self, case):
-        assert multiplier(case["price"], case["prum"]) == pytest.approx(case["expected"])
+        assert multiplier(case["price"], case["prum"]) == pytest.approx(
+            case["expected"]
+        )
 
     @pytest.mark.parametrize("case", CASES["renormalize"], ids=lambda c: c["name"])
     def test_renormalize(self, case):

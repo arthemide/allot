@@ -25,6 +25,15 @@
 		>
 			Allot
 		</a>
+		<a
+			href="https://github.com/arthemide/allot/releases/tag/v{__APP_VERSION__}"
+			target="_blank"
+			rel="noreferrer"
+			class="text-muted-foreground hover:text-foreground text-xs tabular-nums"
+			title="Release notes"
+		>
+			v{__APP_VERSION__}
+		</a>
 		{#if demo.enabled}
 			<span
 				class="rounded-full border border-emerald-600/30 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
