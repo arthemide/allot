@@ -40,9 +40,10 @@ build:
 preview:
 	cd $(FRONT_DIR) && npm run preview
 
-.PHONY: test ## 🧪 Run the unit tests
+.PHONY: test ## 🧪 Run the unit tests, both sides
 test:
 	uv run pytest -q
+	cd $(FRONT_DIR) && npm test
 
 .PHONY: coverage ## 📊 Run the tests and write the HTML coverage report
 coverage:
