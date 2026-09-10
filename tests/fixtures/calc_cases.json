@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared between tests/test_calc.py and front/src/lib/simulate.test.ts. The allocation maths lives twice - in src/calc.py for the app, in front/src/lib/simulate.ts for the browser simulator - and these cases are what keeps the two honest. Change the maths, change this file, and both sides fail until they agree.",
+  "_comment": "Shared between tests/test_calc.py and front/src/lib/calc.test.ts. The maths lives twice - in src/calc.py for the app, in front/src/lib/calc.ts for the /demo page - and these cases are what keeps the two honest. Change the maths, change this file, and both sides fail until they agree.",
   "position": [
     {
       "name": "an imported line, held and never traded",

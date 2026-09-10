@@ -17,7 +17,7 @@ from src.calc import (
 )
 from src.services import portfolio
 
-# Shared with the browser simulator; see TestSharedFixture.
+# Shared with the browser port; see TestSharedFixture.
 CASES = json.loads((Path(__file__).parent / "fixtures" / "calc_cases.json").read_text())
 
 
@@ -277,7 +277,7 @@ class TestSharedFixture:
     """Replay tests/fixtures/calc_cases.json, the contract with the browser.
 
     The demo at /demo runs the same maths in TypeScript
-    (front/src/lib/simulate.ts) so a visitor's portfolio never leaves their
+    (front/src/lib/calc.ts) so a visitor's portfolio never leaves their
     tab. Both sides replay this file: change the maths here and the fixture
     fails until it is updated, then the front's vitest run fails until the
     port catches up.

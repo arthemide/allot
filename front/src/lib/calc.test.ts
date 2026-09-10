@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 import cases from '../../../tests/fixtures/calc_cases.json';
-import { allocate, gainPercent, multiplier, position, summarize, type Trade } from './simulate';
+import { allocate, gainPercent, multiplier, position, summarize, type Trade } from './calc';
 
 const close = (value: number | null, expected: number | null) => {
 	if (expected === null) expect(value).toBeNull();

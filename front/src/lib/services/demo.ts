@@ -4,7 +4,7 @@
  * The /demo page mounts the real app; only this file stands in for the
  * server, so a visitor's portfolio never leaves their machine. It holds the
  * state and answers the same calls, but computes nothing itself: every
- * formula lives in `$lib/simulate`, the single mirror of `src/calc.py`.
+ * formula lives in `$lib/calc`, the single mirror of `src/calc.py`.
  *
  * A refresh lays the sample portfolio out again: nothing here persists, which
  * is the point.
@@ -30,7 +30,7 @@ import {
 	summarize,
 	type Row,
 	type Trade
-} from '$lib/simulate';
+} from '$lib/calc';
 import { refresh } from '$lib/state/refresh.svelte';
 
 /** A transaction plus the asset it belongs to, which the API infers from its route. */
@@ -245,7 +245,7 @@ function renderNote(): string {
 		for (const asset of buying) lines.push(`  [ ] ${asset.symbol} - ${asset.amount.toFixed(2)} EUR`);
 		lines.push('');
 	}
-	lines.push('Simulator: this note is computed in your browser and saved nowhere.');
+	lines.push('Demo: this note is computed in your browser and saved nowhere.');
 	return lines.join('\n');
 }
 

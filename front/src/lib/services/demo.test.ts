@@ -1,7 +1,7 @@
 /**
  * The demo store, end to end.
  *
- * Not the maths - that is the fixture in simulate.test.ts - but the wiring:
+ * Not the maths - that is the fixture in calc.test.ts - but the wiring:
  * the sample portfolio a visitor lands on, a transaction going in and out,
  * a CSV replacing the sample, and the reset.
  */

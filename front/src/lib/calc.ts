@@ -1,5 +1,5 @@
 /**
- * The allocation, entirely in the browser.
+ * The calculation, entirely in the browser.
  *
  * A faithful port of the pieces of `src/calc.py` the /demo page needs, so a
  * visitor's CSV never leaves their machine. Only the euro-split path is
