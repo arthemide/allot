@@ -2,6 +2,7 @@
 	import { getFeedUrl, getNote } from '$lib/services/api';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { demo } from '$lib/state/demo.svelte';
 
 	let open = $state(false);
 	let note = $state('');
@@ -15,6 +16,8 @@
 		error = '';
 		try {
 			note = await getNote();
+			// A calendar cannot subscribe to a portfolio that lives in one tab.
+			if (demo.enabled) return;
 			const url = await getFeedUrl();
 			feed = url.url;
 			hasToken = url.token;
@@ -49,8 +52,12 @@
 		<Dialog.Header>
 			<Dialog.Title>Monthly note</Dialog.Title>
 			<Dialog.Description>
-				Recomputed from current prices. Paste it into a reminder, or subscribe a calendar to the
-				feed once - it carries twelve months and rebuilds itself on every fetch.
+				{#if demo.enabled}
+					Recomputed from this demo portfolio, in your browser.
+				{:else}
+					Recomputed from current prices. Paste it into a reminder, or subscribe a calendar to the
+					feed once - it carries twelve months and rebuilds itself on every fetch.
+				{/if}
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -69,9 +76,11 @@
 		{/if}
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => copy('feed')} disabled={!feed}>
-				{copied === 'feed' ? 'Copied' : 'Copy feed link'}
-			</Button>
+			{#if !demo.enabled}
+				<Button variant="outline" onclick={() => copy('feed')} disabled={!feed}>
+					{copied === 'feed' ? 'Copied' : 'Copy feed link'}
+				</Button>
+			{/if}
 			<Button onclick={() => copy('note')} disabled={!note}>
 				{copied === 'note' ? 'Copied' : 'Copy note'}
 			</Button>
