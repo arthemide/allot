@@ -1,7 +1,7 @@
 /**
  * The allocation, entirely in the browser.
  *
- * A faithful port of the pieces of `src/calc.py` the simulator needs, so a
+ * A faithful port of the pieces of `src/calc.py` the /demo page needs, so a
  * visitor's CSV never leaves their machine. Only the euro-split path is
  * ported (the one an untracked envelope uses): the monthly amount is shared
  * across an envelope's assets, weighted and modulated by each one's gap to its
@@ -242,4 +242,130 @@ export function allocate(
 				}))
 			};
 		});
+}
+
+// --- Position (port of calc.position) ------------------------------------
+
+export type Trade = { side: 'buy' | 'sell'; quantity: number; unit_price: number; fees: number };
+
+export type PositionResult = { quantity: number; prum: number; invested: number };
+
+/**
+ * Recompute quantity and PRUM from an opening position plus trades.
+ *
+ * PRUM = (sum(buy_quantity * buy_price) + sum(fees)) / sum(buy_quantity).
+ * A sell reduces the quantity held and leaves the PRUM untouched, which is
+ * why sells contribute to neither term of the ratio. `baseQuantity` /
+ * `basePrum` carry a holding that predates transaction tracking; it behaves
+ * exactly like an initial buy.
+ */
+export function position(
+	trades: Trade[],
+	baseQuantity = 0,
+	basePrum: number | null = null
+): PositionResult {
+	let boughtQuantity = baseQuantity;
+	let boughtCost = baseQuantity * (basePrum ?? 0);
+	let soldQuantity = 0;
+
+	for (const trade of trades) {
+		if (trade.side === 'buy') {
+			boughtQuantity += trade.quantity;
+			boughtCost += trade.quantity * trade.unit_price + trade.fees;
+		} else {
+			soldQuantity += trade.quantity;
+		}
+	}
+
+	if (boughtQuantity === 0) return { quantity: 0, prum: 0, invested: 0 };
+
+	const prum = boughtCost / boughtQuantity;
+	const quantity = boughtQuantity - soldQuantity;
+	return { quantity, prum, invested: quantity * prum };
+}
+
+// --- Totals (port of portfolio.summary) ----------------------------------
+
+export function gainPercent(invested: number, marketValue: number): number | null {
+	if (!invested) return null;
+	return ((marketValue - invested) / invested) * 100;
+}
+
+type SummaryInput = {
+	symbol: string;
+	label: string;
+	envelope: string;
+	currency: string;
+	invested: number;
+	market_value: number | null;
+};
+
+/**
+ * Totals across every asset, grouped by envelope.
+ *
+ * The server converts to EUR on the way in; here every line is already in
+ * euros, so `to_eur` has no counterpart and `eur_usd_rate` stays null.
+ */
+export function summarize(positions: SummaryInput[]) {
+	const envelopes = new Map<
+		string,
+		{
+			envelope: string;
+			invested: number;
+			market_value: number;
+			gain: number;
+			gain_percent: number | null;
+			assets: {
+				symbol: string;
+				label: string;
+				currency: string;
+				invested: number;
+				market_value: number;
+				gain: number;
+				gain_percent: number | null;
+			}[];
+		}
+	>();
+
+	for (const p of positions) {
+		const bucket = envelopes.get(p.envelope) ?? {
+			envelope: p.envelope,
+			invested: 0,
+			market_value: 0,
+			gain: 0,
+			gain_percent: null,
+			assets: []
+		};
+		const marketValue = p.market_value ?? 0;
+		bucket.invested += p.invested;
+		bucket.market_value += marketValue;
+		bucket.assets.push({
+			symbol: p.symbol,
+			label: p.label,
+			currency: p.currency,
+			invested: p.invested,
+			market_value: marketValue,
+			gain: marketValue - p.invested,
+			gain_percent: gainPercent(p.invested, marketValue)
+		});
+		envelopes.set(p.envelope, bucket);
+	}
+
+	for (const bucket of envelopes.values()) {
+		bucket.gain = bucket.market_value - bucket.invested;
+		bucket.gain_percent = gainPercent(bucket.invested, bucket.market_value);
+	}
+
+	const buckets = [...envelopes.values()].sort((a, b) => a.envelope.localeCompare(b.envelope));
+	const invested = buckets.reduce((sum, b) => sum + b.invested, 0);
+	const marketValue = buckets.reduce((sum, b) => sum + b.market_value, 0);
+	return {
+		currency: 'EUR',
+		eur_usd_rate: null,
+		invested,
+		market_value: marketValue,
+		gain: marketValue - invested,
+		gain_percent: gainPercent(invested, marketValue),
+		envelopes: buckets
+	};
 }
