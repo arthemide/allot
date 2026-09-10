@@ -1,10 +1,13 @@
 """Unit tests for the pure calculation module. No database, no network."""
 
+import json
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from src import calc
+from src.services import portfolio
 from src.calc import (
     Trade,
     multiplier,
@@ -13,6 +16,9 @@ from src.calc import (
     quantity_for_target_prum,
     renormalize,
 )
+
+# Shared with the browser simulator; see TestSharedFixture.
+CASES = json.loads((Path(__file__).parent / "fixtures" / "calc_cases.json").read_text())
 
 
 class TestPosition:
@@ -265,3 +271,62 @@ class TestIsFractional:
     def test_a_fraction_already_traded_settles_it(self):
         # Whatever the ticker looks like: a quantity of 0.4 is proof
         assert calc.is_fractional("MC.PA", traded_in_fractions=True)
+
+
+class TestSharedFixture:
+    """Replay tests/fixtures/calc_cases.json, the contract with the browser.
+
+    The demo at /demo runs the same maths in TypeScript
+    (front/src/lib/simulate.ts) so a visitor's portfolio never leaves their
+    tab. Both sides replay this file: change the maths here and the fixture
+    fails until it is updated, then the front's vitest run fails until the
+    port catches up.
+    """
+
+    @pytest.mark.parametrize("case", CASES["position"], ids=lambda c: c["name"])
+    def test_position(self, case):
+        trades = [Trade(**trade) for trade in case["trades"]]
+        result = position(trades, case["base_quantity"], case["base_prum"])
+        expected = case["expected"]
+        assert result.quantity == pytest.approx(expected["quantity"])
+        assert result.prum == pytest.approx(expected["prum"])
+        assert result.invested == pytest.approx(expected["invested"])
+
+        price = case["price"]
+        market_value = result.quantity * price if price is not None else None
+        gain = market_value - result.invested if market_value is not None else None
+        gain_percent = (
+            gain / result.invested * 100 if gain is not None and result.invested else None
+        )
+        assert market_value == pytest.approx(expected["market_value"])
+        assert gain == pytest.approx(expected["gain"])
+        assert gain_percent == pytest.approx(expected["gain_percent"])
+
+    @pytest.mark.parametrize("case", CASES["multiplier"], ids=lambda c: c["name"])
+    def test_multiplier(self, case):
+        assert multiplier(case["price"], case["prum"]) == pytest.approx(case["expected"])
+
+    @pytest.mark.parametrize("case", CASES["renormalize"], ids=lambda c: c["name"])
+    def test_renormalize(self, case):
+        weighted = [(weight, mult) for weight, mult in case["weighted"]]
+        amounts = renormalize(case["budget"], weighted)
+        assert amounts == pytest.approx(case["expected"])
+
+    @pytest.mark.parametrize("case", CASES["summary"], ids=lambda c: c["name"])
+    def test_summary(self, case, monkeypatch):
+        # The grouping is what the browser copies; where the positions come
+        # from is not part of the contract.
+        monkeypatch.setattr(portfolio, "all_positions", lambda: case["positions"])
+        monkeypatch.setattr(portfolio.prices, "eur_usd_rate", lambda: None)
+        result = portfolio.summary()
+        expected = case["expected"]
+        assert result["invested"] == pytest.approx(expected["invested"])
+        assert result["market_value"] == pytest.approx(expected["market_value"])
+        assert result["gain"] == pytest.approx(expected["gain"])
+        assert result["gain_percent"] == pytest.approx(expected["gain_percent"])
+        assert [e["envelope"] for e in result["envelopes"]] == [
+            e["envelope"] for e in expected["envelopes"]
+        ]
+        for got, want in zip(result["envelopes"], expected["envelopes"], strict=True):
+            for field in ("invested", "market_value", "gain", "gain_percent"):
+                assert got[field] == pytest.approx(want[field])

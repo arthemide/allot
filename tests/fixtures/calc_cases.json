@@ -1,0 +1,183 @@
+{
+  "_comment": "Shared between tests/test_calc.py and front/src/lib/simulate.test.ts. The allocation maths lives twice - in src/calc.py for the app, in front/src/lib/simulate.ts for the browser simulator - and these cases are what keeps the two honest. Change the maths, change this file, and both sides fail until they agree.",
+  "position": [
+    {
+      "name": "an imported line, held and never traded",
+      "base_quantity": 10,
+      "base_prum": 20,
+      "trades": [],
+      "price": 25,
+      "expected": {
+        "quantity": 10,
+        "prum": 20,
+        "invested": 200,
+        "market_value": 250,
+        "gain": 50,
+        "gain_percent": 25
+      }
+    },
+    {
+      "name": "fees are spread over the bought quantity",
+      "base_quantity": 0,
+      "base_prum": null,
+      "trades": [
+        { "side": "buy", "quantity": 1, "unit_price": 100, "fees": 6 },
+        { "side": "buy", "quantity": 1, "unit_price": 200, "fees": 4 }
+      ],
+      "price": 150,
+      "expected": {
+        "quantity": 2,
+        "prum": 155,
+        "invested": 310,
+        "market_value": 300,
+        "gain": -10,
+        "gain_percent": -3.2258064516129035
+      }
+    },
+    {
+      "name": "a sell moves the quantity, never the PRUM",
+      "base_quantity": 0,
+      "base_prum": null,
+      "trades": [
+        { "side": "buy", "quantity": 1, "unit_price": 100, "fees": 0 },
+        { "side": "buy", "quantity": 1, "unit_price": 200, "fees": 0 },
+        { "side": "sell", "quantity": 0.5, "unit_price": 900, "fees": 0 }
+      ],
+      "price": null,
+      "expected": {
+        "quantity": 1.5,
+        "prum": 150,
+        "invested": 225,
+        "market_value": null,
+        "gain": null,
+        "gain_percent": null
+      }
+    },
+    {
+      "name": "the opening position behaves like a first buy",
+      "base_quantity": 5,
+      "base_prum": 10,
+      "trades": [{ "side": "buy", "quantity": 5, "unit_price": 20, "fees": 0 }],
+      "price": 15,
+      "expected": {
+        "quantity": 10,
+        "prum": 15,
+        "invested": 150,
+        "market_value": 150,
+        "gain": 0,
+        "gain_percent": 0
+      }
+    },
+    {
+      "name": "sold out: no quantity left, and no rate to report",
+      "base_quantity": 2,
+      "base_prum": 10,
+      "trades": [{ "side": "sell", "quantity": 2, "unit_price": 30, "fees": 0 }],
+      "price": 10,
+      "expected": {
+        "quantity": 0,
+        "prum": 10,
+        "invested": 0,
+        "market_value": 0,
+        "gain": 0,
+        "gain_percent": null
+      }
+    },
+    {
+      "name": "nothing was ever bought",
+      "base_quantity": 0,
+      "base_prum": null,
+      "trades": [],
+      "price": 10,
+      "expected": {
+        "quantity": 0,
+        "prum": 0,
+        "invested": 0,
+        "market_value": 0,
+        "gain": 0,
+        "gain_percent": null
+      }
+    }
+  ],
+  "multiplier": [
+    { "name": "more than 10% below the cost basis: top up", "price": 80, "prum": 100, "expected": 1.5 },
+    { "name": "just inside the band, below", "price": 91, "prum": 100, "expected": 1.0 },
+    { "name": "at the cost basis", "price": 100, "prum": 100, "expected": 1.0 },
+    { "name": "just inside the band, above", "price": 109, "prum": 100, "expected": 1.0 },
+    { "name": "more than 10% above: ease off", "price": 120, "prum": 100, "expected": 0.5 },
+    { "name": "no cost basis to compare against", "price": 120, "prum": 0, "expected": 1.0 }
+  ],
+  "renormalize": [
+    {
+      "name": "equal weights, one line topped up",
+      "budget": 300,
+      "weighted": [[1, 1.5], [1, 1.0], [1, 0.5]],
+      "expected": [150, 100, 50]
+    },
+    {
+      "name": "weights count as much as multipliers",
+      "budget": 100,
+      "weighted": [[3, 1.0], [1, 1.0]],
+      "expected": [75, 25]
+    },
+    {
+      "name": "nothing weighted: nothing spent",
+      "budget": 500,
+      "weighted": [[0, 1.5], [0, 1.0]],
+      "expected": [0, 0]
+    }
+  ],
+  "summary": [
+    {
+      "name": "two envelopes, one line under water",
+      "positions": [
+        {
+          "symbol": "AAA",
+          "label": "Fund A",
+          "envelope": "PEA",
+          "currency": "EUR",
+          "invested": 100,
+          "market_value": 150
+        },
+        {
+          "symbol": "BBB",
+          "label": "Fund B",
+          "envelope": "PEA",
+          "currency": "EUR",
+          "invested": 100,
+          "market_value": 50
+        },
+        {
+          "symbol": "CCC",
+          "label": "Fund C",
+          "envelope": "CTO",
+          "currency": "EUR",
+          "invested": 200,
+          "market_value": 260
+        }
+      ],
+      "expected": {
+        "invested": 400,
+        "market_value": 460,
+        "gain": 60,
+        "gain_percent": 15,
+        "envelopes": [
+          {
+            "envelope": "CTO",
+            "invested": 200,
+            "market_value": 260,
+            "gain": 60,
+            "gain_percent": 30
+          },
+          {
+            "envelope": "PEA",
+            "invested": 200,
+            "market_value": 200,
+            "gain": 0,
+            "gain_percent": 0
+          }
+        ]
+      }
+    }
+  ]
+}
