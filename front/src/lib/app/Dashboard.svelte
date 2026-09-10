@@ -91,12 +91,14 @@
 		<p class="text-red-600">{error}</p>
 	{:else}
 		<div class="flex flex-wrap items-center gap-3">
+			<!-- Width follows the longest name: an asset is picked by its label,
+			     which a fixed width would cut off in the closed state. -->
 			<label for="asset" class="text-sm font-medium">Asset</label>
 			<select
 				id="asset"
 				value={selected}
 				onchange={(e) => select(e.currentTarget.value)}
-				class="border-input bg-background h-9 w-64 max-w-full rounded-md border px-3 text-sm"
+				class="border-input bg-background h-9 w-auto max-w-full min-w-64 rounded-md border px-3 text-sm"
 			>
 				<option value={ALL}>* All assets (totals and settings)</option>
 				{#each positions as p (p.symbol)}
