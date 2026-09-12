@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
-    "curl-cffi>=0.16.2",
+    "curl-cffi>=0.16.3",
 ]
 
 [dependency-groups]
@@ -17,7 +17,7 @@ dev = [
     # TestClient speaks to the app through httpx; the app itself uses
     # curl_cffi, so this belongs to the tests only.
     "httpx>=0.28.0",
-    "ruff>=0.16.5",
+    "ruff>=0.16.6",
 ]
 
 [tool.pytest.ini_options]
