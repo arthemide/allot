@@ -56,6 +56,20 @@ describe('the demo backend', () => {
 		expect((await demoBackend.getAsset('FR0000000001')).envelope).toBe('AV');
 	});
 
+	it('refuses to track a symbol twice, as the API does', async () => {
+		startDemo();
+		await expect(
+			demoBackend.createAsset({
+				symbol: 'IE00B4L5Y983',
+				label: 'Again',
+				envelope: 'PEA',
+				currency: 'EUR',
+				weight: 1
+			})
+		).rejects.toThrow('already tracked');
+		expect(await demoBackend.getAssets()).toHaveLength(5);
+	});
+
 	it('starts over from whatever the visitor did to it', async () => {
 		startDemo();
 		await demoBackend.deleteAsset('FR0010315770');

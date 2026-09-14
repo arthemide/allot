@@ -26,7 +26,7 @@
 			Allot
 		</a>
 		<a
-			href="https://github.com/arthemide/allot/releases/tag/v{__APP_VERSION__}"
+			href="https://github.com/arthemide/allot/releases"
 			target="_blank"
 			rel="noreferrer"
 			class="text-muted-foreground hover:text-foreground text-xs tabular-nums"
@@ -39,7 +39,7 @@
 				class="rounded-full border border-emerald-600/30 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
 				title="Everything runs in your browser; nothing is saved."
 			>
-				Demo
+				Demo - sample figures
 			</span>
 		{/if}
 	</div>

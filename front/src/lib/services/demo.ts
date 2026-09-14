@@ -101,73 +101,58 @@ const positions = (): Position[] => assets.map(positionOf);
  * the rest around it. The visitor replaces the lot with their own export from
  * the nav whenever they want.
  */
-const SAMPLE: { asset: Asset; envelope: string }[] = [
+const SAMPLE: Asset[] = [
 	{
+		symbol: 'IE00B4L5Y983',
+		label: 'iShares Core MSCI World',
 		envelope: 'PEA',
-		asset: {
-			symbol: 'IE00B4L5Y983',
-			label: 'iShares Core MSCI World',
-			envelope: 'PEA',
-			currency: 'EUR',
-			weight: 3,
-			base_quantity: 42,
-			base_prum: 88.4,
-			price: 96.2
-		}
+		currency: 'EUR',
+		weight: 3,
+		base_quantity: 42,
+		base_prum: 88.4,
+		price: 96.2
 	},
 	{
+		symbol: 'FR0010315770',
+		label: 'Lyxor MSCI Europe',
 		envelope: 'PEA',
-		asset: {
-			symbol: 'FR0010315770',
-			label: 'Lyxor MSCI Europe',
-			envelope: 'PEA',
-			currency: 'EUR',
-			weight: 1,
-			base_quantity: 60,
-			base_prum: 27.9,
-			// Below the cost basis by more than 10%: the plan tops it up.
-			price: 24.1
-		}
+		currency: 'EUR',
+		weight: 1,
+		base_quantity: 60,
+		base_prum: 27.9,
+		// Below the cost basis by more than 10%: the plan tops it up.
+		price: 24.1
 	},
 	{
+		symbol: 'FR0011871128',
+		label: 'Amundi S&P 500',
 		envelope: 'PEA',
-		asset: {
-			symbol: 'FR0011871128',
-			label: 'Amundi S&P 500',
-			envelope: 'PEA',
-			currency: 'EUR',
-			weight: 2,
-			base_quantity: 25,
-			base_prum: 36.5,
-			// Well above: the plan eases off.
-			price: 44.8
-		}
+		currency: 'EUR',
+		weight: 2,
+		base_quantity: 25,
+		base_prum: 36.5,
+		// Well above: the plan eases off.
+		price: 44.8
 	},
 	{
+		symbol: 'IE00BFNM3P36',
+		label: 'Amundi MSCI Emerging Markets',
 		envelope: 'CTO',
-		asset: {
-			symbol: 'IE00BFNM3P36',
-			label: 'Amundi MSCI Emerging Markets',
-			envelope: 'CTO',
-			currency: 'EUR',
-			weight: 1,
-			base_quantity: 30,
-			base_prum: 21.3,
-			price: 22.05
-		}
+		currency: 'EUR',
+		weight: 1,
+		base_quantity: 30,
+		base_prum: 21.3,
+		price: 22.05
 	},
 	{
+		symbol: 'IE00BYZK4552',
+		label: 'iShares Automation & Robotics',
 		envelope: 'CTO',
-		asset: {
-			symbol: 'IE00BYZK4552',
-			label: 'iShares Automation & Robotics',
-			envelope: 'CTO',
-			currency: 'EUR',
-			weight: 1,
-			base_quantity: 18,
-			base_prum: 13.75,
-			price: 15.9
-		}
+		currency: 'EUR',
+		weight: 1,
+		base_quantity: 18,
+		base_prum: 13.75,
+		price: 15.9
 	}
 ];
 
@@ -207,7 +192,7 @@ function monthsAgo(count: number): string {
 
 /** Lay out the sample portfolio. Called on arrival, and again on "Start over". */
 export function startDemo() {
-	assets = SAMPLE.map(({ asset }) => ({ ...asset }));
+	assets = SAMPLE.map((asset) => ({ ...asset }));
 	envelopes = [
 		{ name: 'PEA', monthly_amount: 400, started_on: null, opening_cash: null, available: null },
 		{ name: 'CTO', monthly_amount: 150, started_on: null, opening_cash: null, available: null }
@@ -224,13 +209,10 @@ export function restartDemo() {
 
 /** The monthly note, short form: what to buy, by envelope. */
 function renderNote(): string {
-	const rows: Row[] = assets.map((a) => ({
-		isin: a.symbol,
-		name: a.label,
-		quantity: a.base_quantity,
-		prum: positionOf(a).prum,
-		price: a.price
-	}));
+	const rows: Row[] = assets.map((a) => {
+		const held = positionOf(a);
+		return { isin: a.symbol, name: a.label, quantity: held.quantity, prum: held.prum, price: a.price };
+	});
 	const plan = allocate(
 		rows,
 		envelopes.map((e) => ({ name: e.name, monthly: e.monthly_amount })),
@@ -322,6 +304,9 @@ export const demoBackend = {
 	searchTickers: () => fail('Ticker search needs the real app.'),
 
 	createAsset: (asset: NewAsset) => {
+		// The API answers 409 here; a second entry would shadow the first.
+		if (assets.some((a) => a.symbol === asset.symbol))
+			return fail(`${asset.symbol} is already tracked.`);
 		assets = [
 			...assets,
 			{ ...asset, base_quantity: 0, base_prum: null, price: null }

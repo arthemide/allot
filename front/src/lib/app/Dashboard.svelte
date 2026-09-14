@@ -30,6 +30,7 @@
 	const position = $derived(positions.find((p) => p.symbol === selected) ?? null);
 
 	async function loadPositions() {
+		error = '';
 		try {
 			[positions, envelopes] = await Promise.all([getAssets(), getEnvelopes()]);
 			// Deleted since, or a link naming something untracked.
@@ -46,7 +47,13 @@
 			chart = null;
 			return;
 		}
-		chart = await getChart(selected, window_);
+		try {
+			chart = await getChart(selected, window_);
+		} catch (e) {
+			// A stale ?asset= lands here before loadPositions moves the selection.
+			chart = null;
+			error = e instanceof Error ? e.message : 'Could not load the chart.';
+		}
 	}
 
 	async function refresh() {
@@ -98,7 +105,7 @@
 				id="asset"
 				value={selected}
 				onchange={(e) => select(e.currentTarget.value)}
-				class="border-input bg-background h-9 w-auto max-w-full min-w-64 rounded-md border px-3 text-sm"
+				class="border-input bg-background h-9 w-auto max-w-md min-w-64 rounded-md border px-3 text-sm"
 			>
 				<option value={ALL}>* All assets (totals and settings)</option>
 				{#each positions as p (p.symbol)}
@@ -114,19 +121,23 @@
 
 			{#if chart}
 				<div class="space-y-3 rounded-lg border p-4">
-					<div class="flex flex-wrap items-center gap-2">
-						{#each [['tx', 'Since first buy'], ['1y', '1 year'], ['3y', '3 years'], ['5y', '5 years'], ['max', 'Max']] as [value, label] (value)}
-							<button
-								type="button"
-								class="rounded-md border px-2 py-1 text-xs {window_ === value
-									? 'bg-primary text-primary-foreground'
-									: 'hover:bg-muted'}"
-								onclick={() => (window_ = value)}
-							>
-								{label}
-							</button>
-						{/each}
-					</div>
+					<!-- Without a price history the window buttons have nothing to
+					     narrow: an unquoted asset, or the demo. -->
+					{#if chart.prices.length}
+						<div class="flex flex-wrap items-center gap-2">
+							{#each [['tx', 'Since first buy'], ['1y', '1 year'], ['3y', '3 years'], ['5y', '5 years'], ['max', 'Max']] as [value, label] (value)}
+								<button
+									type="button"
+									class="rounded-md border px-2 py-1 text-xs {window_ === value
+										? 'bg-primary text-primary-foreground'
+										: 'hover:bg-muted'}"
+									onclick={() => (window_ = value)}
+								>
+									{label}
+								</button>
+							{/each}
+						</div>
+					{/if}
 					<AssetChart
 						transactions={chart.transactions}
 						priceHistory={chart.prices}

@@ -2,9 +2,10 @@
 
 > Per-asset PRUM tracking and a monthly allocation note.
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-
-**[Try the demo](https://allot.gireg.fr/demo/)**
+[![Try the demo](https://img.shields.io/badge/try_the_demo-allot.gireg.fr-2ea44f)](https://allot.gireg.fr/demo/)
+[![Release](https://img.shields.io/github/v/release/arthemide/allot)](https://github.com/arthemide/allot/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/arthemide/allot/main.yaml?branch=main)](https://github.com/arthemide/allot/actions)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
 
 ## Overview
 
@@ -74,7 +75,7 @@ Which file, from which broker. A row is added when a reader is written and teste
 
 | Broker | Export | Status |
 | --- | --- | --- |
-| BoursoBank | PEA (CSV) | **Supported** |
+| BoursoBank | Portefeuille (CSV) - the same file for a PEA or a CTO | **Supported** |
 
 ## Self-hosting
 
