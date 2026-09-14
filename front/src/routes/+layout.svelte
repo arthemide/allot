@@ -4,8 +4,9 @@
 	import { ModeWatcher } from "mode-watcher";
 	import SunIcon from "@lucide/svelte/icons/sun";
 	import MoonIcon from "@lucide/svelte/icons/moon";
-	
+
 	import { toggleMode } from "mode-watcher";
+	import { page } from "$app/state";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import MonthlyNote from "$lib/components/MonthlyNote.svelte";
 	import TickerSearch from "$lib/components/TickerSearch.svelte";
@@ -16,8 +17,13 @@
 
 	let { children } = $props();
 
+	// The public simulator shares the build but not the app: no nav, no login,
+	// no session probe. It stands on its own page.
+	const simulator = $derived(page.url.pathname.startsWith('/simulate'));
+
 	// An instance with no password never shows a login screen.
 	$effect(() => {
+		if (simulator) return;
 		getSession()
 			.then((state) => {
 				session.required = state.required;
@@ -39,7 +45,9 @@
 
 <ModeWatcher />
 
-{#if !session.ready}
+{#if simulator}
+	{@render children()}
+{:else if !session.ready}
 	<!-- No flash of the app before the answer comes back. -->
 {:else if session.required && !session.authenticated}
 	<Login />
