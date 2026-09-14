@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.7.0] - 2026-09-14
+
+### Other
+
+- bump the front group in /front with 2 updates (#47)
+- bump the python group with 2 updates (#49)
+- bump typescript from 5.9.3 to 6.0.3 in /front (#48)
+
 ## [0.6.1] - 2026-09-08
 
 ### Other
