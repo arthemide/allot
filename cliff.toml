@@ -37,6 +37,8 @@ commit_parsers = [
     { message = "^refactor", group = "Changed" },
     { message = "^docs", group = "Documentation" },
     { message = "^test", group = "Tests" },
+    # Branch noise that a rebase merge lets through when it was not squashed.
+    { message = "^(wip|fixup!|squash!|amend!)", skip = true },
     { message = "^chore\\(release\\)", skip = true },
     { message = "^chore: trigger", skip = true },
     { message = "^chore", group = "Other" },
