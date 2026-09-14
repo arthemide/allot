@@ -10,6 +10,10 @@
 
 	let open = $state(false);
 	let envelope = $state('');
+	// The README is the doc: written once, and linked from here rather than
+	// repeated in the dialog.
+	const EXPORT_DOC = 'https://github.com/arthemide/allot#importing-a-portfolio';
+
 	let csv = $state('');
 	let fileName = $state('');
 	let importing = $state(false);
@@ -50,7 +54,7 @@
 			return;
 		}
 		if (!csv.trim()) {
-			error = 'Drop a file or paste its content.';
+			error = 'Drop a file first.';
 			return;
 		}
 		error = '';
@@ -77,11 +81,23 @@
 		<Dialog.Header>
 			<Dialog.Title>Import a portfolio export</Dialog.Title>
 			<Dialog.Description>
-				Your broker's portfolio CSV, with a quantity and a cost per line - not the account
-				movements. Each line becomes the asset's opening position, PRUM included; importing
-				again replaces it. Assets already tracked keep their envelope and weight.
+				Each line becomes the asset's opening position, PRUM included; importing again replaces
+				it. Assets already tracked keep their envelope and weight.
 			</Dialog.Description>
 		</Dialog.Header>
+
+		<!-- Said before the dropzone, not after a failed import: the movements
+		     export is the file people reach for first. -->
+		<p
+			class="text-muted-foreground rounded-md border border-amber-600/30 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+		>
+			<strong class="font-semibold">BoursoBank only for now.</strong> Take the
+			<em>portfolio</em> export - one row per line held, with a quantity and a cost - not the
+			account movements.
+			<a href={EXPORT_DOC} target="_blank" rel="noreferrer" class="underline underline-offset-2">
+				How to export it
+			</a>
+		</p>
 
 		<form class="space-y-3" onsubmit={run}>
 			<!-- The dropzone: click to browse, or drag a file onto it. -->
@@ -116,7 +132,7 @@
 					<span class="text-muted-foreground text-xs">Click or drop to replace</span>
 				{:else}
 					<span class="text-sm font-medium">Drop your CSV here, or click to browse</span>
-					<span class="text-muted-foreground text-xs">.csv from your broker's portfolio</span>
+					<span class="text-muted-foreground text-xs">your BoursoBank portfolio export</span>
 				{/if}
 			</button>
 			<input
@@ -126,18 +142,6 @@
 				onchange={(e) => load((e.currentTarget as HTMLInputElement).files?.[0])}
 				class="hidden"
 			/>
-
-			<details class="text-sm">
-				<summary class="text-muted-foreground hover:text-foreground cursor-pointer text-xs uppercase">
-					Or paste the content
-				</summary>
-				<textarea
-					bind:value={csv}
-					rows="5"
-					placeholder="name;isin;quantity;buyingPrice;..."
-					class="border-input bg-background mt-2 w-full rounded-md border px-3 py-2 font-mono text-xs"
-				></textarea>
-			</details>
 
 			<div class="flex flex-wrap items-end gap-3">
 				<div class="space-y-1">

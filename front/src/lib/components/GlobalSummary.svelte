@@ -10,6 +10,7 @@
 	} from '$lib/services/api';
 	import type { Envelope, Position, Summary } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import ClippedText from '$lib/components/ClippedText.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -204,13 +205,12 @@
 							<Table.Cell class="max-w-0 pl-8 text-left">
 								<button
 									type="button"
-									title={asset.label}
 									class="hover:text-primary flex w-full min-w-0 items-baseline gap-2
 										text-left hover:underline"
 									onclick={() => onSelect(asset.symbol)}
 								>
 									<span class="shrink-0 font-mono">{asset.symbol}</span>
-									<span class="text-muted-foreground truncate text-xs">{asset.label}</span>
+									<ClippedText text={asset.label} class="text-muted-foreground text-xs" />
 								</button>
 							</Table.Cell>
 							<Table.Cell class="w-40 text-right">

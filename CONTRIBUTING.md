@@ -24,11 +24,11 @@ make dev-front    # front dev server on :5173 (needs dev-api)
 
 ```bash
 make test         # pytest
-make lint         # ruff check + svelte-check
+make check         # ruff check + svelte-check
 make format       # ruff format, then ruff check --fix
 ```
 
-Run `make lint` and `make test` before pushing; CI runs the same commands.
+Run `make check` and `make test` before pushing; CI runs the same commands.
 
 ## Workflow
 
