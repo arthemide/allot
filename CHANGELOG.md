@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.7.1] - 2026-09-14
+
+### Added
+
+- a /demo page running the whole app in the browser (#50)
+
 ## [0.7.0] - 2026-09-14
 
 ### Other
@@ -68,7 +74,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.2.2] - 2026-08-30
 
-### Other
+### Tests
 
 - cover the routes and the SQLite layer (#30)
 
