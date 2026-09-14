@@ -10,7 +10,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- read a portfolio and split it in the browser (#50)
 - a /demo page running the whole app in the browser (#50)
+- show the version in the nav (#50)
+
+### Changed
+
+- english copy, reuse formatMoney, tighten the CSV reader (#50)
+- name the browser port after what it mirrors (#50)
+
+### Documentation
+
+- say which broker export the import expects (#50)
+
+### Fixed
+
+- keep asset names readable (#50)
+
+### Tests
+
+- a shared fixture keeping the browser port in step with calc.py (#50)
+
+### Other
+
+- give test commits their own changelog group (#50)
 
 ## [0.7.0] - 2026-09-14
 
