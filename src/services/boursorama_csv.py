@@ -80,7 +80,7 @@ class Row(BaseModel):
     name: str
     quantity: float
     prum: float
-    # Optional: the import resolves prices itself, the simulator needs it.
+    # Optional: the import resolves prices itself, the /demo page needs it.
     price: float | None
 
 

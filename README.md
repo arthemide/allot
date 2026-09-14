@@ -2,7 +2,10 @@
 
 > Per-asset PRUM tracking and a monthly allocation note.
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Try the demo](https://img.shields.io/badge/try_the_demo-allot.gireg.fr-2ea44f)](https://allot.gireg.fr/demo/)
+[![Release](https://img.shields.io/github/v/release/arthemide/allot)](https://github.com/arthemide/allot/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/arthemide/allot/main.yaml?branch=main)](https://github.com/arthemide/allot/actions)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
 
 ## Overview
 
@@ -21,6 +24,7 @@ An envelope can also **track its cash**, which is what makes a 600 € share rea
 - Ticker search, so the exchange suffix (`WPEA.PA`, `VWCE.DE`, `ETH-USD`) does not have to be guessed
 - Price chart with transaction markers and the step PRUM curve
 - Envelope cash: an envelope can save up month after month and be told to buy whole shares when it can afford them, rather than to place an amount that no broker will take
+- Portfolio import from a [CSV export](#importing-a-portfolio)
 - A monthly note, as a checklist with a link per line, and a calendar feed to subscribe to
 
 ## Getting started
@@ -64,6 +68,14 @@ make note
 ```
 
 Run `make` on its own to list every target.
+
+### Importing a portfolio
+
+Which file, from which broker. A row is added when a reader is written and tested; nothing is assumed to fit.
+
+| Broker | Export | Status |
+| --- | --- | --- |
+| BoursoBank | Portefeuille (CSV) - the same file for a PEA or a CTO | **Supported** |
 
 ## Self-hosting
 
@@ -179,18 +191,6 @@ The version in `pyproject.toml` is the source of truth. Bumping it and merging t
 `GET /session` says whether a password is required, and `POST /login` exchanges one for a session cookie.
 
 Interactive docs are off - they publish the whole surface. `make dev-api` turns them back on at `/docs`.
-
-## Layout
-
-```
-app.py              entry point: the API, and the built front alongside it
-schema.sql          the whole database schema
-src/calc.py         pure calculations - no I/O, the only module worth unit-testing
-src/services/       positions, allocation, prices, note rendering
-src/databases/      SQLite access, plain dicts, no ORM
-src/routes/         HTTP surface
-front/              SvelteKit front, built statically into front/dist
-```
 
 ## Contributing
 
