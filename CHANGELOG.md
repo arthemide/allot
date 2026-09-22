@@ -6,34 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.8.0] - 2026-09-22
+
+### Fixed
+
+- conditionally render release notes link based on demo state
+
+### Other
+
+- let the changelog keep what was written by hand
+- bump the front group in /front with 5 updates
+- bump the python group with 2 updates
+- update version to 0.8.0 in package files
+
 ## [0.7.1] - 2026-09-14
 
 ### Added
 
-- read a portfolio and split it in the browser (#50)
 - a /demo page running the whole app in the browser (#50)
-- show the version in the nav (#50)
-
-### Changed
-
-- english copy, reuse formatMoney, tighten the CSV reader (#50)
-- name the browser port after what it mirrors (#50)
-
-### Documentation
-
-- say which broker export the import expects (#50)
-
-### Fixed
-
-- keep asset names readable (#50)
-
-### Tests
-
-- a shared fixture keeping the browser port in step with calc.py (#50)
-
-### Other
-
-- give test commits their own changelog group (#50)
 
 ## [0.7.0] - 2026-09-14
 
