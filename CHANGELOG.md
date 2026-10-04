@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.9.0] - 2026-10-04
+
+### Other
+
+- bump the front group in /front with 3 updates
+- bump ruff from 0.16.7 to 0.16.8 in the python group
+- bump the python group with 4 updates
+- bump the front group in /front with 4 updates
+- update version to 0.9.0 in package files
+
 ## [0.8.0] - 2026-09-22
 
 ### Fixed
