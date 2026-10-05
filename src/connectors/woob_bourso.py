@@ -20,6 +20,14 @@ from src.connectors.store import PositionRow
 
 logger = logging.getLogger(__name__)
 
+
+def _unavailable() -> "ConnectorUnavailable":
+    return ConnectorUnavailable(
+        "woob is not installed in this image. Build it with INSTALL_WOOB=1 "
+        "(or `make woob-install` for a local run)."
+    )
+
+
 MODULE = "boursorama"
 # Vendored modules, so nothing is fetched at runtime; STATE_DIR holds the
 # 90-day trusted-device cookie.
@@ -35,16 +43,26 @@ class WoobLogin:
 
     def __init__(self, login: str, password: str):
         try:
-            from woob.core import Woob
+            # WoobBase, not Woob: it loads modules straight from a directory,
+            # with no repository and no `woob update`, so nothing is ever
+            # fetched over the network. The module must be vendored.
+            from woob.core import WoobBase
+        except ImportError:  # older layout
+            try:
+                from woob.core.ouiboube import WoobBase
+            except ModuleNotFoundError as error:
+                raise _unavailable() from error
         except ModuleNotFoundError as error:  # the connectors group is optional
+            raise _unavailable() from error
+
+        if not (MODULES_PATH / MODULE).is_dir():
             raise ConnectorUnavailable(
-                "woob is not installed in this image. Build it with INSTALL_WOOB=1 "
-                "(or `make woob-install` for a local run)."
-            ) from error
+                f"the woob '{MODULE}' module is not vendored under {MODULES_PATH}. "
+                "Run `make woob-vendor` from a machine that has it."
+            )
 
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        self._woob = Woob()
-        self._woob.modules_path = str(MODULES_PATH)
+        self._woob = WoobBase(modules_path=str(MODULES_PATH))
         self._login = login
         self._password = password
         self._backend: Any = None
