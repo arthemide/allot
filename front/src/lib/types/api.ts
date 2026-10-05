@@ -154,6 +154,14 @@ export interface ImportReport {
 	total: number;
 }
 
+/** Where an interactive bank login stands, and the import once it is through. */
+export interface ConnectorStatus {
+	session_id: string;
+	status: 'otp' | 'app_validation' | 'done';
+	prompt: string;
+	report: ImportReport | null;
+}
+
 /** Whether this instance asks for a password, and whether we gave it one. */
 export type Session = {
 	required: boolean;

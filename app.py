@@ -41,7 +41,7 @@ FORWARDED_ALLOW_IPS = os.getenv("ALLOT_FORWARDED_ALLOW_IPS", "127.0.0.1")
 
 # The static front is deliberately not guarded: it carries no data, and
 # guarding it would make the login screen itself unreachable.
-GUARDED_PREFIXES = ("/assets", "/transactions", "/envelopes", "/note")
+GUARDED_PREFIXES = ("/assets", "/transactions", "/envelopes", "/note", "/connectors")
 
 DOCS = bool(os.getenv("ALLOT_DOCS"))
 

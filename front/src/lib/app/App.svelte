@@ -5,6 +5,7 @@
 
 	import { Button } from '#lib/components/ui/button/index.js';
 	import ImportCsv from '#lib/components/ImportCsv.svelte';
+	import ConnectorSync from '#lib/components/ConnectorSync.svelte';
 	import MonthlyNote from '#lib/components/MonthlyNote.svelte';
 	import TickerSearch from '#lib/components/TickerSearch.svelte';
 	import { restartDemo } from '#lib/services/demo.js';
@@ -53,6 +54,7 @@
 		{:else}
 			<TickerSearch />
 			<ImportCsv />
+			<ConnectorSync />
 		{/if}
 		<MonthlyNote />
 		<Button onclick={toggleMode} variant="outline" size="icon">
