@@ -10,6 +10,17 @@ dependencies = [
 ]
 
 [dependency-groups]
+# The local-machine path: discover and the Playwright-driven sync. Not in the
+# image.
+connectors = [
+    "beautifulsoup4>=4.15.0",
+    "playwright>=1.63.0",
+]
+# The in-app path: woob logs in and reads the positions. Installed in the
+# image only when built with INSTALL_WOOB=1.
+woob = [
+    "woob>=3.7",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-mock>=3.17.0",
@@ -18,6 +29,7 @@ dev = [
     # curl_cffi, so this belongs to the tests only.
     "httpx>=0.28.0",
     "ruff>=0.17.1",
+    "beautifulsoup4>=4.15.0",
 ]
 
 [tool.pytest.ini_options]
@@ -34,3 +46,12 @@ select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
+
+[tool.coverage.run]
+# The browser half of the connectors needs a human at the keyboard; the pure
+# half (masking, summary) is what the tests cover.
+omit = [
+    "src/connectors/browser.py",
+    "src/connectors/__main__.py",
+    "src/connectors/woob_bourso.py",
+]

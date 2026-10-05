@@ -139,6 +139,32 @@ class ImportReport(BaseModel):
     total: int
 
 
+class ConnectorLogin(BaseModel):
+    """Bank credentials, used once and never stored."""
+
+    login: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class ConnectorAnswer(BaseModel):
+    """The second factor: an SMS/email code, or an acknowledged app tap."""
+
+    answer: str = ""
+
+
+class ConnectorStatus(BaseModel):
+    """Where a login stands, and the import once it is through.
+
+    `status` is "otp" or "app_validation" while the bank waits for a second
+    factor, then "done". `report` is filled only on "done".
+    """
+
+    session_id: str
+    status: Literal["otp", "app_validation", "done"]
+    prompt: str = ""
+    report: ImportReport | None = None
+
+
 class Envelope(BaseModel):
     name: str
     monthly_amount: float = Field(ge=0)

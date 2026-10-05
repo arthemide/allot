@@ -253,6 +253,11 @@ def delete_transaction(transaction_id: int) -> None:
     execute('DELETE FROM "transaction" WHERE id = ?', (transaction_id,))
 
 
+def delete_transactions_of(symbol: str) -> None:
+    """Drop every trade of an asset, leaving the asset itself in place."""
+    execute('DELETE FROM "transaction" WHERE symbol = ?', (symbol,))
+
+
 def last_transaction_date() -> str | None:
     rows = query('SELECT max(date) AS last FROM "transaction"')
     return rows[0]["last"] if rows else None

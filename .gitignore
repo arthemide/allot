@@ -20,6 +20,11 @@ front/.vite/
 
 # Local state
 data/
+# Bank connectors: browser profile (a live session), network dumps and the
+# snapshot database. Already under data/, named so it survives a move.
+data/connectors/
+# woob state holds the 90-day trusted-device cookie: a secret, like the db.
+data/connectors/woob-state/
 *.db
 *.db-journal
 *.db-wal
