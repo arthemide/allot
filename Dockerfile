@@ -17,17 +17,27 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS deps
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt
+RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
+    && uv export --frozen --no-dev --only-group woob --no-emit-project \
+        -o woob-requirements.txt
 
 # curl_cffi ships an armv7 wheel; its own dependency cffi does not, and has to
 # be compiled. Doing it in a throwaway stage keeps gcc and the headers out of
 # the image that actually ships.
 FROM python:3.14-slim AS wheels
+# INSTALL_WOOB=1 adds the in-app BoursoBank sync. It pulls lxml, which compiles
+# from source on armv7 and needs the libxml2/libxslt headers.
+ARG INSTALL_WOOB=1
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libffi-dev python3-dev \
+    && apt-get install -y --no-install-recommends \
+        gcc libffi-dev python3-dev libxml2-dev libxslt1-dev \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=deps /app/requirements.txt ./
+COPY --from=deps /app/requirements.txt /app/woob-requirements.txt ./
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
+RUN if [ "$INSTALL_WOOB" = "1" ]; then \
+        pip install --no-cache-dir --require-hashes --prefix=/install \
+            -r woob-requirements.txt; \
+    fi
 
 # Litestream publishes a binary per architecture but an image for only two of
 # them, so the binary is what gets used. Fetched on the build platform and
@@ -60,13 +70,16 @@ COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 COPY app.py schema.sql docker-entrypoint.sh ./
 COPY litestream.yml /etc/litestream.yml
 COPY src/ ./src/
+# Vendored woob modules, so the in-app sync fetches nothing at runtime.
+COPY vendor/ ./vendor/
 COPY --from=front /front/dist ./front/dist
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     ALLOT_HOST=0.0.0.0 \
     ALLOT_PORT=8000 \
-    ALLOT_DB_PATH=/data/allot.db
+    ALLOT_DB_PATH=/data/allot.db \
+    ALLOT_CONNECTORS_DIR=/data/connectors
 
 VOLUME ["/data"]
 EXPOSE 8000

@@ -14,7 +14,7 @@ from src.models.schema import (
     SearchHit,
     Summary,
 )
-from src.services import boursorama_csv, portfolio, prices, ratelimit
+from src.services import boursorama_csv, portfolio, portfolio_import, prices, ratelimit
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -88,46 +88,9 @@ def import_csv(payload: ImportCsv, envelope: str):
     except boursorama_csv.CsvError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(error))
 
-    if db.get_envelope(envelope) is None:
-        db.upsert_envelope(envelope, 0.0)
-
-    imported, unresolved, elsewhere = [], [], []
-    for row in parsed.rows:
-        hits = prices.search(row.isin, limit=1)
-        if not hits:
-            unresolved.append({"isin": row.isin, "name": row.name})
-            continue
-        hit = hits[0]
-        symbol = hit["symbol"]
-        existing = db.get_asset(symbol)
-        if existing is None:
-            db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
-        elif existing["envelope"] != envelope:
-            # Left where the user filed it; the position is still updated below.
-            elsewhere.append(
-                {
-                    "symbol": symbol,
-                    "isin": row.isin,
-                    "label": row.name,
-                    "envelope": existing["envelope"],
-                }
-            )
-        db.set_opening_position(symbol, row.quantity, row.prum * row.quantity)
-        imported.append(
-            {
-                "symbol": symbol,
-                "isin": row.isin,
-                "label": row.name,
-                "quantity": row.quantity,
-                "prum": row.prum,
-            }
-        )
-    return {
-        "imported": imported,
-        "unresolved": unresolved,
-        "elsewhere": elsewhere,
-        "total": len(parsed.rows),
-    }
+    # The CSV speaks only for the rows it carries: manual trades stay, and
+    # assets it does not mention are left alone.
+    return portfolio_import.apply_snapshot(envelope, parsed.rows)
 
 
 @router.get("/summary", response_model=Summary)
