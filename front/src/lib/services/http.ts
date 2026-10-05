@@ -2,6 +2,7 @@ import { session } from '#lib/state/session.svelte.js';
 import type {
 	AssetUpdate,
 	Chart,
+	ConnectorStatus,
 	Envelope,
 	EnvelopeStart,
 	FeedUrl,
@@ -122,6 +123,18 @@ export const importCsv = (envelope: string, csv: string) =>
 	request<ImportReport>(`/assets/import?envelope=${encodeURIComponent(envelope)}`, {
 		method: 'POST',
 		body: JSON.stringify({ csv })
+	});
+
+export const connectorLogin = (login: string, password: string) =>
+	request<ConnectorStatus>('/connectors/bourso/login', {
+		method: 'POST',
+		body: JSON.stringify({ login, password })
+	});
+
+export const connectorAnswer = (sessionId: string, answer: string) =>
+	request<ConnectorStatus>(`/connectors/bourso/login/${encodeURIComponent(sessionId)}`, {
+		method: 'POST',
+		body: JSON.stringify({ answer })
 	});
 
 export const updateAsset = (symbol: string, body: AssetUpdate) =>

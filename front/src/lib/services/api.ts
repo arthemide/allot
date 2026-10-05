@@ -35,6 +35,10 @@ export const searchTickers: typeof http.searchTickers = (query) => backend().sea
 export const createAsset: typeof http.createAsset = (asset) => backend().createAsset(asset);
 export const importCsv: typeof http.importCsv = (envelope, csv) =>
 	backend().importCsv(envelope, csv);
+export const connectorLogin: typeof http.connectorLogin = (login, password) =>
+	backend().connectorLogin(login, password);
+export const connectorAnswer: typeof http.connectorAnswer = (sessionId, answer) =>
+	backend().connectorAnswer(sessionId, answer);
 export const updateAsset: typeof http.updateAsset = (symbol, body) =>
 	backend().updateAsset(symbol, body);
 export const deleteAsset: typeof http.deleteAsset = (symbol) => backend().deleteAsset(symbol);
