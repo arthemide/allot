@@ -73,11 +73,22 @@ connectors-install:
 	uv sync --group connectors
 	uv run --group connectors playwright install chromium
 
-.PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync (woob + vendored modules)
+# A woob modules directory that already holds 'boursorama', fetched once on a
+# networked machine (pip install woob && woob update) or a woob git checkout's
+# modules/ folder. The sync itself never reaches the network.
+WOOB_MODULES_SRC ?= $(HOME)/.local/share/woob/modules
+
+.PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync (woob only; then woob-vendor)
 woob-install:
 	uv sync --group woob
-	uv run --group woob woob config add-sources file://$(CURDIR)/vendor/woob-modules
-	uv run --group woob woob update
+
+.PHONY: woob-vendor ## 🏦 Copy the woob boursorama module into vendor/ (no network at runtime)
+woob-vendor:
+	test -d "$(WOOB_MODULES_SRC)/boursorama" \
+		|| { echo "set WOOB_MODULES_SRC to a woob modules dir holding 'boursorama'"; exit 1; }
+	mkdir -p vendor/woob-modules
+	cp -r "$(WOOB_MODULES_SRC)/boursorama" vendor/woob-modules/
+	echo "vendored boursorama into vendor/woob-modules/"
 
 .PHONY: discover ## 🏦 Log in to a bank by hand and record its JSON (BANK=bourso|afer)
 discover:

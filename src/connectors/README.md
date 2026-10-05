@@ -62,8 +62,13 @@ of a non-local instance. The password is used once and never written or logged.
 For a local run (`make start`):
 
 ```sh
-make woob-install   # woob and the vendored modules, nothing fetched later
+make woob-install   # installs woob (the module is vendored separately)
+make woob-vendor    # copies the boursorama module into vendor/, once
 ```
+
+The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/`
+only: no repository, no `woob update`, nothing fetched at runtime. See that
+folder's README for how to populate it on a networked machine.
 
 In the on-premise image, woob is left out by default (it pulls lxml, which
 compiles from source on the 32-bit Pi). Build it in explicitly:
@@ -88,6 +93,4 @@ any asset the bank no longer lists. The cash balance is read but left for you
 to reconcile.
 
 woob performs the automated login internally. That is the fragile part: if
-BoursoBank changes its login screen, woob has to catch up. Modules are
-vendored under `vendor/woob-modules/` so nothing is fetched at runtime; see
-that folder's README to populate it.
+BoursoBank changes its login screen, the vendored module has to be refreshed.
