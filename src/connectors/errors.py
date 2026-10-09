@@ -21,5 +21,13 @@ class AuthFailed(RuntimeError):
     """The bank refused the credentials, or locked the account."""
 
 
+class AuthenticationInterrupted(RuntimeError):
+    """The bank stopped an interactive authentication before it completed."""
+
+
+class AuthenticationMethodUnsupported(RuntimeError):
+    """The bank requires a login method the connector cannot complete."""
+
+
 class ConnectorUnavailable(RuntimeError):
     """The optional connector dependency (woob) is not installed here."""

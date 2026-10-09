@@ -14,7 +14,13 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterator
 
-from src.connectors.errors import AuthFailed, ConnectorUnavailable, SessionExpired
+from src.connectors.errors import (
+    AuthenticationInterrupted,
+    AuthenticationMethodUnsupported,
+    AuthFailed,
+    ConnectorUnavailable,
+    SessionExpired,
+)
 from src.connectors.paths import ROOT, STATE_DIR
 from src.connectors.store import PositionRow
 
@@ -47,9 +53,11 @@ class WoobLogin:
             # with no repository and no `woob update`, so nothing is ever
             # fetched over the network. The module must be vendored.
             from woob.core import WoobBase
+            from woob.tools.storage import StandardStorage
         except ImportError:  # older layout
             try:
                 from woob.core.ouiboube import WoobBase
+                from woob.tools.storage import StandardStorage
             except ModuleNotFoundError as error:
                 raise _unavailable() from error
         except ModuleNotFoundError as error:  # the connectors group is optional
@@ -62,7 +70,8 @@ class WoobLogin:
             )
 
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        self._woob = WoobBase(modules_path=str(MODULES_PATH))
+        self._storage = StandardStorage(STATE_DIR / "boursorama.yml")
+        self._woob = WoobBase(modules_path=str(MODULES_PATH), storage=self._storage)
         self._login = login
         self._password = password
         self._backend: Any = None
@@ -72,38 +81,50 @@ class WoobLogin:
     # --- login -----------------------------------------------------------
 
     def start(self) -> str:
-        return self._attempt({})
+        return self._attempt()
 
     def answer(self, value: str) -> str:
         """Supply the code, or acknowledge the app validation, and resume."""
         if self.status == "app_validation":
-            return self._attempt({})
-        return self._attempt({self._field: value})
+            self._backend.config["resume"].set(True)
+        else:
+            self._backend.config[self._field].set(value)
+        return self._attempt()
 
-    def _attempt(self, extra: dict[str, str]) -> str:
+    def _attempt(self) -> str:
+        from woob.browser.exceptions import ClientError
         from woob.exceptions import (
             AppValidationExpired,
+            AuthMethodNotImplemented,
             BrowserIncorrectPassword,
             BrowserQuestion,
             DecoupledValidation,
         )
 
-        params = {"login": self._login, "password": self._password, **self._stored}
         try:
-            self._backend = self._woob.build_backend(
-                MODULE, params=params, name="allot"
-            )
-            self._backend.browser.dump_state()  # trust the device for next time
+            if self._backend is None:
+                # Woob refuses an MFA flow without this explicit acknowledgement
+                # that a caller can show the user its interactive challenge.
+                self._backend = self._woob.build_backend(
+                    MODULE,
+                    params={
+                        "login": self._login,
+                        "password": self._password,
+                        "request_information": True,
+                    },
+                    storage=self._storage,
+                    name="allot",
+                )
+            self._backend.browser.do_login()
+            self._backend.dump_state()  # trust the device for next time
             self.status = "done"
             self.prompt = ""
         except BrowserQuestion as question:
             field = question.fields[0]
             self._field = field.id
-            self._stored = params
             self.status = "otp"
             self.prompt = field.label or "Enter the code the bank sent you."
         except DecoupledValidation as validation:
-            self._stored = params
             self.status = "app_validation"
             self.prompt = str(validation.message) or "Validate in your bank app."
         except AppValidationExpired:
@@ -112,6 +133,25 @@ class WoobLogin:
         except BrowserIncorrectPassword as error:
             self.status = "failed"
             raise AuthFailed(str(error)) from None
+        except AuthMethodNotImplemented as error:
+            self.status = "failed"
+            logger.warning(
+                "BoursoBank requested QR validation; safe response shape: %s",
+                _shape(getattr(self._backend.browser.page, "doc", None)),
+            )
+            raise AuthenticationMethodUnsupported(
+                "BoursoBank requires QR-code validation, which Woob does not support. "
+                "Use the manual BoursoBank sync instead."
+            ) from error
+        except ClientError as error:
+            self.status = "failed"
+            if getattr(error.response, "status_code", None) == 401:
+                raise AuthenticationInterrupted(
+                    "BoursoBank rejected the validation check. Start the connection again."
+                ) from None
+            raise AuthenticationInterrupted(
+                "BoursoBank interrupted the connection. Start it again."
+            ) from error
         return self.status
 
     # --- reading ---------------------------------------------------------
@@ -178,11 +218,21 @@ class WoobLogin:
             self._backend = None
 
     _field = ""
-    _stored: dict[str, str] = {}
 
 
 def _is_cash(inv: Any) -> bool:
     return str(getattr(inv, "code", "") or "").upper() in ("", "XX-LIQUIDITY", "LIQ")
+
+
+def _shape(value: Any) -> Any:
+    """Describe an authentication response without logging its contents."""
+    if isinstance(value, dict):
+        return {str(key): _shape(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_shape(item) for item in value[:3]]
+    if isinstance(value, str):
+        return f"string({len(value)})"
+    return type(value).__name__
 
 
 def _text(value: Any) -> str:
