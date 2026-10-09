@@ -73,26 +73,29 @@ connectors-install:
 	uv sync --group connectors
 	uv run --group connectors playwright install chromium
 
-# A woob modules directory that already holds 'boursorama', fetched once on a
-# networked machine (pip install woob && woob update) or a woob git checkout's
-# modules/ folder. The sync itself never reaches the network.
-WOOB_MODULES_SRC ?= $(HOME)/.local/share/woob/modules
-
-.PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync (woob only; then woob-vendor)
+.PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync for a local run
 woob-install:
 	uv sync --group woob
 
-.PHONY: woob-vendor ## 🏦 Copy the woob boursorama module into vendor/ (no network at runtime)
-woob-vendor:
-	test -d "$(WOOB_MODULES_SRC)/boursorama" \
-		|| { echo "set WOOB_MODULES_SRC to a woob modules dir holding 'boursorama'"; exit 1; }
+# Woob downloads modules under a versioned directory. Ask the installed version
+# rather than assuming its on-disk layout.
+WOOB_MODULES_SRC ?= $(shell uv run --group woob python -c 'from woob.core import Woob; print(Woob().repositories.modules_dir)')
+
+.PHONY: woob-vendor ## 🏦 Fetch and copy the boursorama module into vendor/
+woob-vendor: woob-install
+	uv run --group woob python -c 'from woob.core import Woob; Woob().repositories.install("boursorama")'
+	test -d "$(WOOB_MODULES_SRC)/boursorama"
 	mkdir -p vendor/woob-modules
-	cp -r "$(WOOB_MODULES_SRC)/boursorama" vendor/woob-modules/
+	cp -r "$(WOOB_MODULES_SRC)/boursorama/." vendor/woob-modules/boursorama/
 	echo "vendored boursorama into vendor/woob-modules/"
 
 .PHONY: discover ## 🏦 Log in to a bank by hand and record its JSON (BANK=bourso|afer)
 discover:
 	uv run --group connectors python -m src.connectors discover $(BANK)
+
+.PHONY: discover-fresh ## 🏦 Discover on a fresh, temporary browser profile (BANK=bourso|afer)
+discover-fresh:
+	uv run --group connectors python -m src.connectors discover $(BANK) --fresh
 
 .PHONY: sync ## 🏦 Read a bank's positions with the saved session and store a snapshot (BANK=bourso)
 sync:

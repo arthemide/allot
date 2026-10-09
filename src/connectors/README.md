@@ -26,6 +26,14 @@ To print the summary of a past run again:
 uv run python -m src.connectors summary data/connectors/dumps/bourso/<timestamp>
 ```
 
+To inspect a stronger authentication flow without discarding the profile that
+regular syncs reuse, launch a one-off empty browser profile. It is removed as
+soon as the discovery window closes:
+
+```sh
+make discover-fresh BANK=bourso
+```
+
 ## Sync
 
 ```sh
@@ -62,13 +70,13 @@ of a non-local instance. The password is used once and never written or logged.
 For a local run (`make start`):
 
 ```sh
-make woob-install   # installs woob (the module is vendored separately)
-make woob-vendor    # copies the boursorama module into vendor/, once
+make woob-install
+make woob-vendor    # downloads the module once, then vendors it with Allot
 ```
 
 The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/`
-only: no repository, no `woob update`, nothing fetched at runtime. See that
-folder's README for how to populate it on a networked machine.
+only: no repository, no `woob update`, nothing fetched at runtime. Commit the
+vendored `boursorama` module before building an image with this checkout.
 
 In the on-premise image, woob is left out by default (it pulls lxml, which
 compiles from source on the 32-bit Pi). Build it in explicitly:
@@ -94,3 +102,13 @@ to reconcile.
 
 woob performs the automated login internally. That is the fragile part: if
 BoursoBank changes its login screen, the vendored module has to be refreshed.
+It does not support BoursoBank's QR-code validation. When the bank requires a
+QR code, use the local, visible-browser path instead:
+
+```sh
+make connectors-install
+make discover BANK=bourso
+make sync BANK=bourso
+```
+
+The QR code is then handled in the browser by the bank's own login flow.
