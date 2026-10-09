@@ -63,6 +63,9 @@
 			code = '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Validation échouée.';
+			// A failed bank challenge invalidates its server-side attempt. Return to
+			// the credentials form instead of offering a dead challenge again.
+			status = null;
 		} finally {
 			busy = false;
 		}

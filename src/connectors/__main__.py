@@ -11,6 +11,7 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from src.connectors.banks import BANKS, Bank
 from src.connectors.errors import LayoutChanged, SessionExpired
@@ -41,6 +42,11 @@ def main() -> None:
         "discover", help="log in by hand and record the JSON the site fetches"
     )
     discover.add_argument("bank", choices=sorted(BANKS))
+    discover.add_argument(
+        "--fresh",
+        action="store_true",
+        help="use a temporary browser profile instead of the saved bank session",
+    )
     sync = commands.add_parser(
         "sync", help="read the positions with the saved session and store them"
     )
@@ -64,13 +70,19 @@ def main() -> None:
         run_sync(bank, args.visible)
         return
     with single_run():
-        recorder = asyncio.run(
-            browser.discover(
-                bank,
-                profile_dir=PROFILES_DIR / bank.key,
-                dumps_dir=DUMPS_DIR,
+        if args.fresh:
+            # A clean device can reveal a stronger login method without erasing
+            # the profile used by regular browser-driven syncs.
+            with TemporaryDirectory(prefix=f"{bank.key}-", dir=PROFILES_DIR) as profile:
+                recorder = asyncio.run(browser.discover(bank, Path(profile), DUMPS_DIR))
+        else:
+            recorder = asyncio.run(
+                browser.discover(
+                    bank,
+                    profile_dir=PROFILES_DIR / bank.key,
+                    dumps_dir=DUMPS_DIR,
+                )
             )
-        )
     report = render(summarise(recorder.captures, dict(recorder.blocked)))
     (recorder.dump_dir / "summary.txt").write_text(report + "\n", encoding="utf-8")
     print(f"\n{len(recorder.captures)} responses written to {recorder.dump_dir}\n")
