@@ -8,7 +8,13 @@ from __future__ import annotations
 import pytest
 
 from src.connectors import login_session, store
-from src.connectors.errors import AuthFailed, ConnectorUnavailable, SessionExpired
+from src.connectors.errors import (
+    AuthenticationInterrupted,
+    AuthenticationMethodUnsupported,
+    AuthFailed,
+    ConnectorUnavailable,
+    SessionExpired,
+)
 from src.connectors.store import PositionRow
 from src.databases import sqlite as db
 from src.services import prices
@@ -111,7 +117,6 @@ class TestStraightThrough:
         # The manual trade is cleared: the snapshot is the whole truth
         assert db.transactions_of("CW8.PA") == []
 
-
 class TestTwoFactor:
     def test_an_otp_is_asked_then_answered(self, client, resolver):
         FakeLogin.script = ["otp", "done"]
@@ -166,6 +171,30 @@ class TestFailures:
         login_session.get(first["session_id"]).answer = expired
         second = client.post(f"/connectors/bourso/login/{first['session_id']}", json={})
         assert second.status_code == 502
+
+    def test_an_interrupted_app_validation_is_502(self, client, resolver):
+        FakeLogin.script = ["app_validation"]
+        first = post(client).json()
+
+        def interrupted(value):
+            raise AuthenticationInterrupted("BoursoBank rejected the validation check.")
+
+        login_session.get(first["session_id"]).answer = interrupted
+        second = client.post(f"/connectors/bourso/login/{first['session_id']}", json={})
+        assert second.status_code == 502
+        assert login_session.get(first["session_id"]) is None
+
+    def test_an_unsupported_authentication_method_is_422(self, client, resolver):
+        FakeLogin.script = ["app_validation"]
+        first = post(client).json()
+
+        def unsupported(value):
+            raise AuthenticationMethodUnsupported("QR code is not supported")
+
+        login_session.get(first["session_id"]).answer = unsupported
+        second = client.post(f"/connectors/bourso/login/{first['session_id']}", json={})
+        assert second.status_code == 422
+        assert login_session.get(first["session_id"]) is None
 
 
 class TestGuard:

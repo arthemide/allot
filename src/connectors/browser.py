@@ -9,6 +9,8 @@ submits, and both refuse every host outside the bank's domains.
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import json
 import random
 from collections import Counter
@@ -53,6 +55,25 @@ class Recorder:
         self.blocked: Counter[str] = Counter()
         self.pending: set[asyncio.Task] = set()
 
+    @staticmethod
+    def _shape(value):
+        """Keep JSON keys and scalar sizes without writing authentication data."""
+        if isinstance(value, dict):
+            return {key: Recorder._shape(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [Recorder._shape(item) for item in value[:3]]
+        if isinstance(value, str):
+            try:
+                encoded = base64.b64decode(value, validate=True) if value else b""
+            except (binascii.Error, ValueError):
+                encoded = b""
+            return {
+                "type": "string",
+                "length": len(value),
+                "base64_bytes": len(encoded) if encoded else None,
+            }
+        return type(value).__name__
+
     def on_response(self, response: Response) -> None:
         task = asyncio.ensure_future(self._record(response))
         self.pending.add(task)
@@ -80,11 +101,16 @@ class Recorder:
         url = mask_url(response.url)
         if kind == "json":
             try:
-                body = mask_json(json.loads(text))
+                parsed = json.loads(text)
+                body = mask_json(parsed)
+                shape = self._shape(parsed)
             except ValueError:
                 body = mask_html(text)
+                shape = None
             file = f"{seq:03d}.json"
             payload = {"url": url, "method": request.method, "body": body}
+            if shape is not None:
+                payload["shape"] = shape
             content = json.dumps(payload, ensure_ascii=False, indent=2)
         else:
             body = mask_html(text)

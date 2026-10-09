@@ -17,6 +17,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from src.connectors import login_session, store
 from src.connectors.errors import (
+    AuthenticationInterrupted,
+    AuthenticationMethodUnsupported,
     AuthFailed,
     ConnectorUnavailable,
     LayoutChanged,
@@ -31,7 +33,7 @@ SOURCE = "bourso"
 
 @dataclass
 class _Line:
-    """A security row as the import service wants it (isin, name, qty, prum)."""
+    """A security row as the import service wants it."""
 
     isin: str
     name: str
@@ -47,7 +49,9 @@ def login(payload: ConnectorLogin):
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error))
     except AuthFailed as error:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error))
-    except (SessionExpired, LayoutChanged) as error:
+    except AuthenticationMethodUnsupported as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
+    except (AuthenticationInterrupted, SessionExpired, LayoutChanged) as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error))
     return _advance(session_id, attempt)
 
@@ -61,7 +65,10 @@ def answer(session_id: str, payload: ConnectorAnswer):
     except AuthFailed as error:
         login_session.finish(session_id)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error))
-    except (SessionExpired, LayoutChanged) as error:
+    except AuthenticationMethodUnsupported as error:
+        login_session.finish(session_id)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
+    except (AuthenticationInterrupted, SessionExpired, LayoutChanged) as error:
         login_session.finish(session_id)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error))
     return _advance(session_id, attempt)
