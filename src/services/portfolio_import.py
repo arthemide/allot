@@ -28,34 +28,72 @@ class SnapshotLine(Protocol):
     name: str
     quantity: float
     prum: float
+    currency: str | None
 
 
 def apply_snapshot(
-    envelope: str, lines: list[SnapshotLine], *, authoritative: bool = False
+    envelope: str,
+    lines: list[SnapshotLine],
+    *,
+    authoritative: bool = False,
+    reconcile_missing: bool | None = None,
+    symbols: dict[str, str] | None = None,
 ) -> dict:
-    """Write the lines as opening positions; return an ImportReport dict."""
+    """Write the lines as opening positions; return an ImportReport dict.
+
+    A broker line with a currency only accepts a Yahoo listing in that exact
+    currency. ``symbols`` holds an explicit, user-selected ticker for a line
+    that could not be resolved automatically.
+    """
     if db.get_envelope(envelope) is None:
         db.upsert_envelope(envelope, 0.0)
 
+    reconcile_missing = authoritative if reconcile_missing is None else reconcile_missing
     imported, unresolved, elsewhere = [], [], []
     touched: set[str] = set()
     for row in lines:
-        hits = prices.search(row.isin, limit=1)
-        if not hits:
-            unresolved.append({"isin": row.isin, "name": row.name})
-            continue
-        hit = hits[0]
-        symbol = hit["symbol"]
-        existing = db.get_asset(symbol)
+        currency = _currency(row)
+        existing = db.get_asset_by_isin(row.isin)
+        hit = None
+        if existing is not None:
+            if currency is not None and existing["currency"] != currency:
+                unresolved.append(_unresolved(row, currency))
+                continue
+            symbol = existing["symbol"]
+        else:
+            requested_symbol = (symbols or {}).get(row.isin)
+            hits = prices.search(requested_symbol or row.isin, limit=10)
+            hit = next(
+                (
+                    candidate
+                    for candidate in hits
+                    if (requested_symbol is None or candidate["symbol"] == requested_symbol)
+                    and (
+                        currency is None
+                        or str(candidate.get("currency") or "").upper() == currency
+                    )
+                ),
+                None,
+            )
+            if hit is None:
+                unresolved.append(_unresolved(row, currency))
+                continue
+            symbol = hit["symbol"]
+            existing = db.get_asset(symbol)
+
         if existing is None:
             db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
-        elif existing["envelope"] != envelope:
-            if authoritative:
+            db.set_asset_isin(symbol, row.isin)
+        else:
+            if hit is not None and hit.get("currency"):
+                db.set_asset_currency(symbol, hit["currency"])
+            db.set_asset_isin(symbol, row.isin)
+            if existing["envelope"] != envelope and authoritative:
                 # The broker says this line is in `envelope`; move it there,
                 # keeping the user's label and weight. Otherwise a later
                 # account's zero-out would wrongly drop it.
                 db.update_asset(symbol, existing["label"], envelope, existing["weight"])
-            else:
+            elif existing["envelope"] != envelope:
                 # Left where the user filed it; the position is updated below.
                 elsewhere.append(
                     {
@@ -81,7 +119,9 @@ def apply_snapshot(
             }
         )
 
-    if authoritative:
+    # An unresolved line may still be held. Never mark anything sold until
+    # every broker row was matched to a ticker in its own currency.
+    if reconcile_missing and not unresolved:
         _zero_sold(envelope, touched)
 
     return {
@@ -90,6 +130,24 @@ def apply_snapshot(
         "elsewhere": elsewhere,
         "total": len(lines),
     }
+
+
+def _currency(row: SnapshotLine) -> str | None:
+    value = getattr(row, "currency", None)
+    return str(value).upper() if value else None
+
+
+def _unresolved(row: SnapshotLine, currency: str | None) -> dict:
+    line = {"isin": row.isin, "name": row.name}
+    account = getattr(row, "account", None)
+    if account is not None:
+        line.update(
+            account=account,
+            currency=currency,
+            quantity=row.quantity,
+            prum=row.prum,
+        )
+    return line
 
 
 def _zero_sold(envelope: str, touched: set[str]) -> None:

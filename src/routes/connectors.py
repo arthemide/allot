@@ -24,7 +24,13 @@ from src.connectors.errors import (
     LayoutChanged,
     SessionExpired,
 )
-from src.models.schema import ConnectorAnswer, ConnectorLogin, ConnectorStatus
+from src.models.schema import (
+    ConnectorAnswer,
+    ConnectorLogin,
+    ConnectorResolution,
+    ConnectorStatus,
+    ImportReport,
+)
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 
@@ -35,10 +41,12 @@ SOURCE = "bourso"
 class _Line:
     """A security row as the import service wants it."""
 
+    account: str
     isin: str
     name: str
     quantity: float
     prum: float
+    currency: str
 
 
 @router.post("/bourso/login", response_model=ConnectorStatus)
@@ -74,6 +82,54 @@ def answer(session_id: str, payload: ConnectorAnswer):
     return _advance(session_id, attempt)
 
 
+@router.post("/bourso/resolve", response_model=ImportReport)
+def resolve(payload: ConnectorResolution):
+    """Apply a manually selected ticker to the latest unresolved Bourso row."""
+    from src.services import portfolio_import
+
+    row = next(
+        (
+            row
+            for row in store.latest(store.DEFAULT_DB, SOURCE)
+            if row["account"] == payload.account
+            and row["isin"] == payload.isin
+            and row["support_type"] != "cash"
+        ),
+        None,
+    )
+    if row is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "This BoursoBank position is no longer in the latest snapshot.",
+        )
+    if row["unit_cost"] is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "This BoursoBank position has no cost basis to import.",
+        )
+    line = _Line(
+        account=row["account"],
+        isin=row["isin"],
+        name=row["label"],
+        quantity=row["quantity"] or 0.0,
+        prum=row["unit_cost"],
+        currency=row["currency"],
+    )
+    report = portfolio_import.apply_snapshot(
+        payload.account,
+        [line],
+        authoritative=True,
+        reconcile_missing=False,
+        symbols={payload.isin: payload.symbol},
+    )
+    if report["unresolved"]:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"{payload.symbol} is not a Yahoo listing in {line.currency}.",
+        )
+    return report
+
+
 def _advance(session_id: str, attempt) -> ConnectorStatus:
     """Return the pending challenge, or run the sync once the login is through."""
     if attempt.status in ("otp", "app_validation"):
@@ -95,14 +151,16 @@ def _sync(attempt) -> dict:
 
     by_account: dict[str, list[_Line]] = {}
     for row in rows:
-        if row.support_type == "cash" or row.isin is None:
+        if row.support_type == "cash" or row.isin is None or row.unit_cost is None:
             continue
         by_account.setdefault(row.account, []).append(
             _Line(
+                account=row.account,
                 isin=row.isin,
                 name=row.label,
                 quantity=row.quantity or 0.0,
-                prum=row.unit_cost or 0.0,
+                prum=row.unit_cost,
+                currency=row.currency,
             )
         )
 
