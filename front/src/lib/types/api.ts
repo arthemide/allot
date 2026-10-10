@@ -116,6 +116,7 @@ export interface NewAsset {
 	label: string;
 	envelope: string;
 	currency: string;
+	isin?: string;
 	weight: number;
 }
 
@@ -137,6 +138,10 @@ export interface ImportedLine {
 export interface UnresolvedLine {
 	isin: string;
 	name: string;
+	account?: string;
+	currency?: string;
+	quantity?: number;
+	prum?: number;
 }
 
 /** An imported asset that already lived in another envelope. */
@@ -152,6 +157,12 @@ export interface ImportReport {
 	unresolved: UnresolvedLine[];
 	elsewhere: ElsewhereLine[];
 	total: number;
+}
+
+export interface ConnectorResolution {
+	account: string;
+	isin: string;
+	symbol: string;
 }
 
 /** Where an interactive bank login stands, and the import once it is through. */

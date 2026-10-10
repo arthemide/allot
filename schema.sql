@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS asset (
     label    TEXT NOT NULL,
     envelope TEXT NOT NULL REFERENCES envelope(name) ON UPDATE CASCADE,
     currency TEXT NOT NULL,
+    -- Stable instrument identity across Yahoo ticker changes. It is optional
+    -- for manual assets but required by the BoursoBank connector.
+    isin TEXT,
 
     -- Relative weight inside the envelope. Never constrained to sum to 1:
     -- the monthly split normalises by the total of the envelope's weights.
@@ -45,7 +48,6 @@ CREATE TABLE IF NOT EXISTS asset (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_envelope ON asset (envelope);
-
 -- Where a strategy starts, and where it is recalibrated. The cash in an
 -- envelope is never stored: it is recomputed from this row, the monthly amount
 -- and the transactions. An envelope without a row here knows nothing about
