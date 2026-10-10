@@ -117,6 +117,51 @@ class TestStraightThrough:
         # The manual trade is cleared: the snapshot is the whole truth
         assert db.transactions_of("CW8.PA") == []
 
+    def test_a_currency_mismatch_is_unresolved_until_a_compatible_ticker_is_chosen(
+        self, client, mocker
+    ):
+        FakeLogin.rows = [
+            PositionRow(
+                account="CTO",
+                support_type="security",
+                isin="US0000000001",
+                label="US fund",
+                quantity=2.0,
+                value=200.0,
+                currency="EUR",
+                unit_cost=100.0,
+            )
+        ]
+        search = mocker.patch.object(
+            prices,
+            "search",
+            side_effect=[
+                [{"symbol": "VTI", "label": "US fund", "currency": "USD"}],
+                [{"symbol": "VTI.PA", "label": "US fund", "currency": "EUR"}],
+            ],
+        )
+
+        report = post(client).json()["report"]
+        assert report["imported"] == []
+        assert report["unresolved"] == [
+            {
+                "account": "CTO",
+                "isin": "US0000000001",
+                "name": "US fund",
+                "currency": "EUR",
+                "quantity": 2.0,
+                "prum": 100.0,
+            }
+        ]
+
+        response = client.post(
+            "/connectors/bourso/resolve",
+            json={"account": "CTO", "isin": "US0000000001", "symbol": "VTI.PA"},
+        )
+        assert response.status_code == 200
+        assert db.get_asset("VTI.PA")["currency"] == "EUR"
+        assert search.call_args_list[1].args == ("VTI.PA",)
+
 class TestTwoFactor:
     def test_an_otp_is_asked_then_answered(self, client, resolver):
         FakeLogin.script = ["otp", "done"]
