@@ -81,6 +81,7 @@ class AssetCreate(BaseModel):
     label: str
     envelope: str
     currency: str
+    isin: str | None = None
     weight: float = Field(default=1.0, ge=0)
 
 
@@ -112,10 +113,14 @@ class ImportedLine(BaseModel):
 
 
 class UnresolvedLine(BaseModel):
-    """A row whose identifier no ticker answers to; nothing was written for it."""
+    """A broker row without a compatible Yahoo ticker; nothing was written."""
 
     isin: str
     name: str
+    account: str | None = None
+    currency: str | None = None
+    quantity: float | None = None
+    prum: float | None = None
 
 
 class ElsewhereLine(BaseModel):
@@ -150,6 +155,14 @@ class ConnectorAnswer(BaseModel):
     """The second factor: an SMS/email code, or an acknowledged app tap."""
 
     answer: str = ""
+
+
+class ConnectorResolution(BaseModel):
+    """A ticker selected by the user for an unresolved BoursoBank position."""
+
+    account: str = Field(min_length=1)
+    isin: str = Field(min_length=1)
+    symbol: str = Field(min_length=1)
 
 
 class ConnectorStatus(BaseModel):

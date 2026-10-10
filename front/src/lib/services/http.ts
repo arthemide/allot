@@ -2,6 +2,7 @@ import { session } from '#lib/state/session.svelte.js';
 import type {
 	AssetUpdate,
 	Chart,
+	ConnectorResolution,
 	ConnectorStatus,
 	Envelope,
 	EnvelopeStart,
@@ -135,6 +136,12 @@ export const connectorAnswer = (sessionId: string, answer: string) =>
 	request<ConnectorStatus>(`/connectors/bourso/login/${encodeURIComponent(sessionId)}`, {
 		method: 'POST',
 		body: JSON.stringify({ answer })
+	});
+
+export const resolveConnector = (resolution: ConnectorResolution) =>
+	request<ImportReport>('/connectors/bourso/resolve', {
+		method: 'POST',
+		body: JSON.stringify(resolution)
 	});
 
 export const updateAsset = (symbol: string, body: AssetUpdate) =>

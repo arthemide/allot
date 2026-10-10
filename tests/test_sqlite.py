@@ -23,6 +23,23 @@ class TestSchema:
         # Then nothing was dropped
         assert db.get_envelope("PEA") == {"name": "PEA", "monthly_amount": 300.0}
 
+    def test_a_legacy_database_gains_the_isin_column(self, tmp_path):
+        path = tmp_path / "legacy.db"
+        connection = sqlite3.connect(path)
+        connection.execute(
+            "CREATE TABLE asset (symbol TEXT PRIMARY KEY, label TEXT, envelope TEXT, "
+            "currency TEXT, weight REAL, base_quantity REAL, base_prum REAL)"
+        )
+        connection.commit()
+        connection.close()
+
+        db.init(path)
+
+        connection = db.connect(path)
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(asset)")}
+        connection.close()
+        assert "isin" in columns
+
     def test_the_write_ahead_log_is_on(self, database):
         # Given a database created by init()
         connection = db.connect()

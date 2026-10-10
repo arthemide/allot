@@ -40,6 +40,7 @@ def list_assets():
 @router.post("", response_model=Position, status_code=status.HTTP_201_CREATED)
 def create_asset(payload: AssetCreate):
     """Add an asset, normally picked from the ticker search."""
+    isin = payload.isin.upper() if payload.isin else None
     existing = db.get_asset(payload.symbol)
     if existing is not None:
         raise HTTPException(
@@ -48,6 +49,14 @@ def create_asset(payload: AssetCreate):
             f"{existing['envelope']}. Move it from there instead of adding "
             f"it again.",
         )
+    if isin:
+        existing = db.get_asset_by_isin(isin)
+        if existing is not None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"{isin} is already tracked as {existing['symbol']}. "
+                "Use that asset instead of adding the same instrument again.",
+            )
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)
     db.add_asset(
@@ -57,6 +66,8 @@ def create_asset(payload: AssetCreate):
         payload.currency,
         payload.weight,
     )
+    if isin:
+        db.set_asset_isin(payload.symbol, isin)
     return portfolio.position_of(db.get_asset(payload.symbol))
 
 
@@ -73,6 +84,7 @@ def search_tickers(q: str, limit: int = 10):
 @router.post(
     "/import",
     response_model=ImportReport,
+    response_model_exclude_none=True,
     dependencies=[Depends(rate_limited)],
 )
 def import_csv(payload: ImportCsv, envelope: str):
