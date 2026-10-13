@@ -13,6 +13,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterator
 
+from pydantic import BaseModel, ConfigDict
+
 from src.connectors.errors import (
     AuthenticationInterrupted,
     AuthenticationMethodUnsupported,
@@ -21,9 +23,27 @@ from src.connectors.errors import (
     SessionExpired,
 )
 from src.connectors.paths import ROOT, STATE_DIR
-from src.connectors.store import PositionRow
 
 logger = logging.getLogger(__name__)
+
+
+class PositionRow(BaseModel):
+    """One line of an account, as read from the bank."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account: str
+    # "security" for a holding, "cash" for the account's cash balance.
+    support_type: str
+    isin: str | None = None
+    label: str
+    quantity: float | None = None
+    value: float
+    currency: str = "EUR"
+    # As the bank states them, where it does: PRU, last price, unrealised gain.
+    unit_cost: float | None = None
+    unit_price: float | None = None
+    gain: float | None = None
 
 
 def _unavailable() -> "ConnectorUnavailable":

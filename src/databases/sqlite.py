@@ -31,22 +31,6 @@ def init(path: Path = DB_PATH) -> None:
     connection = connect(path)
     try:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-        # Existing databases predate the broker-identity column. SQLite only
-        # adds columns explicitly, unlike CREATE TABLE IF NOT EXISTS. A column
-        # first shipped as `isin` is renamed to its general name.
-        columns = {
-            row["name"] for row in connection.execute("PRAGMA table_info(asset)")
-        }
-        if "broker_key" not in columns:
-            if "isin" in columns:
-                connection.execute("ALTER TABLE asset RENAME COLUMN isin TO broker_key")
-            else:
-                connection.execute("ALTER TABLE asset ADD COLUMN broker_key TEXT")
-        connection.execute("DROP INDEX IF EXISTS idx_asset_isin")
-        connection.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_broker_key "
-            "ON asset(broker_key) WHERE broker_key IS NOT NULL"
-        )
         connection.commit()
     finally:
         connection.close()
@@ -83,11 +67,6 @@ def get_asset(symbol: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
-def get_asset_by_broker_key(broker_key: str) -> dict[str, Any] | None:
-    rows = query("SELECT * FROM asset WHERE broker_key = ?", (broker_key,))
-    return rows[0] if rows else None
-
-
 def add_asset(
     symbol: str, label: str, envelope: str, currency: str, weight: float = 1.0
 ) -> None:
@@ -110,16 +89,6 @@ def update_asset(symbol: str, label: str, envelope: str, weight: float) -> None:
         "UPDATE asset SET label = ?, envelope = ?, weight = ? WHERE symbol = ?",
         (label, envelope, weight, symbol),
     )
-
-
-def set_asset_currency(symbol: str, currency: str) -> None:
-    """Align the tracked currency with a ticker confirmed by its provider."""
-    execute("UPDATE asset SET currency = ? WHERE symbol = ?", (currency, symbol))
-
-
-def set_asset_broker_key(symbol: str, broker_key: str | None) -> None:
-    """Link an asset to the stable identity that identifies its instrument."""
-    execute("UPDATE asset SET broker_key = ? WHERE symbol = ?", (broker_key, symbol))
 
 
 def set_opening_position(symbol: str, quantity: float, invested: float | None) -> None:

@@ -10,6 +10,6 @@ imports it). The rules it keeps:
 - Reading only: Allot calls the account and investment listings and nothing
   else, even though the woob module itself can do more (transfers, documents).
 
-Local state (snapshots, the trusted-device cookie) lives under
-data/connectors/, which git ignores.
+Local state (woob's trusted-device cookie) lives under data/connectors/,
+which git ignores.
 """
