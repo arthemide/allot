@@ -24,8 +24,7 @@ jobs:
         with:
           enable-cache: true
       - name: Install dependencies
-        # The woob group too, so the vendored module is loaded for real.
-        run: uv sync --all-extras --dev --group woob
+        run: uv sync --all-extras --dev
       - name: check
         run: uv run ruff check .
       - name: Format
