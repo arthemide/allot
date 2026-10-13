@@ -49,10 +49,16 @@ def test_a_stale_attempt_is_swept(monkeypatch):
     assert login_session.get(sid) is None and attempt.deinit_called
 
 
-def test_the_default_factory_needs_woob():
-    # woob is an optional dependency, absent here: the lazy import is caught
-    # and surfaced as ConnectorUnavailable.
+def test_the_default_factory_needs_woob(mocker):
+    # woob is an optional dependency. Hide it whether or not this environment
+    # has it: the lazy import is caught and surfaced as ConnectorUnavailable.
+    import sys
+
     from src.connectors.errors import ConnectorUnavailable
+
+    hidden = {"woob", "woob.core", "woob.core.ouiboube", "woob.tools.storage"}
+    hidden |= {name for name in sys.modules if name.startswith("woob.")}
+    mocker.patch.dict(sys.modules, dict.fromkeys(hidden))
 
     with pytest.raises(ConnectorUnavailable):
         login_session._default_factory("u", "p")
