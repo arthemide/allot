@@ -204,6 +204,28 @@ def prune_empty_envelopes() -> list[str]:
     return empty
 
 
+# --- bank accounts --------------------------------------------------------
+
+
+def bank_accounts() -> dict[str, str | None]:
+    """Each bank account already placed, and the envelope it syncs into."""
+    return {
+        row["account"]: row["envelope"]
+        for row in query("SELECT account, envelope FROM bank_account")
+    }
+
+
+def set_bank_account(account: str, envelope: str | None) -> None:
+    """Place a bank account in an envelope, or leave it out with None."""
+    execute(
+        """
+        INSERT INTO bank_account (account, envelope) VALUES (?, ?)
+        ON CONFLICT(account) DO UPDATE SET envelope = excluded.envelope
+        """,
+        (account, envelope),
+    )
+
+
 # --- transactions ---------------------------------------------------------
 
 
@@ -251,11 +273,6 @@ def add_transaction(
 
 def delete_transaction(transaction_id: int) -> None:
     execute('DELETE FROM "transaction" WHERE id = ?', (transaction_id,))
-
-
-def delete_transactions_of(symbol: str) -> None:
-    """Drop every trade of an asset, leaving the asset itself in place."""
-    execute('DELETE FROM "transaction" WHERE symbol = ?', (symbol,))
 
 
 def last_transaction_date() -> str | None:

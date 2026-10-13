@@ -122,23 +122,63 @@ class TestNonAuthoritative:
 
 
 class TestAuthoritative:
-    def test_manual_trades_of_touched_assets_are_cleared(self, database, resolver):
+    def test_recorded_trades_are_kept_and_the_opening_makes_up_the_rest(
+        self, database, resolver
+    ):
+        # Given 10 imported, then a recorded buy of 1 at 100
         portfolio_import.apply_snapshot("PEA", [WORLD])
         db.add_transaction("CW8.PA", "2026-01-01", "buy", 1.0, 100.0)
-        portfolio_import.apply_snapshot("PEA", [WORLD], authoritative=True)
-        assert db.transactions_of("CW8.PA") == []
+        # When the bank reports the 10 it holds now
+        report = portfolio_import.apply_snapshot("PEA", [WORLD], authoritative=True)
+        # Then the trade stays, for the cash, and the opening shrinks to 9
+        assert len(db.transactions_of("CW8.PA")) == 1
+        asset = db.get_asset("CW8.PA")
+        assert asset["base_quantity"] == pytest.approx(9.0)
+        assert asset["base_prum"] == pytest.approx(100.0)
+        assert report["conflicts"] == []
+
+    def test_trades_beyond_what_the_bank_holds_are_a_conflict(self, database, resolver):
+        # Given trades that already make 12 units
+        db.upsert_envelope("PEA", 0.0)
+        db.add_asset("CW8.PA", "World", "PEA", "EUR")
+        db.add_transaction("CW8.PA", "2026-01-01", "buy", 12.0, 90.0)
+        # When the bank reports 10
+        report = portfolio_import.apply_snapshot("PEA", [WORLD], authoritative=True)
+        # Then nothing moves, and the gap is reported
+        assert report["imported"] == []
+        assert report["conflicts"] == [
+            {
+                "symbol": "CW8.PA",
+                "label": "World",
+                "bank_quantity": 10.0,
+                "tracked_quantity": 12.0,
+            }
+        ]
+        assert db.get_asset("CW8.PA")["base_quantity"] == 0.0
+        assert len(db.transactions_of("CW8.PA")) == 1
 
     def test_an_asset_no_longer_reported_is_zeroed(self, database, resolver):
-        # Given two assets imported, one of them traded
+        # Given two assets imported
         portfolio_import.apply_snapshot("PEA", [WORLD, EUROPE])
-        db.add_transaction("0P0001.F", "2026-01-01", "buy", 1.0, 50.0)
         # When a later authoritative snapshot reports only the first
         portfolio_import.apply_snapshot("PEA", [WORLD], authoritative=True)
-        # Then the missing one is zeroed and its trades dropped, asset kept
+        # Then the missing one is zeroed, asset kept
         sold = db.get_asset("0P0001.F")
         assert sold is not None
         assert sold["base_quantity"] == 0.0 and sold["base_prum"] is None
-        assert db.transactions_of("0P0001.F") == []
+
+    def test_a_traded_asset_no_longer_reported_needs_its_sell_recorded(
+        self, database, resolver
+    ):
+        # Given an asset with a recorded buy on top of its opening
+        portfolio_import.apply_snapshot("PEA", [WORLD, EUROPE])
+        db.add_transaction("0P0001.F", "2026-01-01", "buy", 1.0, 50.0)
+        # When the bank no longer reports it
+        report = portfolio_import.apply_snapshot("PEA", [WORLD], authoritative=True)
+        # Then it is a conflict: an unrecorded sell would leave the cash wrong
+        assert [c["symbol"] for c in report["conflicts"]] == ["0P0001.F"]
+        assert db.get_asset("0P0001.F")["base_quantity"] == 2.0
+        assert len(db.transactions_of("0P0001.F")) == 1
 
     def test_an_unresolved_line_prevents_a_partial_snapshot_from_zeroing_assets(
         self, database, resolver

@@ -56,6 +56,55 @@ def position(
     return PositionResult(quantity=quantity, prum=prum, invested=quantity * prum)
 
 
+# A broker rounds what it reports; below these gaps, two figures are one.
+QUANTITY_TOLERANCE = 1e-6
+PRUM_TOLERANCE = 0.01
+
+
+def opening_for(
+    trades: list[Trade], quantity: float, prum: float | None
+) -> tuple[float, float | None] | None:
+    """The opening position that, with `trades` on top, lands on a broker's figures.
+
+    A broker reports what is held now, while the trades recorded here stay
+    the history the cash is derived from. So the trades are kept and the
+    opening position absorbs the difference:
+
+        base_quantity = quantity - bought + sold
+        base_prum     = (prum * (base_quantity + bought) - cost) / base_quantity
+
+    with `bought`, `cost` (fees included) and `sold` summed over the trades,
+    which makes `position(trades, base_quantity, base_prum)` give back
+    `quantity` and `prum`.
+
+    Returns (base_quantity, base_prum), base_prum None for an empty opening,
+    or None when no opening can: the trades already hold more than the broker
+    reports (an unrecorded sell), or they alone make up the quantity at
+    another PRUM, or the PRUM is unknown while an opening is needed.
+    """
+    bought = sum(t.quantity for t in trades if t.side == "buy")
+    cost = sum(t.quantity * t.unit_price + t.fees for t in trades if t.side == "buy")
+    sold = sum(t.quantity for t in trades if t.side == "sell")
+
+    base_quantity = quantity - bought + sold
+    if base_quantity < -QUANTITY_TOLERANCE:
+        return None
+    if base_quantity <= QUANTITY_TOLERANCE:
+        # The trades alone make up the holding: nothing to open, as long as
+        # they also make up the broker's PRUM.
+        if quantity <= QUANTITY_TOLERANCE:
+            return 0.0, None
+        if prum and abs(cost / bought - prum) <= PRUM_TOLERANCE * prum:
+            return 0.0, None
+        return None
+    if not prum:
+        return None
+    base_prum = (prum * (base_quantity + bought) - cost) / base_quantity
+    if base_prum <= 0:
+        return None
+    return base_quantity, base_prum
+
+
 def prum_after_buy(
     quantity: float, prum: float, price: float, amount: float, fees: float = 0.0
 ) -> tuple[float, float]:

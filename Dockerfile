@@ -25,12 +25,16 @@ RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
 # be compiled. Doing it in a throwaway stage keeps gcc and the headers out of
 # the image that actually ships.
 FROM python:3.14-slim AS wheels
-# INSTALL_WOOB=1 adds the in-app BoursoBank sync. It pulls lxml, which compiles
-# from source on armv7 and needs the libxml2/libxslt headers.
-ARG INSTALL_WOOB=1
+# INSTALL_WOOB=1 adds the in-app BoursoBank sync; it is off unless asked for.
+# lxml has an armv7 wheel, but pillow does not, so on the Pi it compiles from
+# source and needs the jpeg and zlib headers. Those are only installed then.
+ARG INSTALL_WOOB=0
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        gcc libffi-dev python3-dev libxml2-dev libxslt1-dev \
+    && apt-get install -y --no-install-recommends gcc libffi-dev python3-dev \
+    && if [ "$INSTALL_WOOB" = "1" ]; then \
+        apt-get install -y --no-install-recommends \
+            libjpeg62-turbo-dev zlib1g-dev; \
+    fi \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/requirements.txt /app/woob-requirements.txt ./
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
@@ -63,6 +67,14 @@ RUN set -eu; \
 
 FROM python:3.14-slim
 WORKDIR /app
+
+# A pillow compiled on the Pi links against the shared jpeg library.
+ARG INSTALL_WOOB=0
+RUN if [ "$INSTALL_WOOB" = "1" ]; then \
+        apt-get update \
+        && apt-get install -y --no-install-recommends libjpeg62-turbo \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
 
 COPY --from=wheels /install /usr/local
 COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
