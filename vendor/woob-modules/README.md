@@ -21,7 +21,7 @@ make woob-update    # needs gpgv: `brew install gnupg` on macOS, `gpgv` on Debia
 
 `scripts/woob_update.py` downloads the repository index and the module archive, refuses either unless `gpgv` finds a good signature from `trusted.gpg`, checks that the module accepts the woob version in `uv.lock` and depends on no other module, refuses any archive entry outside `boursorama/` or that is not a plain file, then swaps the folder and rewrites `boursorama.lock`. Any failed check leaves this folder untouched. `--force` vendors the same version again.
 
-A weekly workflow (`.github/workflows/woob-update.yaml`) runs the same target and opens a PR when the module changed. That code receives the bank login and password: read the diff before merging.
+That code receives the bank login and password: read the diff of every refresh before committing it.
 
 ## When woob rotates its key
 
