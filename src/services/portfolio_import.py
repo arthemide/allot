@@ -33,7 +33,7 @@ class SnapshotLine(Protocol):
     isin: str | None
     name: str
     quantity: float
-    prum: float
+    prum: float | None
     currency: str | None
 
 
@@ -66,6 +66,24 @@ def apply_snapshot(
         currency = _currency(row)
         broker_key = _broker_key(row)
         linked = db.get_asset_by_broker_key(broker_key)
+        if row.prum is None:
+            # No cost basis from the bank. The PRUM the user gave earlier still
+            # holds while the number of parts is unchanged; once it moves, a
+            # new amount invested is needed.
+            if linked is not None and linked["base_quantity"] == row.quantity:
+                touched.add(linked["symbol"])
+                imported.append(
+                    {
+                        "symbol": linked["symbol"],
+                        "isin": row.isin,
+                        "label": row.name,
+                        "quantity": row.quantity,
+                        "prum": linked["base_prum"],
+                    }
+                )
+                continue
+            unresolved.append(_unresolved(row, currency))
+            continue
         requested = (symbols or {}).get(broker_key)
         hit = None
         if linked is not None and requested in (None, linked["symbol"]):

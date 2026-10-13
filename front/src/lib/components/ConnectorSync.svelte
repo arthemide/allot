@@ -33,6 +33,7 @@
 	let hits = $state<SearchHit[]>([]);
 	let searching = $state(false);
 	let tickerQuery = $state('');
+	let invested = $state('');
 	const unresolved = $derived(report?.unresolved.length ?? 0);
 	const waitingForUser = $derived(
 		(status !== null && status.status !== 'done') || unresolved > 0
@@ -46,6 +47,7 @@
 		status = report = resolving = null;
 		hits = [];
 		tickerQuery = '';
+		invested = '';
 		busy = false;
 	});
 
@@ -96,6 +98,7 @@
 	async function findTicker(line: UnresolvedLine) {
 		resolving = line;
 		hits = [];
+		invested = '';
 		// A part-based line the broker does not tag has no ISIN; start the
 		// search from its name so the user can steer to the right ticker.
 		tickerQuery = line.isin ?? line.name;
@@ -119,13 +122,22 @@
 
 	async function resolve(hit: SearchHit) {
 		if (!resolving?.account || !resolving?.broker_key || !resolving.currency) return;
+		// The bank gives no cost basis for some lines (a CEFP page): the PRUM
+		// then comes from what the user says was invested.
+		const needsInvested = resolving.prum == null;
+		const amount = Number(invested);
+		if (needsInvested && !(amount > 0)) {
+			error = 'Indiquez le montant investi sur cette ligne.';
+			return;
+		}
 		error = '';
 		busy = true;
 		try {
 			await resolveConnector({
 				account: resolving.account,
 				broker_key: resolving.broker_key,
-				symbol: hit.symbol
+				symbol: hit.symbol,
+				...(needsInvested ? { invested: amount } : {})
 			});
 			report = report && {
 				...report,
@@ -135,6 +147,7 @@
 			};
 			resolving = null;
 			hits = [];
+			invested = '';
 			refresh.bump();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Résolution impossible.';
@@ -211,6 +224,24 @@
 							Rechercher
 						</Button>
 					</form>
+					{#if resolving.prum == null}
+						<div class="space-y-1">
+							<Label for="sync-invested">
+								Montant investi ({resolving.quantity ?? '?'} parts)
+							</Label>
+							<Input
+								id="sync-invested"
+								type="number"
+								step="any"
+								min="0"
+								bind:value={invested}
+							/>
+							<p class="text-muted-foreground text-xs">
+								BoursoBank n'affiche pas de prix de revient pour cette ligne : le PRUM est
+								calculé à partir de ce montant.
+							</p>
+						</div>
+					{/if}
 					{#if searching}
 						<p class="text-muted-foreground">Recherche...</p>
 					{:else if hits.length}

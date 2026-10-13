@@ -208,6 +208,54 @@ class TestStraightThrough:
         assert report["imported"][0]["symbol"] == "0P0000CEFP.F"
         search.assert_not_called()
 
+    def test_a_line_without_cost_basis_asks_for_the_amount_invested(
+        self, client, mocker
+    ):
+        # Given a CEFP line as Woob reads it: parts and value, no ISIN, no cost
+        FakeLogin.rows = [
+            PositionRow(
+                account="CEFP",
+                support_type="security",
+                label="FONDS CEFP",
+                quantity=4.0,
+                value=640.20,
+                currency="EUR",
+            )
+        ]
+        mocker.patch.object(
+            prices,
+            "search",
+            return_value=[
+                {"symbol": "0P0000CEFP.F", "label": "Fonds", "currency": "EUR"}
+            ],
+        )
+        # When it is synced, it is offered rather than dropped
+        report = post(client).json()["report"]
+        line = report["unresolved"][0]
+        assert line["broker_key"] == "CEFP|FONDS CEFP" and line["prum"] is None
+
+        resolve = {
+            "account": "CEFP",
+            "broker_key": "CEFP|FONDS CEFP",
+            "symbol": "0P0000CEFP.F",
+        }
+        # A ticker alone is not enough: the PRUM has no source yet
+        assert (
+            client.post("/connectors/bourso/resolve", json=resolve).status_code == 422
+        )
+        # With the amount invested, the PRUM is derived from it
+        response = client.post(
+            "/connectors/bourso/resolve", json={**resolve, "invested": 600.0}
+        )
+        assert response.status_code == 200
+        asset = db.get_asset("0P0000CEFP.F")
+        assert asset["base_quantity"] == 4.0 and asset["base_prum"] == 150.0
+
+        # The next sync keeps it while the number of parts is unchanged
+        report = post(client).json()["report"]
+        assert report["unresolved"] == []
+        assert db.get_asset("0P0000CEFP.F")["base_prum"] == 150.0
+
 
 class TestTwoFactor:
     def test_an_otp_is_asked_then_answered(self, client, resolver):
