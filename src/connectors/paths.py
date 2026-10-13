@@ -15,5 +15,4 @@ ROOT = Path(__file__).parent.parent.parent
 
 DATA_DIR = Path(os.getenv("ALLOT_CONNECTORS_DIR", ROOT / "data" / "connectors"))
 
-DB_PATH = DATA_DIR / "connectors.db"
 STATE_DIR = DATA_DIR / "woob-state"

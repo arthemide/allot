@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.connectors import login_session, store
+from src.connectors import login_session
 from src.connectors.errors import (
     AuthenticationInterrupted,
     AuthenticationMethodUnsupported,
@@ -15,7 +15,7 @@ from src.connectors.errors import (
     ConnectorUnavailable,
     SessionExpired,
 )
-from src.connectors.store import PositionRow
+from src.connectors.woob_bourso import PositionRow
 from src.databases import sqlite as db
 from src.services import prices
 
@@ -71,12 +71,11 @@ class FakeLogin:
 
 
 @pytest.fixture(autouse=True)
-def fake_woob(monkeypatch, tmp_path):
+def fake_woob(monkeypatch):
     FakeLogin.script = ["done"]
     FakeLogin.rows = ROWS
     FakeLogin.raise_on_start = None
     monkeypatch.setattr(login_session, "factory", FakeLogin)
-    monkeypatch.setattr(store, "DEFAULT_DB", tmp_path / "connectors.db")
     login_session.reset()
     yield
     login_session.reset()
@@ -101,13 +100,12 @@ class TestStraightThrough:
     def test_no_2fa_syncs_and_reports(self, client, resolver):
         # Given a login that needs no second factor
         response = post(client)
-        # Then the asset is opened from the bank's figures and a snapshot is kept
+        # Then the asset is opened from the bank's figures
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "done"
         assert body["report"]["imported"][0]["symbol"] == "CW8.PA"
         assert db.get_asset("CW8.PA")["base_quantity"] == 10.0
-        assert len(store.snapshots(store.DEFAULT_DB, "bourso")) == 1
 
     def test_the_bank_is_authoritative(self, client, resolver):
         db.upsert_envelope("PEA", 0.0)
@@ -117,9 +115,7 @@ class TestStraightThrough:
         # The manual trade is cleared: the snapshot is the whole truth
         assert db.transactions_of("CW8.PA") == []
 
-    def test_a_currency_mismatch_is_unresolved_until_a_compatible_ticker_is_chosen(
-        self, client, mocker
-    ):
+    def test_a_currency_mismatch_is_reported_unresolved(self, client, mocker):
         FakeLogin.rows = [
             PositionRow(
                 account="CTO",
@@ -132,86 +128,22 @@ class TestStraightThrough:
                 unit_cost=100.0,
             )
         ]
-        search = mocker.patch.object(
+        mocker.patch.object(
             prices,
             "search",
-            side_effect=[
-                [{"symbol": "VTI", "label": "US fund", "currency": "USD"}],
-                [{"symbol": "VTI.PA", "label": "US fund", "currency": "EUR"}],
-            ],
+            return_value=[{"symbol": "VTI", "label": "US fund", "currency": "USD"}],
         )
 
         report = post(client).json()["report"]
+
         assert report["imported"] == []
-        assert report["unresolved"] == [
-            {
-                "broker_key": "US0000000001",
-                "account": "CTO",
-                "isin": "US0000000001",
-                "name": "US fund",
-                "currency": "EUR",
-                "quantity": 2.0,
-                "prum": 100.0,
-            }
-        ]
+        assert report["unresolved"] == [{"isin": "US0000000001", "name": "US fund"}]
+        assert db.get_asset("VTI") is None
 
-        response = client.post(
-            "/connectors/bourso/resolve",
-            json={"account": "CTO", "broker_key": "US0000000001", "symbol": "VTI.PA"},
-        )
-        assert response.status_code == 200
-        assert db.get_asset("VTI.PA")["currency"] == "EUR"
-        assert search.call_args_list[1].args == ("VTI.PA",)
-
-    def test_a_line_without_isin_is_offered_then_remembered(self, client, mocker):
-        # Given a part-based CEFP line the bank reports without an ISIN
-        FakeLogin.rows = [
-            PositionRow(
-                account="CEFP",
-                support_type="security",
-                label="FONDS CEFP",
-                quantity=5.0,
-                value=600.0,
-                currency="EUR",
-                unit_cost=110.0,
-            )
-        ]
-        search = mocker.patch.object(
-            prices,
-            "search",
-            return_value=[
-                {"symbol": "0P0000CEFP.F", "label": "Fonds", "currency": "EUR"}
-            ],
-        )
-        # When it is synced, nothing is guessed: the user is asked for a ticker
-        report = post(client).json()["report"]
-        assert report["imported"] == []
-        assert report["unresolved"][0]["broker_key"] == "CEFP|FONDS CEFP"
-        search.assert_not_called()
-
-        # Once a ticker is picked, the position is opened from the bank's figures
-        response = client.post(
-            "/connectors/bourso/resolve",
-            json={
-                "account": "CEFP",
-                "broker_key": "CEFP|FONDS CEFP",
-                "symbol": "0P0000CEFP.F",
-            },
-        )
-        assert response.status_code == 200
-        assert db.get_asset("0P0000CEFP.F")["base_quantity"] == 5.0
-
-        # And the next sync reuses that choice without asking again
-        search.reset_mock()
-        report = post(client).json()["report"]
-        assert report["unresolved"] == []
-        assert report["imported"][0]["symbol"] == "0P0000CEFP.F"
-        search.assert_not_called()
-
-    def test_a_line_without_cost_basis_asks_for_the_amount_invested(
+    def test_a_cefp_line_without_isin_nor_cost_is_reported_not_dropped(
         self, client, mocker
     ):
-        # Given a CEFP line as Woob reads it: parts and value, no ISIN, no cost
+        # Given a CEFP line as woob reads it: parts and value, no ISIN, no cost
         FakeLogin.rows = [
             PositionRow(
                 account="CEFP",
@@ -222,39 +154,13 @@ class TestStraightThrough:
                 currency="EUR",
             )
         ]
-        mocker.patch.object(
-            prices,
-            "search",
-            return_value=[
-                {"symbol": "0P0000CEFP.F", "label": "Fonds", "currency": "EUR"}
-            ],
-        )
-        # When it is synced, it is offered rather than dropped
-        report = post(client).json()["report"]
-        line = report["unresolved"][0]
-        assert line["broker_key"] == "CEFP|FONDS CEFP" and line["prum"] is None
+        search = mocker.patch.object(prices, "search")
 
-        resolve = {
-            "account": "CEFP",
-            "broker_key": "CEFP|FONDS CEFP",
-            "symbol": "0P0000CEFP.F",
-        }
-        # A ticker alone is not enough: the PRUM has no source yet
-        assert (
-            client.post("/connectors/bourso/resolve", json=resolve).status_code == 422
-        )
-        # With the amount invested, the PRUM is derived from it
-        response = client.post(
-            "/connectors/bourso/resolve", json={**resolve, "invested": 600.0}
-        )
-        assert response.status_code == 200
-        asset = db.get_asset("0P0000CEFP.F")
-        assert asset["base_quantity"] == 4.0 and asset["base_prum"] == 150.0
-
-        # The next sync keeps it while the number of parts is unchanged
         report = post(client).json()["report"]
-        assert report["unresolved"] == []
-        assert db.get_asset("0P0000CEFP.F")["base_prum"] == 150.0
+
+        # Then nothing is guessed from its label, and the user sees it
+        assert report["unresolved"] == [{"isin": None, "name": "FONDS CEFP"}]
+        search.assert_not_called()
 
 
 class TestTwoFactor:

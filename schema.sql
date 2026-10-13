@@ -30,12 +30,6 @@ CREATE TABLE IF NOT EXISTS asset (
     label    TEXT NOT NULL,
     envelope TEXT NOT NULL REFERENCES envelope(name) ON UPDATE CASCADE,
     currency TEXT NOT NULL,
-    -- Stable instrument identity across Yahoo ticker changes. For an ISIN
-    -- holding it is the ISIN; for a part-based holding the broker does not
-    -- tag (e.g. a CEFP line without ISIN) it is "account|label". Manual
-    -- assets that were given an ISIN share its value, so a later sync merges
-    -- onto them instead of duplicating.
-    broker_key TEXT,
 
     -- Relative weight inside the envelope. Never constrained to sum to 1:
     -- the monthly split normalises by the total of the envelope's weights.
@@ -51,6 +45,7 @@ CREATE TABLE IF NOT EXISTS asset (
 );
 
 CREATE INDEX IF NOT EXISTS idx_asset_envelope ON asset (envelope);
+
 -- Where a strategy starts, and where it is recalibrated. The cash in an
 -- envelope is never stored: it is recomputed from this row, the monthly amount
 -- and the transactions. An envelope without a row here knows nothing about

@@ -116,7 +116,6 @@ export interface NewAsset {
 	label: string;
 	envelope: string;
 	currency: string;
-	isin?: string;
 	weight: number;
 }
 
@@ -128,29 +127,23 @@ export interface AssetUpdate {
 
 export interface ImportedLine {
 	symbol: string;
-	isin: string | null;
+	isin: string;
 	label: string;
 	quantity: number;
 	prum: number;
 }
 
-/** A broker line no compatible ticker was matched to; nothing was written. */
+/** A broker line no ticker in its currency answers to; nothing was written. */
 export interface UnresolvedLine {
-	/** Stable identity of the line: the ISIN, or "account|label" when absent. */
-	broker_key: string;
+	/** Null for a line the broker does not tag (a CEFP line by parts). */
 	isin: string | null;
 	name: string;
-	account?: string;
-	currency?: string;
-	quantity?: number;
-	/** Null when the bank shows no cost basis: the user gives the amount. */
-	prum?: number | null;
 }
 
 /** An imported asset that already lived in another envelope. */
 export interface ElsewhereLine {
 	symbol: string;
-	isin: string | null;
+	isin: string;
 	label: string;
 	envelope: string;
 }
@@ -160,14 +153,6 @@ export interface ImportReport {
 	unresolved: UnresolvedLine[];
 	elsewhere: ElsewhereLine[];
 	total: number;
-}
-
-export interface ConnectorResolution {
-	account: string;
-	broker_key: string;
-	symbol: string;
-	/** Total paid, only when the bank shows no cost basis for the line. */
-	invested?: number;
 }
 
 /** Where an interactive bank login stands, and the import once it is through. */

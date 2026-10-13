@@ -20,7 +20,6 @@
 	// Envelope the next added asset lands in; free text so a new one can be
 	// created on the spot.
 	let envelope = $state('');
-	let isin = $state('');
 
 	$effect(() => {
 		if (!open) return;
@@ -61,7 +60,6 @@
 				label: hit.label,
 				envelope: envelope.trim().toUpperCase(),
 				currency: hit.currency ?? 'EUR',
-				isin: isin.trim().toUpperCase() || undefined,
 				weight: 1
 			});
 			hits = hits.filter((h) => h.symbol !== hit.symbol);
@@ -93,10 +91,6 @@
 		<div class="space-y-1">
 			<label for="q" class="text-muted-foreground block text-xs uppercase">Name or symbol</label>
 			<Input id="q" bind:value={query} placeholder="msci world" class="w-64" />
-		</div>
-		<div class="space-y-1">
-			<label for="isin" class="text-muted-foreground block text-xs uppercase">ISIN (optional)</label>
-			<Input id="isin" bind:value={isin} placeholder="US0079031078" class="w-40" />
 		</div>
 		<div class="space-y-1">
 			<label for="env" class="text-muted-foreground block text-xs uppercase">Add to envelope</label>
