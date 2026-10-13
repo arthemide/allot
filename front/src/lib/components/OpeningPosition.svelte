@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { setOpeningPosition } from '$lib/services/api';
-	import type { Position } from '$lib/types/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { formatMoney } from '$lib/utils';
+	import { setOpeningPosition } from '#lib/services/api.js';
+	import type { Position } from '#lib/types/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { formatMoney } from '#lib/utils.js';
 
 	let {
 		position,

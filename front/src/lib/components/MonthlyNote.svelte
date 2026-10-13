@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { getFeedUrl, getNote } from '$lib/services/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { demo } from '$lib/state/demo.svelte';
+	import { getFeedUrl, getNote } from '#lib/services/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { demo } from '#lib/state/demo.svelte.js';
 
 	let open = $state(false);
 	let note = $state('');

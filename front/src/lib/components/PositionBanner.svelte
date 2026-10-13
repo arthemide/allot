@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Position } from '$lib/types/api';
-	import { formatMoney } from '$lib/utils';
+	import type { Position } from '#lib/types/api.js';
+	import { formatMoney } from '#lib/utils.js';
 
 	let { position }: { position: Position } = $props();
 

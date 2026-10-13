@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { login } from '$lib/services/api';
-	import { session } from '$lib/state/session.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { login } from '#lib/services/api.js';
+	import { session } from '#lib/state/session.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 
 	let password = $state('');
 	let error = $state('');

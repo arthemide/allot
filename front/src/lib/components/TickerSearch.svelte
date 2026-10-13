@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { createAsset, getAssets, getEnvelopes, searchTickers } from '$lib/services/api';
-	import { refresh } from '$lib/state/refresh.svelte';
-	import type { Envelope, SearchHit } from '$lib/types/api';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { formatMoney } from '$lib/utils';
+	import { createAsset, getAssets, getEnvelopes, searchTickers } from '#lib/services/api.js';
+	import { refresh } from '#lib/state/refresh.svelte.js';
+	import type { Envelope, SearchHit } from '#lib/types/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { formatMoney } from '#lib/utils.js';
 
 	// Lives in the header, so it fetches what it needs instead of taking props.
 	let envelopes = $state<Envelope[]>([]);
