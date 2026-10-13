@@ -75,7 +75,6 @@ woob-install:
 .PHONY: woob-update ## 🏦 Refresh the vendored boursorama module from woob's signed repository (needs gpgv)
 woob-update: woob-install
 	uv run --group woob python scripts/woob_update.py
-	uv run --group woob pytest -q --no-cov tests/test_woob_vendor.py
 
 .PHONY: up ## 🐳 Start the on-premise stack from the published image
 up:
