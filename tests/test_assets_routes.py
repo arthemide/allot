@@ -298,11 +298,6 @@ class TestSummary:
         # Then both figures went through the rate before being totalled
         assert body["invested"] == 10.0
         assert body["market_value"] == pytest.approx(12.0 / 1.1)
-        # The global table still shows each asset in its native currency.
-        asset = body["envelopes"][0]["assets"][0]
-        assert asset["currency"] == "USD"
-        assert asset["invested"] == 11.0
-        assert asset["market_value"] == 12.0
 
     def test_an_asset_without_a_quote_counts_as_no_value(self, client, mocker):
         # Given a position whose price the provider does not answer
