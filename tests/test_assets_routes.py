@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.databases import sqlite as db
+from src.services import prices
 from tests.conftest import PRICE
 
 
@@ -297,6 +298,25 @@ class TestSummary:
         # Then both figures went through the rate before being totalled
         assert body["invested"] == 10.0
         assert body["market_value"] == pytest.approx(12.0 / 1.1)
+        # The global table still shows each asset in its native currency.
+        asset = body["envelopes"][0]["assets"][0]
+        assert asset["currency"] == "USD"
+        assert asset["invested"] == 11.0
+        assert asset["market_value"] == 12.0
+
+    def test_an_asset_without_a_quote_counts_as_no_value(self, client, mocker):
+        # Given a position whose price the provider does not answer
+        db.upsert_envelope("PEA", 0.0)
+        db.add_asset("CW8.PA", "Amundi MSCI World", "PEA", "EUR")
+        db.set_opening_position("CW8.PA", 2.0, 20.0)
+        mocker.patch.object(prices, "current_price", return_value=None)
+        # When the summary is read
+        body = client.get("/assets/summary").json()
+        # Then the row shows no value rather than failing
+        asset = body["envelopes"][0]["assets"][0]
+        assert asset["invested"] == 20.0
+        assert asset["market_value"] == 0.0
+        assert asset["gain"] == -20.0
 
     def test_a_portfolio_with_nothing_invested_has_no_rate_of_return(self, client):
         # Given no asset at all

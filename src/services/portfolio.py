@@ -169,15 +169,20 @@ def summary() -> dict:
         market_value = to_eur(position["market_value"], currency, rate)
         bucket["invested"] += invested
         bucket["market_value"] += market_value
+        # Asset rows stay in their own currency. Only envelope and portfolio
+        # totals mix currencies, so only those are in EUR. A missing quote
+        # counts as no market value, like it does in the totals.
+        native_invested = position["invested"] or 0.0
+        native_value = position["market_value"] or 0.0
         bucket["assets"].append(
             {
                 "symbol": position["symbol"],
                 "label": position["label"],
                 "currency": currency,
-                "invested": invested,
-                "market_value": market_value,
-                "gain": market_value - invested,
-                "gain_percent": _percent(invested, market_value),
+                "invested": native_invested,
+                "market_value": native_value,
+                "gain": native_value - native_invested,
+                "gain_percent": _percent(native_invested, native_value),
             }
         )
 

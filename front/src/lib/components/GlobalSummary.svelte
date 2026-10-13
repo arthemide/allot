@@ -46,6 +46,8 @@
 	});
 
 	const eur = (value: number | null) => formatMoney(value, 'EUR');
+	const money = (value: number | null, currency: string | undefined) =>
+		formatMoney(value, currency ?? 'EUR');
 
 	function tone(value: number): string {
 		return value >= 0 ? 'text-green-600' : 'text-red-600';
@@ -226,12 +228,14 @@
 								{shareOf(asset).toFixed(0)} %
 							</Table.Cell>
 							<Table.Cell class="w-32"></Table.Cell>
-							<Table.Cell class="text-right tabular-nums">{eur(totals2?.invested ?? 0)}</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">
-								{eur(totals2?.market_value ?? 0)}
+								{money(totals2?.invested ?? 0, totals2?.currency)}
+							</Table.Cell>
+							<Table.Cell class="text-right tabular-nums">
+								{money(totals2?.market_value ?? 0, totals2?.currency)}
 							</Table.Cell>
 							<Table.Cell class="text-right tabular-nums {tone(totals2?.gain ?? 0)}">
-								{eur(totals2?.gain ?? 0)}
+								{money(totals2?.gain ?? 0, totals2?.currency)}
 								<span class="ml-1 text-xs">{percent(totals2?.gain_percent)}</span>
 							</Table.Cell>
 							<Table.Cell class="w-16 text-right">
