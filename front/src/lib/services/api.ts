@@ -9,7 +9,7 @@
  */
 import * as http from './http';
 import { demoBackend } from './demo';
-import { demo } from '$lib/state/demo.svelte';
+import { demo } from '#lib/state/demo.svelte.js';
 
 /** The half of the app that answers right now. */
 const backend = () => (demo.enabled ? demoBackend : http);

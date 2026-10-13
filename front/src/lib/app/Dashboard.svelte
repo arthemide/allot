@@ -1,15 +1,15 @@
 <script lang="ts">
-	import AssetChart from '$lib/components/AssetChart.svelte';
-	import GlobalSummary from '$lib/components/GlobalSummary.svelte';
-	import OpeningPosition from '$lib/components/OpeningPosition.svelte';
-	import PositionBanner from '$lib/components/PositionBanner.svelte';
-	import TransactionTable from '$lib/components/TransactionTable.svelte';
-	import { browser } from '$app/environment';
-	import { replaceState } from '$app/navigation';
+	import AssetChart from '#lib/components/AssetChart.svelte';
+	import GlobalSummary from '#lib/components/GlobalSummary.svelte';
+	import OpeningPosition from '#lib/components/OpeningPosition.svelte';
+	import PositionBanner from '#lib/components/PositionBanner.svelte';
+	import TransactionTable from '#lib/components/TransactionTable.svelte';
+	import { browser } from '$app/env';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { getAssets, getChart, getEnvelopes } from '$lib/services/api';
-	import { refresh as refreshSignal } from '$lib/state/refresh.svelte';
-	import type { Chart, Envelope, Position } from '$lib/types/api';
+	import { getAssets, getChart, getEnvelopes } from '#lib/services/api.js';
+	import { refresh as refreshSignal } from '#lib/state/refresh.svelte.js';
+	import type { Chart, Envelope, Position } from '#lib/types/api.js';
 
 	// Sentinel value of the selector: totals and settings instead of one asset.
 	const ALL = '*';
@@ -82,10 +82,10 @@
 	function select(symbol: string) {
 		selected = symbol;
 		if (!browser) return;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (symbol === ALL) url.searchParams.delete('asset');
 		else url.searchParams.set('asset', symbol);
-		replaceState(url, page.state);
+		goto(url, { shallow: true, replace: true, state: page.state });
 	}
 </script>
 

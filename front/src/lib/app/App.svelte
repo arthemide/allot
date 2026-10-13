@@ -3,12 +3,12 @@
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 
-	import { Button } from '$lib/components/ui/button/index.js';
-	import ImportCsv from '$lib/components/ImportCsv.svelte';
-	import MonthlyNote from '$lib/components/MonthlyNote.svelte';
-	import TickerSearch from '$lib/components/TickerSearch.svelte';
-	import { restartDemo } from '$lib/services/demo';
-	import { demo } from '$lib/state/demo.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import ImportCsv from '#lib/components/ImportCsv.svelte';
+	import MonthlyNote from '#lib/components/MonthlyNote.svelte';
+	import TickerSearch from '#lib/components/TickerSearch.svelte';
+	import { restartDemo } from '#lib/services/demo.js';
+	import { demo } from '#lib/state/demo.svelte.js';
 	import Dashboard from './Dashboard.svelte';
 
 	// The app, written once. /demo mounts this same component over its

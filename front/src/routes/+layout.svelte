@@ -1,12 +1,12 @@
 <script lang="ts">
 	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.svg';
 	import { ModeWatcher } from 'mode-watcher';
 
-	import Login from '$lib/components/Login.svelte';
-	import { getSession } from '$lib/services/api';
-	import { demo } from '$lib/state/demo.svelte';
-	import { session } from '$lib/state/session.svelte';
+	import Login from '#lib/components/Login.svelte';
+	import { getSession } from '#lib/services/api.js';
+	import { demo } from '#lib/state/demo.svelte.js';
+	import { session } from '#lib/state/session.svelte.js';
 
 	let { children } = $props();
 
