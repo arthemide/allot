@@ -145,6 +145,7 @@ class TestStraightThrough:
         assert report["imported"] == []
         assert report["unresolved"] == [
             {
+                "broker_key": "US0000000001",
                 "account": "CTO",
                 "isin": "US0000000001",
                 "name": "US fund",
@@ -156,11 +157,57 @@ class TestStraightThrough:
 
         response = client.post(
             "/connectors/bourso/resolve",
-            json={"account": "CTO", "isin": "US0000000001", "symbol": "VTI.PA"},
+            json={"account": "CTO", "broker_key": "US0000000001", "symbol": "VTI.PA"},
         )
         assert response.status_code == 200
         assert db.get_asset("VTI.PA")["currency"] == "EUR"
         assert search.call_args_list[1].args == ("VTI.PA",)
+
+    def test_a_line_without_isin_is_offered_then_remembered(self, client, mocker):
+        # Given a part-based CEFP line the bank reports without an ISIN
+        FakeLogin.rows = [
+            PositionRow(
+                account="CEFP",
+                support_type="security",
+                label="FONDS CEFP",
+                quantity=5.0,
+                value=600.0,
+                currency="EUR",
+                unit_cost=110.0,
+            )
+        ]
+        search = mocker.patch.object(
+            prices,
+            "search",
+            return_value=[
+                {"symbol": "0P0000CEFP.F", "label": "Fonds", "currency": "EUR"}
+            ],
+        )
+        # When it is synced, nothing is guessed: the user is asked for a ticker
+        report = post(client).json()["report"]
+        assert report["imported"] == []
+        assert report["unresolved"][0]["broker_key"] == "CEFP|FONDS CEFP"
+        search.assert_not_called()
+
+        # Once a ticker is picked, the position is opened from the bank's figures
+        response = client.post(
+            "/connectors/bourso/resolve",
+            json={
+                "account": "CEFP",
+                "broker_key": "CEFP|FONDS CEFP",
+                "symbol": "0P0000CEFP.F",
+            },
+        )
+        assert response.status_code == 200
+        assert db.get_asset("0P0000CEFP.F")["base_quantity"] == 5.0
+
+        # And the next sync reuses that choice without asking again
+        search.reset_mock()
+        report = post(client).json()["report"]
+        assert report["unresolved"] == []
+        assert report["imported"][0]["symbol"] == "0P0000CEFP.F"
+        search.assert_not_called()
+
 
 class TestTwoFactor:
     def test_an_otp_is_asked_then_answered(self, client, resolver):

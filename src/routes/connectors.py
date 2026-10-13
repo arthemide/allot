@@ -42,7 +42,8 @@ class _Line:
     """A security row as the import service wants it."""
 
     account: str
-    isin: str
+    broker_key: str
+    isin: str | None
     name: str
     quantity: float
     prum: float
@@ -84,7 +85,12 @@ def answer(session_id: str, payload: ConnectorAnswer):
 
 @router.post("/bourso/resolve", response_model=ImportReport)
 def resolve(payload: ConnectorResolution):
-    """Apply a manually selected ticker to the latest unresolved Bourso row."""
+    """Apply a manually selected ticker to the latest unresolved Bourso row.
+
+    The row is found by its `broker_key`, which works for an ISIN line and for
+    a part-based line the broker does not tag (a CEFP line without ISIN). Once
+    the choice is made it is remembered, so the next sync updates in place.
+    """
     from src.services import portfolio_import
 
     row = next(
@@ -92,7 +98,7 @@ def resolve(payload: ConnectorResolution):
             row
             for row in store.latest(store.DEFAULT_DB, SOURCE)
             if row["account"] == payload.account
-            and row["isin"] == payload.isin
+            and row["broker_key"] == payload.broker_key
             and row["support_type"] != "cash"
         ),
         None,
@@ -109,6 +115,7 @@ def resolve(payload: ConnectorResolution):
         )
     line = _Line(
         account=row["account"],
+        broker_key=row["broker_key"],
         isin=row["isin"],
         name=row["label"],
         quantity=row["quantity"] or 0.0,
@@ -120,7 +127,7 @@ def resolve(payload: ConnectorResolution):
         [line],
         authoritative=True,
         reconcile_missing=False,
-        symbols={payload.isin: payload.symbol},
+        symbols={payload.broker_key: payload.symbol},
     )
     if report["unresolved"]:
         raise HTTPException(
@@ -151,11 +158,15 @@ def _sync(attempt) -> dict:
 
     by_account: dict[str, list[_Line]] = {}
     for row in rows:
-        if row.support_type == "cash" or row.isin is None or row.unit_cost is None:
+        # A cash balance is not an asset. A security without a cost basis
+        # cannot become a PRUM. A line without an ISIN is still kept: it is
+        # part-based (a CEFP line) and is offered for a manual ticker choice.
+        if row.support_type == "cash" or row.unit_cost is None:
             continue
         by_account.setdefault(row.account, []).append(
             _Line(
                 account=row.account,
+                broker_key=row.broker_key,
                 isin=row.isin,
                 name=row.label,
                 quantity=row.quantity or 0.0,

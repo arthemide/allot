@@ -178,3 +178,25 @@ def test_qr_code_validation_is_reported_as_unsupported(monkeypatch, tmp_path):
 
     with pytest.raises(AuthenticationMethodUnsupported, match="QR-code"):
         login.start()
+
+
+def _stub_empty(monkeypatch):
+    base = types.ModuleType("woob.capabilities.base")
+    base.empty = lambda value: value is None
+    monkeypatch.setitem(sys.modules, "woob.capabilities.base", base)
+
+
+@pytest.mark.parametrize(
+    "code, quantity, cash",
+    [
+        ("XX-LIQUIDITY", None, True),
+        ("", None, True),
+        # A part-based line without ISIN, as a CEFP shows it, is a support.
+        ("", 5.0, False),
+        ("FR0010315770", 5.0, False),
+    ],
+)
+def test_only_a_balance_without_parts_is_cash(monkeypatch, code, quantity, cash):
+    _stub_empty(monkeypatch)
+    inv = types.SimpleNamespace(code=code, quantity=quantity)
+    assert woob_bourso._is_cash(inv) is cash
