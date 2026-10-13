@@ -227,10 +227,12 @@ def search(query: str, limit: int = 10) -> list[dict]:
         return []
 
     results = []
+    seen: set[str] = set()
     for quote in quotes[:limit]:
         symbol = quote.get("symbol", "")
-        if not symbol:
+        if not symbol or symbol in seen:
             continue
+        seen.add(symbol)
         metadata = _metadata(symbol)
         price = metadata.get("regularMarketPrice") if metadata else None
         results.append(
