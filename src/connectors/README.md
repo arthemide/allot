@@ -37,4 +37,4 @@ A line is reported unresolved, and nothing is written for it, when it has no ISI
 
 ## Limits
 
-woob performs the automated login internally. That is the fragile part: if BoursoBank changes its login screen, the vendored module has to be refreshed with `make woob-update` (a weekly workflow proposes it as a PR). It does not support BoursoBank's QR-code validation; when the bank requires one, import the BoursoBank CSV export instead.
+woob performs the automated login internally. That is the fragile part: if BoursoBank changes its login screen, the vendored module has to be refreshed with `make woob-update`. It does not support BoursoBank's QR-code validation; when the bank requires one, import the BoursoBank CSV export instead.
