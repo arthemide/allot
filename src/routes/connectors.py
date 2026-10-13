@@ -46,7 +46,9 @@ class _Line:
     isin: str | None
     name: str
     quantity: float
-    prum: float
+    # None when the bank shows no cost basis (a CEFP page lists parts and
+    # their value only): the user supplies what was invested.
+    prum: float | None
     currency: str
 
 
@@ -108,18 +110,25 @@ def resolve(payload: ConnectorResolution):
             status.HTTP_404_NOT_FOUND,
             "This BoursoBank position is no longer in the latest snapshot.",
         )
-    if row["unit_cost"] is None:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "This BoursoBank position has no cost basis to import.",
-        )
+    quantity = row["quantity"] or 0.0
+    prum = row["unit_cost"]
+    if prum is None:
+        # The bank gives no cost basis for this line: the user's figure is the
+        # only source, and the PRUM follows from it.
+        if not payload.invested or quantity <= 0:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "BoursoBank shows no cost basis for this line: give the amount "
+                "invested.",
+            )
+        prum = payload.invested / quantity
     line = _Line(
         account=row["account"],
         broker_key=row["broker_key"],
         isin=row["isin"],
         name=row["label"],
-        quantity=row["quantity"] or 0.0,
-        prum=row["unit_cost"],
+        quantity=quantity,
+        prum=prum,
         currency=row["currency"],
     )
     report = portfolio_import.apply_snapshot(
@@ -158,10 +167,11 @@ def _sync(attempt) -> dict:
 
     by_account: dict[str, list[_Line]] = {}
     for row in rows:
-        # A cash balance is not an asset. A security without a cost basis
-        # cannot become a PRUM. A line without an ISIN is still kept: it is
-        # part-based (a CEFP line) and is offered for a manual ticker choice.
-        if row.support_type == "cash" or row.unit_cost is None:
+        # A cash balance is not an asset, and a line without a quantity cannot
+        # hold a position. Everything else is kept, even without an ISIN or a
+        # cost basis (a CEFP line has neither): those are offered to the user
+        # rather than dropped.
+        if row.support_type == "cash" or not row.quantity:
             continue
         by_account.setdefault(row.account, []).append(
             _Line(

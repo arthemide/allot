@@ -143,7 +143,8 @@ export interface UnresolvedLine {
 	account?: string;
 	currency?: string;
 	quantity?: number;
-	prum?: number;
+	/** Null when the bank shows no cost basis: the user gives the amount. */
+	prum?: number | null;
 }
 
 /** An imported asset that already lived in another envelope. */
@@ -165,6 +166,8 @@ export interface ConnectorResolution {
 	account: string;
 	broker_key: string;
 	symbol: string;
+	/** Total paid, only when the bank shows no cost basis for the line. */
+	invested?: number;
 }
 
 /** Where an interactive bank login stands, and the import once it is through. */
