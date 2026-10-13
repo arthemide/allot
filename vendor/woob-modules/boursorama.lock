@@ -1,0 +1,9 @@
+# Written by scripts/woob_update.py: the module build vendored next
+# to this file, as published and signed by woob.
+[boursorama]
+version = 202608310842
+woob_spec = ~=3.5
+sha256 = e770f5bbb684521eda3b8a23c235ff12b96d645752a81f2301afd5e84064c0e1
+repository = https://updates.woob.tech/3/main/
+fetched_on = 2026-10-13
+

@@ -12,10 +12,9 @@ woob receives a full bank session. Allot only calls the account and investment l
 
 ```sh
 make woob-install
-make woob-vendor    # downloads the module once, then vendors it with Allot
 ```
 
-The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/` only: no repository, no `woob update`, nothing fetched at runtime.
+The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/` only: no repository, no `woob update`, nothing fetched at runtime. The module is committed; see [its README](../../vendor/woob-modules/README.md) for where it comes from and how it is refreshed.
 
 ## Image
 
@@ -42,4 +41,4 @@ sqlite3 data/connectors/connectors.db 'SELECT * FROM positions WHERE snapshot_id
 
 ## Limits
 
-woob performs the automated login internally. That is the fragile part: if BoursoBank changes its login screen, the vendored module has to be refreshed with `make woob-vendor`. It does not support BoursoBank's QR-code validation; when the bank requires one, import the BoursoBank CSV export instead.
+woob performs the automated login internally. That is the fragile part: if BoursoBank changes its login screen, the vendored module has to be refreshed with `make woob-update` (a weekly workflow proposes it as a PR). It does not support BoursoBank's QR-code validation; when the bank requires one, import the BoursoBank CSV export instead.
