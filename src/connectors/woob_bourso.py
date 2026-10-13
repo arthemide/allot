@@ -19,6 +19,7 @@ from src.connectors.errors import (
     AuthenticationInterrupted,
     AuthenticationMethodUnsupported,
     AuthFailed,
+    BankUnavailable,
     ConnectorUnavailable,
     SessionExpired,
 )
@@ -113,10 +114,12 @@ class WoobLogin:
     def _attempt(self) -> str:
         from woob.browser.exceptions import ClientError
         from woob.exceptions import (
-            AppValidationExpired,
+            ActionNeeded,
+            AppValidationError,
             AuthMethodNotImplemented,
             BrowserIncorrectPassword,
             BrowserQuestion,
+            BrowserUnavailable,
             DecoupledValidation,
         )
 
@@ -146,7 +149,8 @@ class WoobLogin:
         except DecoupledValidation as validation:
             self.status = "app_validation"
             self.prompt = str(validation.message) or "Validate in your bank app."
-        except AppValidationExpired:
+        except AppValidationError:
+            # Expired, or refused in the bank app.
             self.status = "failed"
             raise SessionExpired("BoursoBank") from None
         except BrowserIncorrectPassword as error:
@@ -173,15 +177,43 @@ class WoobLogin:
             raise AuthenticationInterrupted(
                 "BoursoBank interrupted the connection. Start it again."
             ) from error
+        except ActionNeeded as error:
+            # New terms to accept, a password to renew: only the website can.
+            self.status = "failed"
+            raise BankUnavailable(
+                "BoursoBank asks for an action on its website first. Log in "
+                "there, then sync again."
+            ) from error
+        except BrowserUnavailable as error:
+            self.status = "failed"
+            raise BankUnavailable(
+                "BoursoBank is unavailable right now. Try again later."
+            ) from error
         return self.status
 
     # --- reading ---------------------------------------------------------
 
     def investments(self) -> list[PositionRow]:
+        """Every security and cash line of the securities accounts.
+
+        Anything woob raises while reading - the bank down, a page it no
+        longer understands - becomes BankUnavailable: the sync stops before
+        anything is written.
+        """
+        try:
+            return self._investments()
+        except Exception as error:
+            logger.exception("woob failed while reading the BoursoBank accounts")
+            raise BankUnavailable(
+                "BoursoBank could not be read. Try again later; if it keeps "
+                "failing, the woob module may need a refresh."
+            ) from error
+
+    def _investments(self) -> list[PositionRow]:
         from woob.capabilities.bank import Account
 
         # Every securities account: PEA, PEA-PME and plain ones (CTO, CEFP).
-        # Each keeps its own label as its envelope, so they never mix.
+        # Each is placed in an envelope by the user, the first time it shows up.
         wanted = {
             getattr(Account, name)
             for name in ("TYPE_PEA", "TYPE_PEA_PME", "TYPE_MARKET")
@@ -198,10 +230,8 @@ class WoobLogin:
             )
             if account.type not in wanted:
                 continue
-            # The account's own label is the envelope ("PEA", "CTO", "CEFP").
-            name = label
             account_rows = list(
-                self._rows(name, self._backend.iter_investment(account))
+                self._rows(label, self._backend.iter_investment(account))
             )
             logger.info("woob account %s -> %d investment(s)", label, len(account_rows))
             rows.extend(account_rows)

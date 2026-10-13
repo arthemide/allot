@@ -134,11 +134,28 @@ class ElsewhereLine(BaseModel):
     envelope: str
 
 
+class ConflictLine(BaseModel):
+    """A bank line the recorded trades cannot be reconciled with; left as it was.
+
+    The trades are the history the cash is derived from, so a sync never
+    deletes them: when they already hold more than the bank reports (an
+    unrecorded sell, say), the user fixes the trades and syncs again.
+    """
+
+    symbol: str
+    label: str
+    # What the bank reports, and what the trades recorded here already make.
+    bank_quantity: float
+    tracked_quantity: float
+
+
 class ImportReport(BaseModel):
     imported: list[ImportedLine]
     unresolved: list[UnresolvedLine]
     # Imported, but already filed under another envelope - a heads-up, not an error.
     elsewhere: list[ElsewhereLine]
+    # Only a bank sync reconciles against the trades; a CSV import never has any.
+    conflicts: list[ConflictLine] = []
     total: int
 
 
@@ -155,16 +172,34 @@ class ConnectorAnswer(BaseModel):
     answer: str = ""
 
 
+class AccountChoice(BaseModel):
+    """A bank account no envelope was chosen for yet."""
+
+    account: str
+    # Security lines it holds, to tell accounts apart.
+    lines: int
+    # An existing envelope of the same name, offered as the default.
+    envelope: str | None = None
+
+
+class ConnectorAccounts(BaseModel):
+    """The envelope each new account syncs into; None leaves it out of Allot."""
+
+    envelopes: dict[str, str | None]
+
+
 class ConnectorStatus(BaseModel):
     """Where a login stands, and the import once it is through.
 
     `status` is "otp" or "app_validation" while the bank waits for a second
-    factor, then "done". `report` is filled only on "done".
+    factor, "accounts" while new accounts wait for an envelope (`accounts`),
+    then "done". `report` is filled only on "done".
     """
 
     session_id: str
-    status: Literal["otp", "app_validation", "done"]
+    status: Literal["otp", "app_validation", "accounts", "done"]
     prompt: str = ""
+    accounts: list[AccountChoice] = []
     report: ImportReport | None = None
 
 
