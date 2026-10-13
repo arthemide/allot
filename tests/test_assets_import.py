@@ -97,7 +97,11 @@ class TestImport:
         body = post(client).json()
         # Then the fund is listed as unresolved, and nothing exists for it
         assert body["unresolved"] == [
-            {"isin": "FR0000000001", "name": "FONDS EUROPE CROISSANCE"}
+            {
+                "broker_key": "FR0000000001",
+                "isin": "FR0000000001",
+                "name": "FONDS EUROPE CROISSANCE",
+            }
         ]
         assert len(body["imported"]) == 1
         assert db.get_asset("0P0001.F") is None

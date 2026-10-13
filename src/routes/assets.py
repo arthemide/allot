@@ -50,7 +50,7 @@ def create_asset(payload: AssetCreate):
             f"it again.",
         )
     if isin:
-        existing = db.get_asset_by_isin(isin)
+        existing = db.get_asset_by_broker_key(isin)
         if existing is not None:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
@@ -67,7 +67,7 @@ def create_asset(payload: AssetCreate):
         payload.weight,
     )
     if isin:
-        db.set_asset_isin(payload.symbol, isin)
+        db.set_asset_broker_key(payload.symbol, isin)
     return portfolio.position_of(db.get_asset(payload.symbol))
 
 
