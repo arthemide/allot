@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { PricePoint, PrumPoint, Transaction } from '$lib/types/api';
-	import { currencySymbol } from '$lib/utils';
+	import type { PricePoint, PrumPoint, Transaction } from '#lib/types/api.js';
+	import { currencySymbol } from '#lib/utils.js';
 	import {
 		CategoryScale,
 		Chart,

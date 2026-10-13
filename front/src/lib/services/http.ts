@@ -1,4 +1,4 @@
-import { session } from '$lib/state/session.svelte';
+import { session } from '#lib/state/session.svelte.js';
 import type {
 	AssetUpdate,
 	Chart,
@@ -13,7 +13,7 @@ import type {
 	Session,
 	Summary,
 	Transaction
-} from '$lib/types/api';
+} from '#lib/types/api.js';
 
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';

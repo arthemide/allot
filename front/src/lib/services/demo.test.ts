@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { refresh } from '$lib/state/refresh.svelte';
+import { refresh } from '#lib/state/refresh.svelte.js';
 import { demoBackend, restartDemo, startDemo } from './demo';
 
 describe('the demo backend', () => {

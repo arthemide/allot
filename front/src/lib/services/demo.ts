@@ -4,7 +4,7 @@
  * The /demo page mounts the real app; only this file stands in for the
  * server, so a visitor's portfolio never leaves their machine. It holds the
  * state and answers the same calls, but computes nothing itself: every
- * formula lives in `$lib/calc`, the single mirror of `src/calc.py`.
+ * formula lives in `#lib/calc`, the single mirror of `src/calc.py`.
  *
  * A refresh lays the sample portfolio out again: nothing here persists, which
  * is the point.
@@ -20,7 +20,7 @@ import type {
 	PrumPoint,
 	Summary,
 	Transaction
-} from '$lib/types/api';
+} from '#lib/types/api.js';
 import type * as http from './http';
 import {
 	allocate,
@@ -30,8 +30,8 @@ import {
 	summarize,
 	type Row,
 	type Trade
-} from '$lib/calc';
-import { refresh } from '$lib/state/refresh.svelte';
+} from '#lib/calc.js';
+import { refresh } from '#lib/state/refresh.svelte.js';
 
 /** A transaction plus the asset it belongs to, which the API infers from its route. */
 type StoredTransaction = Transaction & { symbol: string };
