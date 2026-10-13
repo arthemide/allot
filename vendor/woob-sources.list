@@ -1,5 +1,0 @@
-# woob reads its modules from here, so nothing is fetched at runtime. The
-# boursorama module and its dependencies live under vendor/woob-modules/,
-# vendored in the repo to keep the app fully local. `make connectors-install`
-# points woob at this file.
-file://./vendor/woob-modules

@@ -4,9 +4,8 @@ woob performs the login itself - virtual keyboard, strong authentication, the
 lot - and we drive it: hand it the credentials, answer the one challenge it
 raises, then read the investments. Nothing here reimplements the bank's login.
 
-Not unit-tested: it needs woob installed and the modules vendored. The login
-state machine around it (login_session.py) is what the tests exercise, through
-an injected fake. Kept out of coverage for the same reason as browser.py.
+Tested with woob stubbed out in sys.modules (tests/test_woob_bourso.py), so
+neither woob nor the vendored module is needed to run the suite.
 """
 
 from __future__ import annotations
@@ -129,7 +128,7 @@ class WoobLogin:
             self.prompt = str(validation.message) or "Validate in your bank app."
         except AppValidationExpired:
             self.status = "failed"
-            raise SessionExpired("BoursoBank", "bourso") from None
+            raise SessionExpired("BoursoBank") from None
         except BrowserIncorrectPassword as error:
             self.status = "failed"
             raise AuthFailed(str(error)) from None
@@ -143,7 +142,7 @@ class WoobLogin:
             )
             raise AuthenticationMethodUnsupported(
                 "BoursoBank requires QR-code validation, which Woob does not support. "
-                "Use the manual BoursoBank sync instead."
+                "Import the BoursoBank CSV export instead."
             ) from error
         except ClientError as error:
             self.status = "failed"
