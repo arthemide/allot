@@ -81,7 +81,6 @@ class AssetCreate(BaseModel):
     label: str
     envelope: str
     currency: str
-    isin: str | None = None
     weight: float = Field(default=1.0, ge=0)
 
 
@@ -106,26 +105,20 @@ class ImportCsv(BaseModel):
 
 class ImportedLine(BaseModel):
     symbol: str
-    isin: str | None
+    isin: str
     label: str
     quantity: float
     prum: float
 
 
 class UnresolvedLine(BaseModel):
-    """A broker row without a compatible Yahoo ticker; nothing was written.
+    """A row no ticker in its currency answers to; nothing was written for it.
 
-    `broker_key` is the stable identity of the line: it is what a later manual
-    resolution and the next sync both key on.
+    `isin` is None for a line the broker does not tag (a CEFP line by parts).
     """
 
-    broker_key: str
-    isin: str | None = None
+    isin: str | None
     name: str
-    account: str | None = None
-    currency: str | None = None
-    quantity: float | None = None
-    prum: float | None = None
 
 
 class ElsewhereLine(BaseModel):
@@ -136,7 +129,7 @@ class ElsewhereLine(BaseModel):
     """
 
     symbol: str
-    isin: str | None
+    isin: str
     label: str
     envelope: str
 
@@ -160,20 +153,6 @@ class ConnectorAnswer(BaseModel):
     """The second factor: an SMS/email code, or an acknowledged app tap."""
 
     answer: str = ""
-
-
-class ConnectorResolution(BaseModel):
-    """A ticker the user picked for an unresolved BoursoBank line.
-
-    The line is referenced by `broker_key`, which covers both ISIN holdings
-    and part-based lines the broker does not tag (a CEFP line without ISIN).
-    """
-
-    account: str = Field(min_length=1)
-    broker_key: str = Field(min_length=1)
-    symbol: str = Field(min_length=1)
-    # Total paid for the line, only when the bank shows no cost basis.
-    invested: float | None = Field(default=None, gt=0)
 
 
 class ConnectorStatus(BaseModel):

@@ -1,6 +1,6 @@
 # Bank connectors
 
-BoursoBank can be synced from Allot itself, with [woob](https://woob.dev) doing the login. Everything the connector writes lives under `data/connectors/` (git-ignored): the snapshot database and woob's saved state.
+BoursoBank can be synced from Allot itself, with [woob](https://woob.dev) doing the login. The only thing the connector writes outside the app database is woob's saved state, under `data/connectors/` (git-ignored).
 
 ## Credentials
 
@@ -25,7 +25,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml build \
     --build-arg INSTALL_WOOB=1
 ```
 
-The connector's state (snapshot database and the woob trusted-device cookie) then lives under `/data/connectors` on the same volume as the app database.
+The woob trusted-device cookie then lives under `/data/connectors`, on the same volume as the app database.
 
 ## Sync
 
@@ -33,11 +33,7 @@ In the app, "Sync BoursoBank" asks for your login and password. If the bank want
 
 The bank is authoritative: each sync replaces the account's opening positions with what BoursoBank reports, clears the manual trades of those assets, and zeroes any asset the bank no longer lists. The cash balance is read but left for you to reconcile.
 
-Each sync appends a snapshot to `data/connectors/connectors.db` and never overwrites one:
-
-```sh
-sqlite3 data/connectors/connectors.db 'SELECT * FROM positions WHERE snapshot_id = (SELECT max(id) FROM snapshots)'
-```
+A line is reported unresolved, and nothing is written for it, when it has no ISIN (a CEFP line by parts), no cost price, or no Yahoo listing in BoursoBank's currency: add it by hand. While any line is unresolved, nothing in that account is zeroed.
 
 ## Limits
 
