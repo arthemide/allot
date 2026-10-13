@@ -201,16 +201,31 @@ class WoobLogin:
                 )
                 continue
             isin = _text(inv.code) if _text(inv.code) else None
+            quantity = _number(inv.quantity)
+            gain = _number(inv.diff)
+            unit_cost = _number(inv.unitprice)
+            if unit_cost is None and gain is not None and quantity:
+                # No cost column, but the latent gain gives it back.
+                unit_cost = (value - gain) / quantity
+            # Which fields the bank filled, never their values: enough to tell
+            # why a line ends up unresolved.
+            logger.info(
+                "woob line in %s: isin=%s quantity=%s cost=%s",
+                account,
+                isin is not None,
+                quantity is not None,
+                unit_cost is not None,
+            )
             yield PositionRow(
                 account=account,
                 support_type="security",
                 isin=isin,
                 label=label,
-                quantity=_number(inv.quantity),
+                quantity=quantity,
                 value=value,
-                unit_cost=_number(inv.unitprice),
+                unit_cost=unit_cost,
                 unit_price=_number(inv.unitvalue),
-                gain=_number(inv.diff),
+                gain=gain,
             )
 
     def deinit(self) -> None:

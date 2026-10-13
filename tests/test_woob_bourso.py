@@ -200,3 +200,18 @@ def test_only_a_balance_without_parts_is_cash(monkeypatch, code, quantity, cash)
     _stub_empty(monkeypatch)
     inv = types.SimpleNamespace(code=code, quantity=quantity)
     assert woob_bourso._is_cash(inv) is cash
+
+
+def test_the_cost_basis_is_derived_from_the_latent_gain(monkeypatch):
+    _stub_empty(monkeypatch)
+    inv = types.SimpleNamespace(
+        code="FR0010315770",
+        label="Fund",
+        quantity=4.0,
+        valuation=640.0,
+        unitprice=None,
+        unitvalue=160.0,
+        diff=40.0,
+    )
+    (row,) = woob_bourso.WoobLogin._rows("CEFP", iter([inv]))
+    assert row.unit_cost == 150.0

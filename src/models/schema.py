@@ -172,6 +172,8 @@ class ConnectorResolution(BaseModel):
     account: str = Field(min_length=1)
     broker_key: str = Field(min_length=1)
     symbol: str = Field(min_length=1)
+    # Total paid for the line, only when the bank shows no cost basis.
+    invested: float | None = Field(default=None, gt=0)
 
 
 class ConnectorStatus(BaseModel):
