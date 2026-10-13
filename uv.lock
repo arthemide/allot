@@ -47,7 +47,7 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.16.0" },
     { name = "ruff", specifier = ">=0.16.10" },
 ]
-woob = [{ name = "woob", specifier = ">=3.7" }]
+woob = [{ name = "woob", specifier = "==3.7" }]
 
 [[package]]
 name = "annotated-doc"
