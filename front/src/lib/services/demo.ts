@@ -316,6 +316,7 @@ export const demoBackend = {
 
 	connectorLogin: () => fail('Bank sync needs the real app.'),
 	connectorAnswer: () => fail('Bank sync needs the real app.'),
+	connectorAccounts: () => fail('Bank sync needs the real app.'),
 
 	importCsv: (envelope: string, csv: string) => {
 		// The same reader the app runs server-side, here in the tab.

@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS envelope_start (
     opening_cash REAL NOT NULL DEFAULT 0 CHECK (opening_cash >= 0)
 );
 
+-- Which envelope a bank account syncs into, picked by the user the first time
+-- the account shows up. A NULL envelope leaves the account out of Allot. An
+-- envelope that goes away takes its rows along, so the account is asked
+-- about again rather than synced somewhere unexpected.
+CREATE TABLE IF NOT EXISTS bank_account (
+    account  TEXT PRIMARY KEY,  -- the account's label at the bank: "PEA"
+    envelope TEXT REFERENCES envelope(name) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
 -- Every buy and sell. Positions are never stored: quantity and PRUM are
 -- recomputed from this table plus the asset's opening position.
 CREATE TABLE IF NOT EXISTS "transaction" (

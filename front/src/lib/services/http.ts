@@ -137,6 +137,16 @@ export const connectorAnswer = (sessionId: string, answer: string) =>
 		body: JSON.stringify({ answer })
 	});
 
+/** The envelope of each new account; null leaves it out of Allot. */
+export const connectorAccounts = (sessionId: string, envelopes: Record<string, string | null>) =>
+	request<ConnectorStatus>(
+		`/connectors/bourso/login/${encodeURIComponent(sessionId)}/accounts`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ envelopes })
+		}
+	);
+
 export const updateAsset = (symbol: string, body: AssetUpdate) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`, {
 		method: 'PUT',

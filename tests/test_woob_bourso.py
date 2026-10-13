@@ -82,7 +82,9 @@ def test_login_drives_one_interactive_browser(monkeypatch, tmp_path):
     core = types.ModuleType("woob.core")
     core.WoobBase = _Woob
     exceptions = types.ModuleType("woob.exceptions")
-    exceptions.AppValidationExpired = type("AppValidationExpired", (Exception,), {})
+    exceptions.AppValidationError = type("AppValidationError", (Exception,), {})
+    exceptions.ActionNeeded = type("ActionNeeded", (Exception,), {})
+    exceptions.BrowserUnavailable = type("BrowserUnavailable", (Exception,), {})
     exceptions.AuthMethodNotImplemented = _Unsupported
     exceptions.BrowserIncorrectPassword = type(
         "BrowserIncorrectPassword", (Exception,), {}
@@ -118,7 +120,9 @@ def test_rejected_app_validation_is_a_clean_login_failure(monkeypatch, tmp_path)
     core = types.ModuleType("woob.core")
     core.WoobBase = _Woob
     exceptions = types.ModuleType("woob.exceptions")
-    exceptions.AppValidationExpired = type("AppValidationExpired", (Exception,), {})
+    exceptions.AppValidationError = type("AppValidationError", (Exception,), {})
+    exceptions.ActionNeeded = type("ActionNeeded", (Exception,), {})
+    exceptions.BrowserUnavailable = type("BrowserUnavailable", (Exception,), {})
     exceptions.AuthMethodNotImplemented = _Unsupported
     exceptions.BrowserIncorrectPassword = type(
         "BrowserIncorrectPassword", (Exception,), {}
@@ -153,7 +157,9 @@ def test_qr_code_validation_is_reported_as_unsupported(monkeypatch, tmp_path):
     core = types.ModuleType("woob.core")
     core.WoobBase = _Woob
     exceptions = types.ModuleType("woob.exceptions")
-    exceptions.AppValidationExpired = type("AppValidationExpired", (Exception,), {})
+    exceptions.AppValidationError = type("AppValidationError", (Exception,), {})
+    exceptions.ActionNeeded = type("ActionNeeded", (Exception,), {})
+    exceptions.BrowserUnavailable = type("BrowserUnavailable", (Exception,), {})
     exceptions.AuthMethodNotImplemented = _Unsupported
     exceptions.BrowserIncorrectPassword = type(
         "BrowserIncorrectPassword", (Exception,), {}
@@ -215,3 +221,21 @@ def test_the_cost_basis_is_derived_from_the_latent_gain(monkeypatch):
     )
     (row,) = woob_bourso.WoobLogin._rows("CEFP", iter([inv]))
     assert row.unit_cost == 150.0
+
+
+def test_a_bank_that_fails_while_read_stops_the_sync(monkeypatch):
+    bank = types.ModuleType("woob.capabilities.bank")
+    bank.Account = types.SimpleNamespace(TYPE_PEA="pea")
+    monkeypatch.setitem(sys.modules, "woob.capabilities.bank", bank)
+
+    class Down:
+        def iter_accounts(self):
+            raise RuntimeError("502 from the bank")
+
+    login = woob_bourso.WoobLogin.__new__(woob_bourso.WoobLogin)
+    login._backend = Down()
+
+    from src.connectors.errors import BankUnavailable
+
+    with pytest.raises(BankUnavailable, match="could not be read"):
+        login.investments()
