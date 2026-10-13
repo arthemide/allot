@@ -1,17 +1,7 @@
 <script lang="ts">
-	import {
-		connectorAnswer,
-		connectorLogin,
-		resolveConnector,
-		searchTickers
-	} from '#lib/services/api';
-	import { refresh } from '#lib/state/refresh.svelte';
-	import type {
-		ConnectorStatus,
-		ImportReport,
-		SearchHit,
-		UnresolvedLine
-	} from '#lib/types/api';
+	import { connectorAnswer, connectorLogin } from '#lib/services/api.js';
+	import { refresh } from '#lib/state/refresh.svelte.js';
+	import type { ConnectorStatus, ImportReport } from '#lib/types/api.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -29,26 +19,13 @@
 	let error = $state('');
 	let status = $state<ConnectorStatus | null>(null);
 	let report = $state<ImportReport | null>(null);
-	let resolving = $state<UnresolvedLine | null>(null);
-	let hits = $state<SearchHit[]>([]);
-	let searching = $state(false);
-	let tickerQuery = $state('');
-	let invested = $state('');
-	const unresolved = $derived(report?.unresolved.length ?? 0);
-	const waitingForUser = $derived(
-		(status !== null && status.status !== 'done') || unresolved > 0
-	);
-	const inFlight = $derived(busy || searching);
+	const waitingForUser = $derived(status !== null && status.status !== 'done');
 
 	$effect(() => {
-		if (open || waitingForUser || inFlight) return;
+		if (open || waitingForUser || busy) return;
 		// Clear everything on close: credentials never linger in memory.
 		login = password = code = error = '';
-		status = report = resolving = null;
-		hits = [];
-		tickerQuery = '';
-		invested = '';
-		busy = false;
+		status = report = null;
 	});
 
 	function done(result: ConnectorStatus) {
@@ -94,74 +71,13 @@
 			busy = false;
 		}
 	}
-
-	async function findTicker(line: UnresolvedLine) {
-		resolving = line;
-		hits = [];
-		invested = '';
-		// A part-based line the broker does not tag has no ISIN; start the
-		// search from its name so the user can steer to the right ticker.
-		tickerQuery = line.isin ?? line.name;
-		await searchTicker();
-	}
-
-	async function searchTicker() {
-		if (!resolving || !tickerQuery.trim()) return;
-		error = '';
-		searching = true;
-		try {
-			hits = (await searchTickers(tickerQuery.trim())).filter(
-				(hit) => hit.currency === resolving?.currency
-			);
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Recherche impossible.';
-		} finally {
-			searching = false;
-		}
-	}
-
-	async function resolve(hit: SearchHit) {
-		if (!resolving?.account || !resolving?.broker_key || !resolving.currency) return;
-		// The bank gives no cost basis for some lines (a CEFP page): the PRUM
-		// then comes from what the user says was invested.
-		const needsInvested = resolving.prum == null;
-		const amount = Number(invested);
-		if (needsInvested && !(amount > 0)) {
-			error = 'Indiquez le montant investi sur cette ligne.';
-			return;
-		}
-		error = '';
-		busy = true;
-		try {
-			await resolveConnector({
-				account: resolving.account,
-				broker_key: resolving.broker_key,
-				symbol: hit.symbol,
-				...(needsInvested ? { invested: amount } : {})
-			});
-			report = report && {
-				...report,
-				unresolved: report.unresolved.filter(
-					(line) => line.account !== resolving?.account || line.broker_key !== resolving?.broker_key
-				)
-			};
-			resolving = null;
-			hits = [];
-			invested = '';
-			refresh.bump();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Résolution impossible.';
-		} finally {
-			busy = false;
-		}
-	}
 </script>
 
 	<Dialog.Root bind:open>
 		<Dialog.Trigger>
 			{#snippet child({ props })}
 				<Button {...props} variant={waitingForUser ? 'default' : 'outline'} size="sm">
-					{#if inFlight}
+					{#if busy}
 						<LoaderCircle class="size-4 animate-spin" />
 						<span class="sr-only">Synchronisation BoursoBank en cours</span>
 					{:else if waitingForUser}
@@ -191,73 +107,14 @@
 			{#if report.unresolved.length}
 				<div class="space-y-2 rounded-md border p-3 text-sm">
 					<p class="text-muted-foreground">
-						Aucune cotation Yahoo dans la devise Bourso n'a été retenue. Choisissez une cotation
-						compatible pour chaque ligne.
+						Rien n'a été écrit pour ces lignes : pas d'ISIN, pas de prix de revient, ou aucune
+						cotation Yahoo dans la devise Bourso. Ajoutez-les à la main.
 					</p>
-					{#each report.unresolved as line (line.broker_key)}
-						<div class="flex items-center justify-between gap-3">
-							<span>{line.name}{line.isin ? ` (${line.isin})` : ''} - {line.currency ?? 'devise inconnue'}</span>
-							<Button size="sm" variant="outline" onclick={() => findTicker(line)}>
-								Choisir un ticker
-							</Button>
-						</div>
-					{/each}
-				</div>
-			{/if}
-			{#if resolving}
-				<div class="space-y-2 rounded-md border p-3 text-sm">
-					<p>
-						Cotation pour {resolving.name} en {resolving.currency}
-					</p>
-					<form
-						class="flex items-end gap-2"
-						onsubmit={(event) => {
-							event.preventDefault();
-							searchTicker();
-						}}
-					>
-						<div class="flex-1 space-y-1">
-							<Label for="ticker-search">Nom ou ticker Yahoo</Label>
-							<Input id="ticker-search" bind:value={tickerQuery} />
-						</div>
-						<Button type="submit" variant="outline" disabled={searching}>
-							Rechercher
-						</Button>
-					</form>
-					{#if resolving.prum == null}
-						<div class="space-y-1">
-							<Label for="sync-invested">
-								Montant investi ({resolving.quantity ?? '?'} parts)
-							</Label>
-							<Input
-								id="sync-invested"
-								type="number"
-								step="any"
-								min="0"
-								bind:value={invested}
-							/>
-							<p class="text-muted-foreground text-xs">
-								BoursoBank n'affiche pas de prix de revient pour cette ligne : le PRUM est
-								calculé à partir de ce montant.
-							</p>
-						</div>
-					{/if}
-					{#if searching}
-						<p class="text-muted-foreground">Recherche...</p>
-					{:else if hits.length}
-						{#each hits as hit (hit.symbol)}
-							<div class="flex items-center justify-between gap-3">
-								<span>{hit.symbol} - {hit.label}</span>
-								<Button size="sm" variant="outline" disabled={busy} onclick={() => resolve(hit)}>
-									Utiliser
-								</Button>
-							</div>
+					<ul class="list-inside list-disc">
+						{#each report.unresolved as line, index (index)}
+							<li>{line.name}{line.isin ? ` (${line.isin})` : ''}</li>
 						{/each}
-					{:else}
-						<p class="text-muted-foreground">
-							Aucune cotation Yahoo en {resolving.currency} trouvée pour cette ligne.
-						</p>
-					{/if}
+					</ul>
 				</div>
 			{/if}
 			{#if error}<p class="text-destructive text-sm">{error}</p>{/if}

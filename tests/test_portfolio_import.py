@@ -21,10 +21,10 @@ HITS = {
 
 @dataclass
 class Line:
-    isin: str
+    isin: str | None
     name: str
     quantity: float
-    prum: float
+    prum: float | None
     currency: str | None = None
 
 
@@ -55,9 +55,7 @@ class TestNonAuthoritative:
         self, database, resolver
     ):
         report = portfolio_import.apply_snapshot("PEA", [Line("XX", "Mystery", 1, 1)])
-        assert report["unresolved"] == [
-            {"broker_key": "XX", "isin": "XX", "name": "Mystery"}
-        ]
+        assert report["unresolved"] == [{"isin": "XX", "name": "Mystery"}]
         assert db.get_asset("XX") is None
 
     def test_manual_trades_and_untouched_assets_are_left_alone(
@@ -89,46 +87,6 @@ class TestNonAuthoritative:
         assert db.get_asset("WORLD") is None
         assert db.get_asset("WORLD.PA")["currency"] == "EUR"
 
-    def test_a_confirmed_ticker_corrects_an_existing_asset_currency(
-        self, database, mocker
-    ):
-        db.upsert_envelope("PEA", 0.0)
-        db.add_asset("WORLD.PA", "World", "PEA", "USD")
-        mocker.patch.object(
-            prices,
-            "search",
-            return_value=[
-                {"symbol": "WORLD.PA", "label": "World EUR", "currency": "EUR"}
-            ],
-        )
-
-        portfolio_import.apply_snapshot(
-            "PEA", [Line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")]
-        )
-
-        assert db.get_asset("WORLD.PA")["currency"] == "EUR"
-
-    def test_a_later_sync_reuses_the_asset_linked_to_the_broker_key(
-        self, database, mocker
-    ):
-        db.upsert_envelope("CTO", 0.0)
-        db.add_asset("AMD.F", "AMD", "CTO", "EUR")
-        db.set_asset_broker_key("AMD.F", "US0079031078")
-
-        portfolio_import.apply_snapshot(
-            "CTO", [Line("US0079031078", "AMD", 2.0, 100.0, "EUR")]
-        )
-
-        mocker.patch.object(
-            prices, "search", side_effect=AssertionError("not searched")
-        )
-        portfolio_import.apply_snapshot(
-            "CTO", [Line("US0079031078", "AMD", 3.0, 110.0, "EUR")]
-        )
-
-        assert db.get_asset("AMD.F")["base_quantity"] == 3.0
-        assert db.get_asset("AMD.DE") is None
-
     def test_a_different_currency_leaves_the_broker_line_unresolved(
         self, database, mocker
     ):
@@ -143,27 +101,24 @@ class TestNonAuthoritative:
         )
 
         assert report["imported"] == []
-        assert report["unresolved"] == [
-            {"broker_key": "IE000BI8OT95", "isin": "IE000BI8OT95", "name": "World"}
-        ]
+        assert report["unresolved"] == [{"isin": "IE000BI8OT95", "name": "World"}]
 
-    def test_an_explicit_ticker_cannot_bypass_the_currency_check(
-        self, database, mocker
-    ):
-        mocker.patch.object(
-            prices,
-            "search",
-            return_value=[{"symbol": "WORLD", "label": "World USD", "currency": "USD"}],
-        )
+    def test_a_line_without_isin_is_never_guessed(self, database, mocker):
+        search = mocker.patch.object(prices, "search")
 
+        report = portfolio_import.apply_snapshot("CEFP", [Line(None, "Fonds", 3, 10)])
+
+        assert report["unresolved"] == [{"isin": None, "name": "Fonds"}]
+        search.assert_not_called()
+
+    def test_a_line_without_cost_basis_is_unresolved(self, database, resolver):
         report = portfolio_import.apply_snapshot(
-            "PEA",
-            [Line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")],
-            symbols={"IE000BI8OT95": "WORLD"},
+            "PEA", [Line("IE000BI8OT95", "World", 10.0, None)]
         )
 
         assert report["imported"] == []
-        assert db.get_asset("WORLD") is None
+        assert report["unresolved"] == [{"isin": "IE000BI8OT95", "name": "World"}]
+        assert db.get_asset("CW8.PA") is None
 
 
 class TestAuthoritative:
@@ -214,42 +169,3 @@ class TestAuthoritative:
         assert moved["envelope"] == "CTO" and moved["weight"] == 3.0
         portfolio_import.apply_snapshot("PEA", [EUROPE], authoritative=True)
         assert db.get_asset("CW8.PA")["base_quantity"] == 10.0
-
-    def test_picking_another_ticker_moves_the_line_off_the_old_asset(
-        self, database, mocker
-    ):
-        # Given a line linked to a first ticker
-        db.upsert_envelope("CTO", 0.0)
-        db.add_asset("AMD", "AMD", "CTO", "EUR")
-        db.set_asset_broker_key("AMD", "US0079031078")
-        mocker.patch.object(
-            prices,
-            "search",
-            return_value=[{"symbol": "AMD.DE", "label": "AMD", "currency": "EUR"}],
-        )
-        # When the user points it at another one
-        report = portfolio_import.apply_snapshot(
-            "CTO",
-            [Line("US0079031078", "AMD", 2.0, 100.0, "EUR")],
-            authoritative=True,
-            symbols={"US0079031078": "AMD.DE"},
-        )
-        # Then the new asset holds the position and the old one is released
-        assert report["imported"][0]["symbol"] == "AMD.DE"
-        assert db.get_asset("AMD.DE")["broker_key"] == "US0079031078"
-        old = db.get_asset("AMD")
-        assert old["broker_key"] is None and old["base_quantity"] == 0.0
-
-    def test_a_linked_asset_in_another_currency_is_not_updated(self, database, mocker):
-        # A manual add carried the ISIN but trades in USD, the bank reports EUR
-        db.upsert_envelope("CTO", 0.0)
-        db.add_asset("AMD", "AMD", "CTO", "USD")
-        db.set_asset_broker_key("AMD", "US0079031078")
-        mocker.patch.object(prices, "search", side_effect=AssertionError("no search"))
-
-        report = portfolio_import.apply_snapshot(
-            "CTO", [Line("US0079031078", "AMD", 2.0, 100.0, "EUR")], authoritative=True
-        )
-
-        assert report["imported"] == []
-        assert db.get_asset("AMD")["base_quantity"] == 0.0

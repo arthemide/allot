@@ -39,8 +39,6 @@ export const connectorLogin: typeof http.connectorLogin = (login, password) =>
 	backend().connectorLogin(login, password);
 export const connectorAnswer: typeof http.connectorAnswer = (sessionId, answer) =>
 	backend().connectorAnswer(sessionId, answer);
-export const resolveConnector: typeof http.resolveConnector = (resolution) =>
-	backend().resolveConnector(resolution);
 export const updateAsset: typeof http.updateAsset = (symbol, body) =>
 	backend().updateAsset(symbol, body);
 export const deleteAsset: typeof http.deleteAsset = (symbol) => backend().deleteAsset(symbol);
