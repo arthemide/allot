@@ -16,7 +16,4 @@ ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = Path(os.getenv("ALLOT_CONNECTORS_DIR", ROOT / "data" / "connectors"))
 
 DB_PATH = DATA_DIR / "connectors.db"
-PROFILES_DIR = DATA_DIR / "profiles"
-DUMPS_DIR = DATA_DIR / "dumps"
 STATE_DIR = DATA_DIR / "woob-state"
-LOCK = DATA_DIR / "run.lock"

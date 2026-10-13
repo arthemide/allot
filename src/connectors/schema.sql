@@ -8,7 +8,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS snapshots (
     id       INTEGER PRIMARY KEY,
-    source   TEXT NOT NULL,  -- the bank key: "bourso", "afer"
+    source   TEXT NOT NULL,  -- the bank key: "bourso"
     taken_at TEXT NOT NULL   -- ISO 8601, UTC
 );
 
@@ -18,8 +18,7 @@ CREATE TABLE IF NOT EXISTS positions (
     snapshot_id  INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
     -- A product name ("PEA", "PEA-PME"), never an account number.
     account      TEXT NOT NULL,
-    -- "security", "managed" (profiled management), "cash", and for life
-    -- insurance "euro_fund" or "unit_linked".
+    -- "security" for a holding, "cash" for the account's cash balance.
     support_type TEXT NOT NULL,
     -- Stable identity of the line, used to remember a manual ticker choice:
     -- the ISIN when the broker gives one, else "account|label".
