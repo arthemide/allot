@@ -96,7 +96,9 @@
 	async function findTicker(line: UnresolvedLine) {
 		resolving = line;
 		hits = [];
-		tickerQuery = line.isin;
+		// A part-based line the broker does not tag has no ISIN; start the
+		// search from its name so the user can steer to the right ticker.
+		tickerQuery = line.isin ?? line.name;
 		await searchTicker();
 	}
 
@@ -116,19 +118,19 @@
 	}
 
 	async function resolve(hit: SearchHit) {
-		if (!resolving?.account || !resolving.currency) return;
+		if (!resolving?.account || !resolving?.broker_key || !resolving.currency) return;
 		error = '';
 		busy = true;
 		try {
 			await resolveConnector({
 				account: resolving.account,
-				isin: resolving.isin,
+				broker_key: resolving.broker_key,
 				symbol: hit.symbol
 			});
 			report = report && {
 				...report,
 				unresolved: report.unresolved.filter(
-					(line) => line.account !== resolving?.account || line.isin !== resolving?.isin
+					(line) => line.account !== resolving?.account || line.broker_key !== resolving?.broker_key
 				)
 			};
 			resolving = null;
@@ -179,9 +181,9 @@
 						Aucune cotation Yahoo dans la devise Bourso n'a été retenue. Choisissez une cotation
 						compatible pour chaque ligne.
 					</p>
-					{#each report.unresolved as line (`${line.account ?? ''}:${line.isin}`)}
+					{#each report.unresolved as line (line.broker_key)}
 						<div class="flex items-center justify-between gap-3">
-							<span>{line.name} ({line.isin}) - {line.currency ?? 'devise inconnue'}</span>
+							<span>{line.name}{line.isin ? ` (${line.isin})` : ''} - {line.currency ?? 'devise inconnue'}</span>
 							<Button size="sm" variant="outline" onclick={() => findTicker(line)}>
 								Choisir un ticker
 							</Button>
@@ -222,7 +224,7 @@
 						{/each}
 					{:else}
 						<p class="text-muted-foreground">
-							Aucune cotation Yahoo en {resolving.currency} trouvée pour cet ISIN.
+							Aucune cotation Yahoo en {resolving.currency} trouvée pour cette ligne.
 						</p>
 					{/if}
 				</div>

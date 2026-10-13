@@ -22,9 +22,15 @@ from src.services import prices
 
 
 class SnapshotLine(Protocol):
-    """What a broker reports for one holding, whatever the source."""
+    """What a broker reports for one holding, whatever the source.
 
-    isin: str
+    `broker_key` is the stable identity of the line; `isin` is optional because
+    a part-based line the broker does not tag (a CEFP line without ISIN) still
+    has to be importable once the user has picked a ticker for it.
+    """
+
+    broker_key: str
+    isin: str | None
     name: str
     quantity: float
     prum: float
@@ -41,53 +47,58 @@ def apply_snapshot(
 ) -> dict:
     """Write the lines as opening positions; return an ImportReport dict.
 
-    A broker line with a currency only accepts a Yahoo listing in that exact
-    currency. ``symbols`` holds an explicit, user-selected ticker for a line
-    that could not be resolved automatically.
+    A line already linked to a Yahoo ticker (by its `broker_key`) is updated in
+    place, so a manual choice is remembered across syncs. An unlinked line with
+    an ISIN is looked up automatically and must match the broker's currency. An
+    unlinked line without an ISIN is never guessed: it is reported unresolved
+    so the user can pick the ticker by hand. ``symbols`` carries an explicit,
+    user-selected ticker for such a line, keyed by ``broker_key``.
     """
     if db.get_envelope(envelope) is None:
         db.upsert_envelope(envelope, 0.0)
 
-    reconcile_missing = authoritative if reconcile_missing is None else reconcile_missing
+    reconcile_missing = (
+        authoritative if reconcile_missing is None else reconcile_missing
+    )
     imported, unresolved, elsewhere = [], [], []
     touched: set[str] = set()
     for row in lines:
         currency = _currency(row)
-        existing = db.get_asset_by_isin(row.isin)
+        broker_key = _broker_key(row)
+        linked = db.get_asset_by_broker_key(broker_key)
+        requested = (symbols or {}).get(broker_key)
         hit = None
-        if existing is not None:
-            if currency is not None and existing["currency"] != currency:
+        if linked is not None and requested in (None, linked["symbol"]):
+            if currency and linked["currency"] != currency:
+                # Linked earlier (a manual add with its ISIN, say) but quoted
+                # in another currency: the PRUM would not compare.
                 unresolved.append(_unresolved(row, currency))
                 continue
-            symbol = existing["symbol"]
+            symbol = linked["symbol"]
+            existing = linked
         else:
-            requested_symbol = (symbols or {}).get(row.isin)
-            hits = prices.search(requested_symbol or row.isin, limit=10)
-            hit = next(
-                (
-                    candidate
-                    for candidate in hits
-                    if (requested_symbol is None or candidate["symbol"] == requested_symbol)
-                    and (
-                        currency is None
-                        or str(candidate.get("currency") or "").upper() == currency
-                    )
-                ),
-                None,
-            )
+            hit = _resolve_hit(row, currency, symbols or {})
             if hit is None:
                 unresolved.append(_unresolved(row, currency))
                 continue
             symbol = hit["symbol"]
+            if linked is not None and linked["symbol"] != symbol:
+                # The user moved this line to another ticker. The key is
+                # unique, so unlink the old asset, and stop it from still
+                # holding the position the broker now reports elsewhere.
+                db.set_asset_broker_key(linked["symbol"], None)
+                if authoritative:
+                    db.set_opening_position(linked["symbol"], 0, None)
+                    db.delete_transactions_of(linked["symbol"])
             existing = db.get_asset(symbol)
 
         if existing is None:
-            db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
-            db.set_asset_isin(symbol, row.isin)
+            db.add_asset(
+                symbol, row.name, envelope, (hit or {}).get("currency") or "EUR"
+            )
         else:
             if hit is not None and hit.get("currency"):
                 db.set_asset_currency(symbol, hit["currency"])
-            db.set_asset_isin(symbol, row.isin)
             if existing["envelope"] != envelope and authoritative:
                 # The broker says this line is in `envelope`; move it there,
                 # keeping the user's label and weight. Otherwise a later
@@ -103,6 +114,7 @@ def apply_snapshot(
                         "envelope": existing["envelope"],
                     }
                 )
+        db.set_asset_broker_key(symbol, broker_key)
         db.set_opening_position(symbol, row.quantity, row.prum * row.quantity)
         touched.add(symbol)
         if authoritative:
@@ -137,8 +149,42 @@ def _currency(row: SnapshotLine) -> str | None:
     return str(value).upper() if value else None
 
 
+def _broker_key(row: SnapshotLine) -> str:
+    key = getattr(row, "broker_key", None)
+    if key:
+        return key
+    return str(getattr(row, "isin") or getattr(row, "name") or "")
+
+
+def _resolve_hit(row: SnapshotLine, currency: str | None, symbols: dict) -> dict | None:
+    """Pick the Yahoo listing for an unlinked line, or None for the user to pick."""
+    requested = symbols.get(_broker_key(row))
+    if requested is not None:
+        hits = prices.search(requested, limit=10)
+        return next(
+            (h for h in hits if h["symbol"] == requested and _currency_ok(h, currency)),
+            None,
+        )
+    isin = getattr(row, "isin", None)
+    if not isin:
+        # No broker identifier to search with: never guess, hand it to the user.
+        return None
+    hits = prices.search(isin, limit=10)
+    return next((h for h in hits if _currency_ok(h, currency)), None)
+
+
+def _currency_ok(hit: dict, currency: str | None) -> bool:
+    if currency is None:
+        return True
+    return str(hit.get("currency") or "").upper() == currency
+
+
 def _unresolved(row: SnapshotLine, currency: str | None) -> dict:
-    line = {"isin": row.isin, "name": row.name}
+    line = {
+        "broker_key": _broker_key(row),
+        "isin": getattr(row, "isin", None),
+        "name": row.name,
+    }
     account = getattr(row, "account", None)
     if account is not None:
         line.update(

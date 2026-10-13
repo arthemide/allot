@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS positions (
     -- "security", "managed" (profiled management), "cash", and for life
     -- insurance "euro_fund" or "unit_linked".
     support_type TEXT NOT NULL,
+    -- Stable identity of the line, used to remember a manual ticker choice:
+    -- the ISIN when the broker gives one, else "account|label".
+    broker_key   TEXT NOT NULL,
     isin         TEXT,
     label        TEXT NOT NULL,
     quantity     REAL,

@@ -128,15 +128,17 @@ export interface AssetUpdate {
 
 export interface ImportedLine {
 	symbol: string;
-	isin: string;
+	isin: string | null;
 	label: string;
 	quantity: number;
 	prum: number;
 }
 
-/** A row whose identifier no ticker answers to; nothing was written for it. */
+/** A broker line no compatible ticker was matched to; nothing was written. */
 export interface UnresolvedLine {
-	isin: string;
+	/** Stable identity of the line: the ISIN, or "account|label" when absent. */
+	broker_key: string;
+	isin: string | null;
 	name: string;
 	account?: string;
 	currency?: string;
@@ -147,7 +149,7 @@ export interface UnresolvedLine {
 /** An imported asset that already lived in another envelope. */
 export interface ElsewhereLine {
 	symbol: string;
-	isin: string;
+	isin: string | null;
 	label: string;
 	envelope: string;
 }
@@ -161,7 +163,7 @@ export interface ImportReport {
 
 export interface ConnectorResolution {
 	account: string;
-	isin: string;
+	broker_key: string;
 	symbol: string;
 }
 

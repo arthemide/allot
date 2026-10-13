@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from src.connectors.paths import DB_PATH
 
@@ -27,6 +27,10 @@ class PositionRow(BaseModel):
 
     account: str
     support_type: str
+    # Stable identity of the line, filled in by the validator when the caller
+    # does not set it: the ISIN, or "account|label" when the broker does not
+    # tag the holding (a part-based CEFP line without ISIN).
+    broker_key: str | None = None
     isin: str | None = None
     label: str
     quantity: float | None = None
@@ -36,12 +40,29 @@ class PositionRow(BaseModel):
     unit_price: float | None = None
     gain: float | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_broker_key(cls, data: Any) -> Any:
+        if isinstance(data, dict) and not data.get("broker_key"):
+            data["broker_key"] = data.get("isin") or (
+                f"{data.get('account', '')}|{data.get('label', '')}"
+            )
+        return data
+
 
 def connect(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
     connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    # Snapshots taken before the line identity existed lack the column.
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(positions)")
+    }
+    if "broker_key" not in columns:
+        connection.execute(
+            "ALTER TABLE positions ADD COLUMN broker_key TEXT NOT NULL DEFAULT ''"
+        )
     return connection
 
 
@@ -60,15 +81,16 @@ def save_snapshot(
             connection.executemany(
                 """
                 INSERT INTO positions (
-                    snapshot_id, account, support_type, isin, label, quantity,
-                    value, currency, unit_cost, unit_price, gain
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    snapshot_id, account, support_type, broker_key, isin, label,
+                    quantity, value, currency, unit_cost, unit_price, gain
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         snapshot_id,
                         r.account,
                         r.support_type,
+                        r.broker_key,
                         r.isin,
                         r.label,
                         r.quantity,

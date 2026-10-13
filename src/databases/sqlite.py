@@ -31,21 +31,21 @@ def init(path: Path = DB_PATH) -> None:
     connection = connect(path)
     try:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-        # Existing databases predate the ISIN column. SQLite only
-        # adds columns explicitly, unlike CREATE TABLE IF NOT EXISTS.
+        # Existing databases predate the broker-identity column. SQLite only
+        # adds columns explicitly, unlike CREATE TABLE IF NOT EXISTS. A column
+        # first shipped as `isin` is renamed to its general name.
         columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(asset)")
         }
-        if "isin" not in columns:
-            connection.execute("ALTER TABLE asset ADD COLUMN isin TEXT")
-        if "broker_isin" in columns:
-            connection.execute(
-                "UPDATE asset SET isin = broker_isin "
-                "WHERE isin IS NULL AND broker_isin IS NOT NULL"
-            )
+        if "broker_key" not in columns:
+            if "isin" in columns:
+                connection.execute("ALTER TABLE asset RENAME COLUMN isin TO broker_key")
+            else:
+                connection.execute("ALTER TABLE asset ADD COLUMN broker_key TEXT")
+        connection.execute("DROP INDEX IF EXISTS idx_asset_isin")
         connection.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_isin "
-            "ON asset(isin) WHERE isin IS NOT NULL"
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_asset_broker_key "
+            "ON asset(broker_key) WHERE broker_key IS NOT NULL"
         )
         connection.commit()
     finally:
@@ -83,8 +83,8 @@ def get_asset(symbol: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
-def get_asset_by_isin(isin: str) -> dict[str, Any] | None:
-    rows = query("SELECT * FROM asset WHERE isin = ?", (isin,))
+def get_asset_by_broker_key(broker_key: str) -> dict[str, Any] | None:
+    rows = query("SELECT * FROM asset WHERE broker_key = ?", (broker_key,))
     return rows[0] if rows else None
 
 
@@ -117,9 +117,9 @@ def set_asset_currency(symbol: str, currency: str) -> None:
     execute("UPDATE asset SET currency = ? WHERE symbol = ?", (currency, symbol))
 
 
-def set_asset_isin(symbol: str, isin: str) -> None:
-    """Link an asset to the unique ISIN that identifies its instrument."""
-    execute("UPDATE asset SET isin = ? WHERE symbol = ?", (isin, symbol))
+def set_asset_broker_key(symbol: str, broker_key: str | None) -> None:
+    """Link an asset to the stable identity that identifies its instrument."""
+    execute("UPDATE asset SET broker_key = ? WHERE symbol = ?", (broker_key, symbol))
 
 
 def set_opening_position(symbol: str, quantity: float, invested: float | None) -> None:
