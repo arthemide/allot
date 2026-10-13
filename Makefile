@@ -72,17 +72,9 @@ note:
 woob-install:
 	uv sync --group woob
 
-# Woob downloads modules under a versioned directory. Ask the installed version
-# rather than assuming its on-disk layout.
-WOOB_MODULES_SRC ?= $(shell uv run --group woob python -c 'from woob.core import Woob; print(Woob().repositories.modules_dir)')
-
-.PHONY: woob-vendor ## 🏦 Fetch and copy the boursorama module into vendor/
-woob-vendor: woob-install
-	uv run --group woob python -c 'from woob.core import Woob; Woob().repositories.install("boursorama")'
-	test -d "$(WOOB_MODULES_SRC)/boursorama"
-	mkdir -p vendor/woob-modules
-	cp -r "$(WOOB_MODULES_SRC)/boursorama/." vendor/woob-modules/boursorama/
-	echo "vendored boursorama into vendor/woob-modules/"
+.PHONY: woob-update ## 🏦 Refresh the vendored boursorama module from woob's signed repository (needs gpgv)
+woob-update: woob-install
+	uv run --group woob python scripts/woob_update.py
 
 .PHONY: up ## 🐳 Start the on-premise stack from the published image
 up:

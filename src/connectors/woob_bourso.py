@@ -59,13 +59,13 @@ class WoobLogin:
                 from woob.tools.storage import StandardStorage
             except ModuleNotFoundError as error:
                 raise _unavailable() from error
-        except ModuleNotFoundError as error:  # the connectors group is optional
+        except ModuleNotFoundError as error:  # the woob group is optional
             raise _unavailable() from error
 
         if not (MODULES_PATH / MODULE).is_dir():
             raise ConnectorUnavailable(
                 f"the woob '{MODULE}' module is not vendored under {MODULES_PATH}. "
-                "Run `make woob-vendor` from a machine that has it."
+                "Restore it from git, or run `make woob-update`."
             )
 
         STATE_DIR.mkdir(parents=True, exist_ok=True)

@@ -11,9 +11,10 @@ dependencies = [
 
 [dependency-groups]
 # The in-app path: woob logs in and reads the positions. Installed in the
-# image only when built with INSTALL_WOOB=1.
+# image only when built with INSTALL_WOOB=1. Pinned exactly: 3.7 is woob's last
+# core release, and scripts/woob_update.py checks every module build against it.
 woob = [
-    "woob>=3.7",
+    "woob==3.7",
 ]
 dev = [
     "pytest>=8.0.0",
