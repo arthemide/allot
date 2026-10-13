@@ -1,46 +1,38 @@
 # Bank connectors
 
-Read-only, local-only access to BoursoBank (PEA) and Afer (life insurance). You log in yourself in a visible browser, 2FA included; nothing here asks for or stores a password. The browser refuses every host outside the bank's domains, and the code never clicks or types.
+BoursoBank can be synced from Allot itself, with [woob](https://woob.dev) doing the login. Everything the connector writes lives under `data/connectors/` (git-ignored): the snapshot database and woob's saved state.
 
-Everything it writes lives under `data/connectors/`, which git ignores: the browser profile (`profiles/<bank>/`, it holds a live session), the masked network dumps (`dumps/<bank>/<timestamp>/`) and, later, the snapshot database.
+## Credentials
 
-## Install
+The sync runs where the app runs (the Pi), so your credentials travel from the browser to the app over the LAN: turn `ALLOT_PASSWORD_HASH` on, and put HTTPS in front of a non-local instance. The password is used once and never written or logged.
 
-```sh
-make connectors-install   # Playwright and its Chromium, outside the default install
-```
+woob receives a full bank session. Allot only calls the account and investment listings, but the woob module itself also knows transfers and documents: treat the host as one that can reach your bank account.
 
-## First connection: discovery
+## Local run
 
 ```sh
-make discover BANK=bourso   # or BANK=afer
+make woob-install
+make woob-vendor    # downloads the module once, then vendors it with Allot
 ```
 
-A Chromium window opens on the bank's site. Log in, open the target page (PEA portfolio, or the Afer membership detail with its split across funds), wait for it to load, then press Enter in the terminal. Every JSON response and every page is masked (tokens, IBANs, account and membership numbers, personal details) and written to the dump folder, followed by `summary.txt`: which endpoints carry amounts, quantities, ISINs or labels, and whether the figures arrive as JSON or as server-rendered HTML. Hosts the browser refused are listed too; if the login page breaks, one of them is probably needed.
+The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/` only: no repository, no `woob update`, nothing fetched at runtime.
 
-Read the dumps before reusing any of them as a test fixture: masking leans towards too much, but it is a regex, not a guarantee.
+## Image
 
-To print the summary of a past run again:
+In the on-premise image, woob is controlled by the `INSTALL_WOOB` build argument (it pulls lxml, which compiles from source on the 32-bit Pi):
 
 ```sh
-uv run python -m src.connectors summary data/connectors/dumps/bourso/<timestamp>
+docker compose -f docker-compose.yml -f docker-compose.build.yml build \
+    --build-arg INSTALL_WOOB=1
 ```
 
-To inspect a stronger authentication flow without discarding the profile that
-regular syncs reuse, launch a one-off empty browser profile. It is removed as
-soon as the discovery window closes:
-
-```sh
-make discover-fresh BANK=bourso
-```
+The connector's state (snapshot database and the woob trusted-device cookie) then lives under `/data/connectors` on the same volume as the app database.
 
 ## Sync
 
-```sh
-make sync BANK=bourso
-```
+In the app, "Sync BoursoBank" asks for your login and password. If the bank wants a second factor, the dialog shows a code field, or asks you to validate in your bank app and confirm once done. The device is trusted for 90 days through woob's saved state (`data/connectors/woob-state/`, a secret, git-ignored), so the second factor is not asked again until it lapses.
 
-Reuses the session the profile kept, in a hidden browser (`uv run --group connectors python -m src.connectors sync bourso --visible` to watch it). It loads the account list, then the positions page of each PEA, by address only, with a random pause of 2 to 6 seconds between pages. BoursoBank renders those pages server-side, so the figures are read from the HTML: per line the ISIN, label, quantity, cost price, last price, value and unrealised gain, plus the available cash.
+The bank is authoritative: each sync replaces the account's opening positions with what BoursoBank reports, clears the manual trades of those assets, and zeroes any asset the bank no longer lists. The cash balance is read but left for you to reconcile.
 
 Each sync appends a snapshot to `data/connectors/connectors.db` and never overwrites one:
 
@@ -48,67 +40,6 @@ Each sync appends a snapshot to `data/connectors/connectors.db` and never overwr
 sqlite3 data/connectors/connectors.db 'SELECT * FROM positions WHERE snapshot_id = (SELECT max(id) FROM snapshots)'
 ```
 
-If the page no longer looks like what the parser expects, the sync stops without storing anything and says what is missing. Afer has no sync yet: it waits for its own discovery.
+## Limits
 
-## Session expired
-
-The profile keeps the session between runs. When the bank has logged it out, sync stops with a message and stores nothing. Run `make discover BANK=<bank>` again, log in in the window, press Enter, then sync. To start from scratch, delete `data/connectors/profiles/<bank>/`.
-
-## One run at a time
-
-A lock file, `data/connectors/run.lock`, refuses a second run. If a run crashed and left it behind, delete it.
-
-
-## Sync from the app, with woob
-
-The sync above drives a browser on your machine. BoursoBank can instead be
-synced from Allot itself, with [woob](https://woob.dev) doing the login. This
-runs where the app runs (the Pi), so your credentials travel from the browser
-to the app over the LAN: turn `ALLOT_PASSWORD_HASH` on, and put HTTPS in front
-of a non-local instance. The password is used once and never written or logged.
-
-For a local run (`make start`):
-
-```sh
-make woob-install
-make woob-vendor    # downloads the module once, then vendors it with Allot
-```
-
-The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/`
-only: no repository, no `woob update`, nothing fetched at runtime. Commit the
-vendored `boursorama` module before building an image with this checkout.
-
-In the on-premise image, woob is left out by default (it pulls lxml, which
-compiles from source on the 32-bit Pi). Build it in explicitly:
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.build.yml build \
-    --build-arg INSTALL_WOOB=1
-```
-
-The connectors' state (snapshot database and the woob trusted-device cookie)
-then lives under `/data/connectors` on the same volume as the app database.
-
-In the app, "Sync BoursoBank" asks for your login and password. If the bank
-wants a second factor, the dialog shows a code field or asks you to validate
-in your bank app, then finishes on its own. The device is trusted for 90 days
-through woob's saved state (`data/connectors/woob-state/`, a secret, git-
-ignored), so the second factor is not asked again until it lapses.
-
-The bank is authoritative: each sync replaces the PEA's opening positions with
-what BoursoBank reports, clears the manual trades of those assets, and zeroes
-any asset the bank no longer lists. The cash balance is read but left for you
-to reconcile.
-
-woob performs the automated login internally. That is the fragile part: if
-BoursoBank changes its login screen, the vendored module has to be refreshed.
-It does not support BoursoBank's QR-code validation. When the bank requires a
-QR code, use the local, visible-browser path instead:
-
-```sh
-make connectors-install
-make discover BANK=bourso
-make sync BANK=bourso
-```
-
-The QR code is then handled in the browser by the bank's own login flow.
+woob performs the automated login internally. That is the fragile part: if BoursoBank changes its login screen, the vendored module has to be refreshed with `make woob-vendor`. It does not support BoursoBank's QR-code validation; when the bank requires one, import the BoursoBank CSV export instead.

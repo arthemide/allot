@@ -1,20 +1,13 @@
-"""Why a sync stops. Both end the run before anything is stored."""
+"""Why a sync stops. Each ends the run before anything is stored."""
 
 from __future__ import annotations
 
 
 class SessionExpired(RuntimeError):
-    """The bank sent the browser back to its login page."""
+    """The bank let the second-factor validation lapse before it was given."""
 
-    def __init__(self, bank: str, key: str):
-        super().__init__(
-            f"{bank} session expired: run `make discover BANK={key}`, log in in "
-            "the window, then sync again."
-        )
-
-
-class LayoutChanged(RuntimeError):
-    """The page no longer looks like what the parser was written against."""
+    def __init__(self, bank: str):
+        super().__init__(f"{bank} validation expired: start the sync again.")
 
 
 class AuthFailed(RuntimeError):

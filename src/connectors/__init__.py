@@ -1,14 +1,15 @@
-"""Read-only connectors to the banks that hold the positions.
+"""Bank connectors: read the positions a broker holds into Allot.
 
-Three rules hold for everything in this package:
+BoursoBank is the only one, through woob (`woob_bourso.py`, the only file that
+imports it). The rules it keeps:
 
-- Local only: the browser talks to the bank it was opened for and nothing
-  else. Every other host is refused before the request leaves.
-- Read only: the code navigates and listens. It never clicks, never types,
-  never submits a form. Logging in is done by hand, 2FA included.
-- No credentials anywhere: no password is asked for or stored. The session
-  lives in a persistent browser profile under data/connectors/, which git
-  ignores along with the dumps and the database.
+- Nothing fetched at runtime: woob loads its module from vendor/woob-modules/,
+  never from a remote repository.
+- Credentials used once: the login and password reach woob in memory for one
+  attempt and are never written or logged.
+- Reading only: Allot calls the account and investment listings and nothing
+  else, even though the woob module itself can do more (transfers, documents).
 
-The browser lives in `browser.py`; everything else is pure and tested.
+Local state (snapshots, the trusted-device cookie) lives under
+data/connectors/, which git ignores.
 """

@@ -21,7 +21,6 @@ from src.connectors.errors import (
     AuthenticationMethodUnsupported,
     AuthFailed,
     ConnectorUnavailable,
-    LayoutChanged,
     SessionExpired,
 )
 from src.models.schema import (
@@ -62,7 +61,7 @@ def login(payload: ConnectorLogin):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(error))
     except AuthenticationMethodUnsupported as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
-    except (AuthenticationInterrupted, SessionExpired, LayoutChanged) as error:
+    except (AuthenticationInterrupted, SessionExpired) as error:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error))
     return _advance(session_id, attempt)
 
@@ -79,7 +78,7 @@ def answer(session_id: str, payload: ConnectorAnswer):
     except AuthenticationMethodUnsupported as error:
         login_session.finish(session_id)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
-    except (AuthenticationInterrupted, SessionExpired, LayoutChanged) as error:
+    except (AuthenticationInterrupted, SessionExpired) as error:
         login_session.finish(session_id)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error))
     return _advance(session_id, attempt)
