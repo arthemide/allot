@@ -148,18 +148,37 @@ export interface ElsewhereLine {
 	envelope: string;
 }
 
+/** A bank line the recorded trades cannot be reconciled with; left as it was. */
+export interface ConflictLine {
+	symbol: string;
+	label: string;
+	bank_quantity: number;
+	tracked_quantity: number;
+}
+
 export interface ImportReport {
 	imported: ImportedLine[];
 	unresolved: UnresolvedLine[];
 	elsewhere: ElsewhereLine[];
+	/** Only a bank sync reconciles against the recorded trades. */
+	conflicts?: ConflictLine[];
 	total: number;
+}
+
+/** A bank account no envelope was chosen for yet. */
+export interface AccountChoice {
+	account: string;
+	lines: number;
+	/** An existing envelope of the same name, offered as the default. */
+	envelope: string | null;
 }
 
 /** Where an interactive bank login stands, and the import once it is through. */
 export interface ConnectorStatus {
 	session_id: string;
-	status: 'otp' | 'app_validation' | 'done';
+	status: 'otp' | 'app_validation' | 'accounts' | 'done';
 	prompt: string;
+	accounts: AccountChoice[];
 	report: ImportReport | null;
 }
 

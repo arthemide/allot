@@ -32,6 +32,9 @@ factory: Callable[[str, str], Any] = _default_factory
 class _Entry:
     attempt: Any
     created: float = field(default_factory=time.monotonic)
+    # What the bank reported, kept while new accounts wait for an envelope so
+    # the bank is not read twice.
+    rows: list | None = None
 
 
 _entries: dict[str, _Entry] = {}
@@ -55,7 +58,11 @@ def begin(login: str, password: str) -> tuple[str, Any]:
     """Start a login; return its id and the attempt once `start` has run."""
     _sweep(time.monotonic())
     attempt = factory(login, password)
-    attempt.start()
+    try:
+        attempt.start()
+    except Exception:
+        attempt.deinit()
+        raise
     sid = secrets.token_urlsafe(16)
     _entries[sid] = _Entry(attempt)
     return sid, attempt
@@ -72,6 +79,16 @@ def answer(sid: str, value: str) -> Any:
 def get(sid: str) -> Any:
     entry = _entries.get(sid)
     return entry.attempt if entry else None
+
+
+def hold(sid: str, rows: list) -> None:
+    """Keep what the bank reported until the user has placed its accounts."""
+    _entries[sid].rows = rows
+
+
+def held(sid: str) -> list | None:
+    entry = _entries.get(sid)
+    return entry.rows if entry else None
 
 
 def finish(sid: str) -> None:

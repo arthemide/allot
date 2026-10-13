@@ -71,6 +71,51 @@ class TestPosition:
             position([Trade(side="swap", quantity=1.0, unit_price=100.0)])
 
 
+class TestOpeningFor:
+    def test_no_trade_opens_the_whole_bank_position(self):
+        assert calc.opening_for([], 10.0, 100.0) == (10.0, 100.0)
+
+    def test_trades_on_top_land_on_the_bank_figures(self):
+        # Given a buy and a sell recorded here, fees included
+        trades = [
+            Trade(side="buy", quantity=2.0, unit_price=120.0, fees=2.0),
+            Trade(side="sell", quantity=1.0, unit_price=130.0),
+        ]
+        # When the bank reports 10 at a PRUM of 105
+        base_quantity, base_prum = calc.opening_for(trades, 10.0, 105.0)
+        # Then the opening plus the trades give exactly that back
+        result = position(trades, base_quantity, base_prum)
+        assert result.quantity == pytest.approx(10.0)
+        assert result.prum == pytest.approx(105.0)
+
+    def test_trades_that_make_the_whole_holding_need_no_opening(self):
+        trades = [Trade(side="buy", quantity=4.0, unit_price=50.0)]
+        assert calc.opening_for(trades, 4.0, 50.0) == (0.0, None)
+
+    def test_trades_that_make_the_holding_at_another_prum_cannot(self):
+        trades = [Trade(side="buy", quantity=4.0, unit_price=50.0)]
+        assert calc.opening_for(trades, 4.0, 60.0) is None
+
+    def test_trades_holding_more_than_the_bank_cannot(self):
+        trades = [Trade(side="buy", quantity=12.0, unit_price=50.0)]
+        assert calc.opening_for(trades, 10.0, 50.0) is None
+
+    def test_a_prum_the_trades_cannot_reach_is_refused(self):
+        # 9 opened units would need a negative PRUM to average 10 with one at 200
+        trades = [Trade(side="buy", quantity=1.0, unit_price=200.0)]
+        assert calc.opening_for(trades, 10.0, 10.0) is None
+
+    def test_an_unknown_prum_cannot_open_anything(self):
+        assert calc.opening_for([], 3.0, None) is None
+
+    def test_a_position_sold_out_needs_no_opening(self):
+        trades = [
+            Trade(side="buy", quantity=2.0, unit_price=50.0),
+            Trade(side="sell", quantity=2.0, unit_price=60.0),
+        ]
+        assert calc.opening_for(trades, 0.0, None) == (0.0, None)
+
+
 class TestPrumAfterBuy:
     def test_buying_below_prum_lowers_it(self):
         # Given 1 unit held at 200, buying 100 worth at 100

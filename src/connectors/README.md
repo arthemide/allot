@@ -4,7 +4,7 @@ BoursoBank can be synced from Allot itself, with [woob](https://woob.dev) doing 
 
 ## Credentials
 
-The sync runs where the app runs (the Pi), so your credentials travel from the browser to the app over the LAN: turn `ALLOT_PASSWORD_HASH` on, and put HTTPS in front of a non-local instance. The password is used once and never written or logged.
+The sync runs where the app runs (the Pi), so your credentials travel from the browser to the app over the LAN. The `/connectors` routes therefore answer 403 until the app password is on (`ALLOT_PASSWORD_HASH`, see `make password`); put HTTPS in front of a non-local instance too. Bank logins are capped at 5 per 10 minutes, since the bank locks an account after a few failures. The password is used once and never written or logged.
 
 woob receives a full bank session. Allot only calls the account and investment listings, but the woob module itself also knows transfers and documents: treat the host as one that can reach your bank account.
 
@@ -18,7 +18,7 @@ The app loads the module with woob's `WoobBase`, from `vendor/woob-modules/` onl
 
 ## Image
 
-In the on-premise image, woob is controlled by the `INSTALL_WOOB` build argument (it pulls lxml, which compiles from source on the 32-bit Pi):
+The on-premise image leaves woob out by default: on the 32-bit Pi, pillow (a woob dependency) has no wheel and compiles from source. Build it in explicitly:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.build.yml build \
@@ -31,7 +31,9 @@ The woob trusted-device cookie then lives under `/data/connectors`, on the same 
 
 In the app, "Sync BoursoBank" asks for your login and password. If the bank wants a second factor, the dialog shows a code field, or asks you to validate in your bank app and confirm once done. The device is trusted for 90 days through woob's saved state (`data/connectors/woob-state/`, a secret, git-ignored), so the second factor is not asked again until it lapses.
 
-The bank is authoritative: each sync replaces the account's opening positions with what BoursoBank reports, clears the manual trades of those assets, and zeroes any asset the bank no longer lists. The cash balance is read but left for you to reconcile.
+The first time an account shows up (PEA, CTO, CEFP...), the dialog asks which envelope it syncs into, offering an envelope of the same name when there is one; leaving it empty keeps the account out of Allot. The choice is remembered (`bank_account` table). Deleting the envelope forgets it, so the account is asked about again.
+
+The bank is authoritative on what is held: after a sync, each asset it reports holds exactly its quantity and PRUM, and an asset of the envelope it no longer lists holds nothing. The trades you recorded are never deleted, because the envelope's cash is derived from them; the opening position absorbs the difference instead. When it cannot, because the trades already hold more than the bank reports (a sell not recorded yet), the line is reported as a conflict and left as it was: record the sell, then sync again. The cash balance is read but left for you to reconcile.
 
 A line is reported unresolved, and nothing is written for it, when it has no ISIN (a CEFP line by parts), no cost price, or no Yahoo listing in BoursoBank's currency: add it by hand. While any line is unresolved, nothing in that account is zeroed.
 

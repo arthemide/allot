@@ -4,10 +4,12 @@ from __future__ import annotations
 
 
 class SessionExpired(RuntimeError):
-    """The bank let the second-factor validation lapse before it was given."""
+    """The second-factor validation lapsed, or was refused in the bank app."""
 
     def __init__(self, bank: str):
-        super().__init__(f"{bank} validation expired: start the sync again.")
+        super().__init__(
+            f"{bank} validation expired or was refused: start the sync again."
+        )
 
 
 class AuthFailed(RuntimeError):
@@ -24,3 +26,7 @@ class AuthenticationMethodUnsupported(RuntimeError):
 
 class ConnectorUnavailable(RuntimeError):
     """The optional connector dependency (woob) is not installed here."""
+
+
+class BankUnavailable(RuntimeError):
+    """The bank failed or answered something woob could not read."""
