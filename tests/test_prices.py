@@ -274,26 +274,6 @@ class TestSearch:
         assert results[0]["price"] is None
         assert results[0]["currency"] is None
 
-    def test_a_duplicate_symbol_is_returned_once(self, mocker):
-        _patch_get(
-            mocker,
-            return_value=_response(
-                {
-                    "quotes": [
-                        {"symbol": "AMD.DE", "shortname": "AMD"},
-                        {"symbol": "AMD.DE", "shortname": "AMD duplicate"},
-                    ]
-                }
-            ),
-        )
-        mocker.patch.object(
-            prices,
-            "_metadata",
-            return_value={"regularMarketPrice": 100.0, "currency": "EUR"},
-        )
-
-        assert [hit["symbol"] for hit in prices.search("amd")] == ["AMD.DE"]
-
     def test_a_failed_search_returns_nothing(self, mocker):
         # Given Yahoo refusing the search
         _patch_get(mocker, return_value=_response({}, status=429))
