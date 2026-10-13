@@ -68,11 +68,6 @@ password:
 note:
 	curl -s http://127.0.0.1:8000/note
 
-.PHONY: connectors-install ## 🏦 Install the local discover/sync path (Playwright)
-connectors-install:
-	uv sync --group connectors
-	uv run --group connectors playwright install chromium
-
 .PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync for a local run
 woob-install:
 	uv sync --group woob
@@ -88,18 +83,6 @@ woob-vendor: woob-install
 	mkdir -p vendor/woob-modules
 	cp -r "$(WOOB_MODULES_SRC)/boursorama/." vendor/woob-modules/boursorama/
 	echo "vendored boursorama into vendor/woob-modules/"
-
-.PHONY: discover ## 🏦 Log in to a bank by hand and record its JSON (BANK=bourso|afer)
-discover:
-	uv run --group connectors python -m src.connectors discover $(BANK)
-
-.PHONY: discover-fresh ## 🏦 Discover on a fresh, temporary browser profile (BANK=bourso|afer)
-discover-fresh:
-	uv run --group connectors python -m src.connectors discover $(BANK) --fresh
-
-.PHONY: sync ## 🏦 Read a bank's positions with the saved session and store a snapshot (BANK=bourso)
-sync:
-	uv run --group connectors python -m src.connectors sync $(BANK)
 
 .PHONY: up ## 🐳 Start the on-premise stack from the published image
 up:

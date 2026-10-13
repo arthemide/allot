@@ -306,7 +306,7 @@ class TestFailures:
 
         # The app validation expires: woob raises on the follow-up call
         def expired(value):
-            raise SessionExpired("BoursoBank", "bourso")
+            raise SessionExpired("BoursoBank")
 
         login_session.get(first["session_id"]).answer = expired
         second = client.post(f"/connectors/bourso/login/{first['session_id']}", json={})
