@@ -106,16 +106,21 @@ class ImportCsv(BaseModel):
 
 class ImportedLine(BaseModel):
     symbol: str
-    isin: str
+    isin: str | None
     label: str
     quantity: float
     prum: float
 
 
 class UnresolvedLine(BaseModel):
-    """A broker row without a compatible Yahoo ticker; nothing was written."""
+    """A broker row without a compatible Yahoo ticker; nothing was written.
 
-    isin: str
+    `broker_key` is the stable identity of the line: it is what a later manual
+    resolution and the next sync both key on.
+    """
+
+    broker_key: str
+    isin: str | None = None
     name: str
     account: str | None = None
     currency: str | None = None
@@ -131,7 +136,7 @@ class ElsewhereLine(BaseModel):
     """
 
     symbol: str
-    isin: str
+    isin: str | None
     label: str
     envelope: str
 
@@ -158,10 +163,14 @@ class ConnectorAnswer(BaseModel):
 
 
 class ConnectorResolution(BaseModel):
-    """A ticker selected by the user for an unresolved BoursoBank position."""
+    """A ticker the user picked for an unresolved BoursoBank line.
+
+    The line is referenced by `broker_key`, which covers both ISIN holdings
+    and part-based lines the broker does not tag (a CEFP line without ISIN).
+    """
 
     account: str = Field(min_length=1)
-    isin: str = Field(min_length=1)
+    broker_key: str = Field(min_length=1)
     symbol: str = Field(min_length=1)
 
 

@@ -137,7 +137,9 @@ class WoobLogin:
             self.status = "failed"
             logger.warning(
                 "BoursoBank requested QR validation; safe response shape: %s",
-                _shape(getattr(self._backend.browser.page, "doc", None)),
+                _shape(
+                    getattr(getattr(self._backend.browser, "page", None), "doc", None)
+                ),
             )
             raise AuthenticationMethodUnsupported(
                 "BoursoBank requires QR-code validation, which Woob does not support. "
@@ -198,10 +200,11 @@ class WoobLogin:
                     account=account, support_type="cash", label=label, value=value
                 )
                 continue
+            isin = _text(inv.code) if _text(inv.code) else None
             yield PositionRow(
                 account=account,
                 support_type="security",
-                isin=_text(inv.code) if _text(inv.code) else None,
+                isin=isin,
                 label=label,
                 quantity=_number(inv.quantity),
                 value=value,
@@ -221,7 +224,13 @@ class WoobLogin:
 
 
 def _is_cash(inv: Any) -> bool:
-    return str(getattr(inv, "code", "") or "").upper() in ("", "XX-LIQUIDITY", "LIQ")
+    code = str(getattr(inv, "code", "") or "").upper()
+    if code in ("XX-LIQUIDITY", "LIQ"):
+        return True
+    # A holding the broker reports by parts (a quantity) is a support even
+    # when it carries no ISIN - a bare CEFP line - not a cash balance.
+    quantity = _number(getattr(inv, "quantity", None))
+    return code == "" and not (quantity is not None and quantity > 0)
 
 
 def _shape(value: Any) -> Any:
