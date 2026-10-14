@@ -4,7 +4,7 @@ woob performs the login itself - virtual keyboard, strong authentication, the
 lot - and we drive it: hand it the credentials, answer the one challenge it
 raises, then read the investments. Nothing here reimplements the bank's login.
 
-Tested with woob stubbed out in sys.modules (tests/test_woob_bourso.py), so
+Tested with woob stubbed out in sys.modules (tests/test_connectors_boursorama.py), so
 neither woob nor the vendored module is needed to run the suite.
 """
 
@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Iterator
-
-from pydantic import BaseModel, ConfigDict
 
 from src.connectors.errors import (
     AuthenticationInterrupted,
@@ -23,28 +21,10 @@ from src.connectors.errors import (
     ConnectorUnavailable,
     SessionExpired,
 )
-from src.connectors.paths import ROOT, STATE_DIR
+from src.connectors.paths import DATA_DIR, ROOT
+from src.models.schema import PositionRow
 
 logger = logging.getLogger(__name__)
-
-
-class PositionRow(BaseModel):
-    """One line of an account, as read from the bank."""
-
-    model_config = ConfigDict(frozen=True)
-
-    account: str
-    # "security" for a holding, "cash" for the account's cash balance.
-    support_type: str
-    isin: str | None = None
-    label: str
-    quantity: float | None = None
-    value: float
-    currency: str = "EUR"
-    # As the bank states them, where it does: PRU, last price, unrealised gain.
-    unit_cost: float | None = None
-    unit_price: float | None = None
-    gain: float | None = None
 
 
 def _unavailable() -> "ConnectorUnavailable":
@@ -55,9 +35,10 @@ def _unavailable() -> "ConnectorUnavailable":
 
 
 MODULE = "boursorama"
-# Vendored modules, so nothing is fetched at runtime; STATE_DIR holds the
-# 90-day trusted-device cookie.
+# Vendored modules, so nothing is fetched at runtime.
 MODULES_PATH = ROOT / "vendor" / "woob-modules"
+# woob's saved state: the 90-day trusted-device cookie, a secret.
+STATE_DIR = DATA_DIR / "woob-state"
 
 
 class WoobLogin:
@@ -212,7 +193,7 @@ class WoobLogin:
     def _investments(self) -> list[PositionRow]:
         from woob.capabilities.bank import Account
 
-        # Every securities account: PEA, PEA-PME and plain ones (CTO, CEFP).
+        # Every securities account: PEA, PEA-PME and plain securities accounts.
         # Each is placed in an envelope by the user, the first time it shows up.
         wanted = {
             getattr(Account, name)
@@ -291,8 +272,8 @@ def _is_cash(inv: Any) -> bool:
     code = str(getattr(inv, "code", "") or "").upper()
     if code in ("XX-LIQUIDITY", "LIQ"):
         return True
-    # A holding the broker reports by parts (a quantity) is a support even
-    # when it carries no ISIN - a bare CEFP line - not a cash balance.
+    # A holding reported with a quantity is a security even without an ISIN,
+    # not a cash balance.
     quantity = _number(getattr(inv, "quantity", None))
     return code == "" and not (quantity is not None and quantity > 0)
 

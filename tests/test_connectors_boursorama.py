@@ -7,7 +7,7 @@ import types
 
 import pytest
 
-from src.connectors import woob_bourso
+from src.connectors.boursorama import connector
 
 
 class _Question(Exception):
@@ -73,9 +73,10 @@ class _Unsupported(Exception):
 
 
 def test_shape_never_contains_authentication_values():
-    assert woob_bourso._shape(
-        {"qrcode": "secret-qr-payload", "items": [123, True]}
-    ) == {"qrcode": "string(17)", "items": ["int", "bool"]}
+    assert connector._shape({"qrcode": "secret-qr-payload", "items": [123, True]}) == {
+        "qrcode": "string(17)",
+        "items": ["int", "bool"],
+    }
 
 
 def test_login_drives_one_interactive_browser(monkeypatch, tmp_path):
@@ -99,10 +100,10 @@ def test_login_drives_one_interactive_browser(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "woob.exceptions", exceptions)
     monkeypatch.setitem(sys.modules, "woob.tools.storage", storage)
     monkeypatch.setitem(sys.modules, "woob.browser.exceptions", browser_exceptions)
-    monkeypatch.setattr(woob_bourso, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(connector, "STATE_DIR", tmp_path)
     _Woob.backend = _Backend()
 
-    login = woob_bourso.WoobLogin("123456", "password")
+    login = connector.WoobLogin("123456", "password")
 
     assert login.start() == "otp"
     assert login.answer("654321") == "done"
@@ -137,11 +138,11 @@ def test_rejected_app_validation_is_a_clean_login_failure(monkeypatch, tmp_path)
     monkeypatch.setitem(sys.modules, "woob.exceptions", exceptions)
     monkeypatch.setitem(sys.modules, "woob.tools.storage", storage)
     monkeypatch.setitem(sys.modules, "woob.browser.exceptions", browser_exceptions)
-    monkeypatch.setattr(woob_bourso, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(connector, "STATE_DIR", tmp_path)
     _Woob.backend = _Backend()
     _Woob.backend.browser = RejectedBrowser()
 
-    login = woob_bourso.WoobLogin("123456", "password")
+    login = connector.WoobLogin("123456", "password")
 
     from src.connectors.errors import AuthenticationInterrupted
 
@@ -174,11 +175,11 @@ def test_qr_code_validation_is_reported_as_unsupported(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "woob.exceptions", exceptions)
     monkeypatch.setitem(sys.modules, "woob.tools.storage", storage)
     monkeypatch.setitem(sys.modules, "woob.browser.exceptions", browser_exceptions)
-    monkeypatch.setattr(woob_bourso, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(connector, "STATE_DIR", tmp_path)
     _Woob.backend = _Backend()
     _Woob.backend.browser = QrCodeBrowser()
 
-    login = woob_bourso.WoobLogin("123456", "password")
+    login = connector.WoobLogin("123456", "password")
 
     from src.connectors.errors import AuthenticationMethodUnsupported
 
@@ -197,7 +198,7 @@ def _stub_empty(monkeypatch):
     [
         ("XX-LIQUIDITY", None, True),
         ("", None, True),
-        # A part-based line without ISIN, as a CEFP shows it, is a support.
+        # A line with a quantity but no ISIN is a security.
         ("", 5.0, False),
         ("FR0010315770", 5.0, False),
     ],
@@ -205,7 +206,7 @@ def _stub_empty(monkeypatch):
 def test_only_a_balance_without_parts_is_cash(monkeypatch, code, quantity, cash):
     _stub_empty(monkeypatch)
     inv = types.SimpleNamespace(code=code, quantity=quantity)
-    assert woob_bourso._is_cash(inv) is cash
+    assert connector._is_cash(inv) is cash
 
 
 def test_the_cost_basis_is_derived_from_the_latent_gain(monkeypatch):
@@ -214,13 +215,14 @@ def test_the_cost_basis_is_derived_from_the_latent_gain(monkeypatch):
         code="FR0010315770",
         label="Fund",
         quantity=4.0,
-        valuation=640.0,
+        valuation=200.0,
         unitprice=None,
-        unitvalue=160.0,
+        unitvalue=50.0,
         diff=40.0,
     )
-    (row,) = woob_bourso.WoobLogin._rows("CEFP", iter([inv]))
-    assert row.unit_cost == 150.0
+    (row,) = connector.WoobLogin._rows("FUND", iter([inv]))
+    # (value - gain) / quantity = (200 - 40) / 4
+    assert row.unit_cost == 40.0
 
 
 def test_a_bank_that_fails_while_read_stops_the_sync(monkeypatch):
@@ -232,7 +234,7 @@ def test_a_bank_that_fails_while_read_stops_the_sync(monkeypatch):
         def iter_accounts(self):
             raise RuntimeError("502 from the bank")
 
-    login = woob_bourso.WoobLogin.__new__(woob_bourso.WoobLogin)
+    login = connector.WoobLogin.__new__(connector.WoobLogin)
     login._backend = Down()
 
     from src.connectors.errors import BankUnavailable

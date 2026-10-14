@@ -114,7 +114,7 @@ class ImportedLine(BaseModel):
 class UnresolvedLine(BaseModel):
     """A row no ticker in its currency answers to; nothing was written for it.
 
-    `isin` is None for a line the broker does not tag (a CEFP line by parts).
+    `isin` is None for a line the broker does not tag.
     """
 
     isin: str | None
@@ -272,6 +272,42 @@ class Session(BaseModel):
 
     required: bool
     authenticated: bool
+
+
+class PositionRow(BaseModel):
+    """One line of a bank account, as a connector read it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account: str
+    # "security" for a holding, "cash" for the account's cash balance.
+    support_type: str
+    isin: str | None = None
+    label: str
+    quantity: float | None = None
+    value: float
+    currency: str = "EUR"
+    # As the bank states them, where it does: PRU, last price, unrealised gain.
+    unit_cost: float | None = None
+    unit_price: float | None = None
+    gain: float | None = None
+
+
+class SnapshotLine(BaseModel):
+    """One holding of a broker snapshot, whatever the source (CSV or sync).
+
+    `isin` and `prum` are optional because a connector reads lines the broker
+    does not tag or price: those are reported unresolved, never guessed.
+    `currency`, when known, is what the Yahoo listing must be quoted in.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    isin: str | None
+    name: str
+    quantity: float
+    prum: float | None
+    currency: str | None = None
 
 
 class Trade(BaseModel):
