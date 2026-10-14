@@ -1,0 +1,3 @@
+# Third-party code, refreshed by scripts/woob_update.py: kept out of the
+# language stats. Diffs stay visible, so module updates can be reviewed.
+vendor/** linguist-vendored

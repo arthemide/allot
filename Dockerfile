@@ -17,17 +17,31 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS deps
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt
+RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
+    && uv export --frozen --no-dev --only-group woob --no-emit-project \
+        -o woob-requirements.txt
 
 # curl_cffi ships an armv7 wheel; its own dependency cffi does not, and has to
 # be compiled. Doing it in a throwaway stage keeps gcc and the headers out of
 # the image that actually ships.
 FROM python:3.14-slim AS wheels
+# INSTALL_WOOB=1 adds the in-app BoursoBank sync; it is off unless asked for.
+# lxml has an armv7 wheel, but pillow does not, so on the Pi it compiles from
+# source and needs the jpeg and zlib headers. Those are only installed then.
+ARG INSTALL_WOOB=0
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libffi-dev python3-dev \
+    && if [ "$INSTALL_WOOB" = "1" ]; then \
+        apt-get install -y --no-install-recommends \
+            libjpeg62-turbo-dev zlib1g-dev; \
+    fi \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=deps /app/requirements.txt ./
+COPY --from=deps /app/requirements.txt /app/woob-requirements.txt ./
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
+RUN if [ "$INSTALL_WOOB" = "1" ]; then \
+        pip install --no-cache-dir --require-hashes --prefix=/install \
+            -r woob-requirements.txt; \
+    fi
 
 # Litestream publishes a binary per architecture but an image for only two of
 # them, so the binary is what gets used. Fetched on the build platform and
@@ -54,19 +68,30 @@ RUN set -eu; \
 FROM python:3.14-slim
 WORKDIR /app
 
+# A pillow compiled on the Pi links against the shared jpeg library.
+ARG INSTALL_WOOB=0
+RUN if [ "$INSTALL_WOOB" = "1" ]; then \
+        apt-get update \
+        && apt-get install -y --no-install-recommends libjpeg62-turbo \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 COPY --from=wheels /install /usr/local
 COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 
 COPY app.py schema.sql docker-entrypoint.sh ./
 COPY litestream.yml /etc/litestream.yml
 COPY src/ ./src/
+# Vendored woob modules, so the in-app sync fetches nothing at runtime.
+COPY vendor/ ./vendor/
 COPY --from=front /front/dist ./front/dist
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     ALLOT_HOST=0.0.0.0 \
     ALLOT_PORT=8000 \
-    ALLOT_DB_PATH=/data/allot.db
+    ALLOT_DB_PATH=/data/allot.db \
+    ALLOT_CONNECTORS_DIR=/data/connectors
 
 VOLUME ["/data"]
 EXPOSE 8000

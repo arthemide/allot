@@ -68,6 +68,14 @@ password:
 note:
 	curl -s http://127.0.0.1:8000/note
 
+.PHONY: woob-install ## 🏦 Install the in-app BoursoBank sync for a local run
+woob-install:
+	uv sync --group woob
+
+.PHONY: woob-update ## 🏦 Refresh the vendored boursorama module from woob's signed repository (needs gpgv)
+woob-update: woob-install
+	uv run --group woob python scripts/woob_update.py
+
 .PHONY: up ## 🐳 Start the on-premise stack from the published image
 up:
 	docker compose up -d

@@ -133,9 +133,10 @@ export interface ImportedLine {
 	prum: number;
 }
 
-/** A row whose identifier no ticker answers to; nothing was written for it. */
+/** A broker line no ticker in its currency answers to; nothing was written. */
 export interface UnresolvedLine {
-	isin: string;
+	/** Null for a line the broker does not tag. */
+	isin: string | null;
 	name: string;
 }
 
@@ -147,11 +148,38 @@ export interface ElsewhereLine {
 	envelope: string;
 }
 
+/** A bank line the recorded trades cannot be reconciled with; left as it was. */
+export interface ConflictLine {
+	symbol: string;
+	label: string;
+	bank_quantity: number;
+	tracked_quantity: number;
+}
+
 export interface ImportReport {
 	imported: ImportedLine[];
 	unresolved: UnresolvedLine[];
 	elsewhere: ElsewhereLine[];
+	/** Only a bank sync reconciles against the recorded trades. */
+	conflicts?: ConflictLine[];
 	total: number;
+}
+
+/** A bank account no envelope was chosen for yet. */
+export interface AccountChoice {
+	account: string;
+	lines: number;
+	/** An existing envelope of the same name, offered as the default. */
+	envelope: string | null;
+}
+
+/** Where an interactive bank login stands, and the import once it is through. */
+export interface ConnectorStatus {
+	session_id: string;
+	status: 'otp' | 'app_validation' | 'accounts' | 'done';
+	prompt: string;
+	accounts: AccountChoice[];
+	report: ImportReport | null;
 }
 
 /** Whether this instance asks for a password, and whether we gave it one. */

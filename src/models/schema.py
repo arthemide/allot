@@ -112,9 +112,12 @@ class ImportedLine(BaseModel):
 
 
 class UnresolvedLine(BaseModel):
-    """A row whose identifier no ticker answers to; nothing was written for it."""
+    """A row no ticker in its currency answers to; nothing was written for it.
 
-    isin: str
+    `isin` is None for a line the broker does not tag.
+    """
+
+    isin: str | None
     name: str
 
 
@@ -131,12 +134,73 @@ class ElsewhereLine(BaseModel):
     envelope: str
 
 
+class ConflictLine(BaseModel):
+    """A bank line the recorded trades cannot be reconciled with; left as it was.
+
+    The trades are the history the cash is derived from, so a sync never
+    deletes them: when they already hold more than the bank reports (an
+    unrecorded sell, say), the user fixes the trades and syncs again.
+    """
+
+    symbol: str
+    label: str
+    # What the bank reports, and what the trades recorded here already make.
+    bank_quantity: float
+    tracked_quantity: float
+
+
 class ImportReport(BaseModel):
     imported: list[ImportedLine]
     unresolved: list[UnresolvedLine]
     # Imported, but already filed under another envelope - a heads-up, not an error.
     elsewhere: list[ElsewhereLine]
+    # Only a bank sync reconciles against the trades; a CSV import never has any.
+    conflicts: list[ConflictLine] = []
     total: int
+
+
+class ConnectorLogin(BaseModel):
+    """Bank credentials, used once and never stored."""
+
+    login: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class ConnectorAnswer(BaseModel):
+    """The second factor: an SMS/email code, or an acknowledged app tap."""
+
+    answer: str = ""
+
+
+class AccountChoice(BaseModel):
+    """A bank account no envelope was chosen for yet."""
+
+    account: str
+    # Security lines it holds, to tell accounts apart.
+    lines: int
+    # An existing envelope of the same name, offered as the default.
+    envelope: str | None = None
+
+
+class ConnectorAccounts(BaseModel):
+    """The envelope each new account syncs into; None leaves it out of Allot."""
+
+    envelopes: dict[str, str | None]
+
+
+class ConnectorStatus(BaseModel):
+    """Where a login stands, and the import once it is through.
+
+    `status` is "otp" or "app_validation" while the bank waits for a second
+    factor, "accounts" while new accounts wait for an envelope (`accounts`),
+    then "done". `report` is filled only on "done".
+    """
+
+    session_id: str
+    status: Literal["otp", "app_validation", "accounts", "done"]
+    prompt: str = ""
+    accounts: list[AccountChoice] = []
+    report: ImportReport | None = None
 
 
 class Envelope(BaseModel):
@@ -208,6 +272,42 @@ class Session(BaseModel):
 
     required: bool
     authenticated: bool
+
+
+class PositionRow(BaseModel):
+    """One line of a bank account, as a connector read it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    account: str
+    # "security" for a holding, "cash" for the account's cash balance.
+    support_type: str
+    isin: str | None = None
+    label: str
+    quantity: float | None = None
+    value: float
+    currency: str = "EUR"
+    # As the bank states them, where it does: PRU, last price, unrealised gain.
+    unit_cost: float | None = None
+    unit_price: float | None = None
+    gain: float | None = None
+
+
+class SnapshotLine(BaseModel):
+    """One holding of a broker snapshot, whatever the source (CSV or sync).
+
+    `isin` and `prum` are optional because a connector reads lines the broker
+    does not tag or price: those are reported unresolved, never guessed.
+    `currency`, when known, is what the Yahoo listing must be quoted in.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    isin: str | None
+    name: str
+    quantity: float
+    prum: float | None
+    currency: str | None = None
 
 
 class Trade(BaseModel):

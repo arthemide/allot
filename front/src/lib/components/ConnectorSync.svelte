@@ -1,0 +1,239 @@
+<script lang="ts">
+	import { connectorAccounts, connectorAnswer, connectorLogin } from '#lib/services/api.js';
+	import { refresh } from '#lib/state/refresh.svelte.js';
+	import type { ConnectorStatus, ImportReport } from '#lib/types/api.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+
+	// The login runs on the server; nothing is kept here. This dialog only
+	// carries the credentials through, shows the one second factor the bank
+	// asks, and asks where a new account goes.
+	let open = $state(false);
+	let login = $state('');
+	let password = $state('');
+	let code = $state('');
+	// Envelope typed for each new account; empty leaves the account out.
+	let envelopes = $state<Record<string, string>>({});
+
+	let busy = $state(false);
+	let error = $state('');
+	let status = $state<ConnectorStatus | null>(null);
+	let report = $state<ImportReport | null>(null);
+	const waitingForUser = $derived(status !== null && status.status !== 'done');
+	const conflicts = $derived(report?.conflicts ?? []);
+
+	$effect(() => {
+		if (open || waitingForUser || busy) return;
+		// Clear everything on close: credentials never linger in memory.
+		login = password = code = error = '';
+		envelopes = {};
+		status = report = null;
+	});
+
+	function done(result: ConnectorStatus) {
+		status = result;
+		if (result.status === 'accounts') {
+			envelopes = Object.fromEntries(
+				result.accounts.map((choice) => [choice.account, choice.envelope ?? ''])
+			);
+		}
+		if (result.status === 'done') {
+			report = result.report;
+			refresh.bump();
+		}
+	}
+
+	async function start(event: SubmitEvent) {
+		event.preventDefault();
+		if (!login.trim() || !password) {
+			error = 'Login and password are both needed.';
+			return;
+		}
+		error = '';
+		busy = true;
+		try {
+			done(await connectorLogin(login.trim(), password));
+			password = '';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'The login failed.';
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function answer(event: SubmitEvent) {
+		event.preventDefault();
+		if (!status) return;
+		error = '';
+		busy = true;
+		try {
+			done(await connectorAnswer(status.session_id, code.trim()));
+			code = '';
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'The validation failed.';
+			// A failed bank challenge invalidates its server-side attempt. Return to
+			// the credentials form instead of offering a dead challenge again.
+			status = null;
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function place(event: SubmitEvent) {
+		event.preventDefault();
+		if (!status) return;
+		error = '';
+		busy = true;
+		try {
+			const chosen = Object.fromEntries(
+				Object.entries(envelopes).map(([account, name]) => [
+					account,
+					name.trim() ? name.trim().toUpperCase() : null
+				])
+			);
+			done(await connectorAccounts(status.session_id, chosen));
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'The sync failed.';
+			status = null;
+		} finally {
+			busy = false;
+		}
+	}
+</script>
+
+<Dialog.Root bind:open>
+	<Dialog.Trigger>
+		{#snippet child({ props })}
+			<Button {...props} variant={waitingForUser ? 'default' : 'outline'} size="sm">
+				{#if busy}
+					<LoaderCircle class="size-4 animate-spin" />
+					<span class="sr-only">BoursoBank sync in progress</span>
+				{:else if waitingForUser}
+					<span
+						class="bg-background text-foreground flex size-4 items-center justify-center rounded-full text-xs font-bold"
+						>!</span
+					>
+					Action needed
+				{:else}
+					Sync BoursoBank
+				{/if}
+			</Button>
+		{/snippet}
+	</Dialog.Trigger>
+
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Sync BoursoBank</Dialog.Title>
+			<Dialog.Description>
+				The login runs on the server; your login and password are neither stored nor logged. The
+				bank is authoritative: each account's positions replace what is tracked here, and the
+				trades you recorded are kept.
+			</Dialog.Description>
+		</Dialog.Header>
+
+		{#if report}
+			<p class="text-sm">
+				{report.imported.length} line{report.imported.length === 1 ? '' : 's'} imported{#if report.unresolved.length},
+					{report.unresolved.length} unresolved{/if}{#if conflicts.length},
+					{conflicts.length} in conflict{/if}.
+			</p>
+			{#if report.unresolved.length}
+				<div class="space-y-2 rounded-md border p-3 text-sm">
+					<p class="text-muted-foreground">
+						Nothing was written for these lines: no ISIN, no cost price, or no Yahoo listing in the
+						bank's currency. Add them by hand. Until they are, nothing in their account is zeroed.
+					</p>
+					<ul class="list-inside list-disc">
+						{#each report.unresolved as line, index (index)}
+							<li>{line.name}{line.isin ? ` (${line.isin})` : ''}</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+			{#if conflicts.length}
+				<div class="space-y-2 rounded-md border p-3 text-sm">
+					<p class="text-muted-foreground">
+						The trades recorded here hold more than the bank reports, so these lines were left as
+						they were. Record the missing sells, then sync again.
+					</p>
+					<ul class="list-inside list-disc">
+						{#each conflicts as line (line.symbol)}
+							<li>
+								<span class="font-mono">{line.symbol}</span>
+								{line.label}: {line.tracked_quantity} tracked, {line.bank_quantity} at the bank
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+			{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
+			<Dialog.Footer>
+				<Button onclick={() => (open = false)}>Close</Button>
+			</Dialog.Footer>
+		{:else if status && status.status === 'accounts'}
+			<form class="space-y-3" onsubmit={place}>
+				<p class="text-sm">
+					{status.accounts.length === 1 ? 'This account is' : 'These accounts are'} new. Pick the envelope
+					each one syncs into; it is remembered for the next syncs. Leave it empty to keep an account
+					out of Allot.
+				</p>
+				{#each status.accounts as choice (choice.account)}
+					<div class="space-y-1">
+						<Label for="sync-account-{choice.account}">
+							{choice.account} ({choice.lines} line{choice.lines === 1 ? '' : 's'})
+						</Label>
+						<Input
+							id="sync-account-{choice.account}"
+							bind:value={envelopes[choice.account]}
+							placeholder="Left out"
+						/>
+					</div>
+				{/each}
+				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
+				<Dialog.Footer>
+					<Button type="submit" disabled={busy}>Sync</Button>
+				</Dialog.Footer>
+			</form>
+		{:else if status && status.status !== 'done'}
+			<form class="space-y-3" onsubmit={answer}>
+				<p class="text-sm">{status.prompt}</p>
+				{#if status.status === 'otp'}
+					<div class="space-y-1">
+						<Label for="sync-code">Code received</Label>
+						<Input id="sync-code" bind:value={code} autocomplete="one-time-code" />
+					</div>
+				{/if}
+				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
+				<Dialog.Footer>
+					<Button type="submit" disabled={busy}>
+						{status.status === 'otp' ? 'Check the code' : 'I validated in the app'}
+					</Button>
+				</Dialog.Footer>
+			</form>
+		{:else}
+			<form class="space-y-3" onsubmit={start} autocomplete="on">
+				<div class="space-y-1">
+					<Label for="sync-login">Login</Label>
+					<Input id="sync-login" name="username" bind:value={login} autocomplete="username" />
+				</div>
+				<div class="space-y-1">
+					<Label for="sync-pw">Password</Label>
+					<Input
+						id="sync-pw"
+						name="password"
+						type="password"
+						bind:value={password}
+						autocomplete="current-password"
+					/>
+				</div>
+				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
+				<Dialog.Footer>
+					<Button type="submit" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</Button>
+				</Dialog.Footer>
+			</form>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>

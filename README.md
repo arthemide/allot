@@ -198,4 +198,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY
 
 ## License
 
-Apache 2.0 - see [LICENSE](LICENSE).
+Apache 2.0 - see [LICENSE](LICENSE). The vendored woob `boursorama` module under `vendor/woob-modules/` keeps its own licence, LGPL-3.0-or-later - see [its README](vendor/woob-modules/README.md).

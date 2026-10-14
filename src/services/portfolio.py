@@ -13,7 +13,8 @@ from src.databases import sqlite as db
 from src.services import prices
 
 
-def _trades(symbol: str) -> list[calc.Trade]:
+def trades_of(symbol: str) -> list[calc.Trade]:
+    """The recorded trades of an asset, as calc wants them."""
     return [
         calc.Trade(
             side=row["side"],
@@ -28,7 +29,9 @@ def _trades(symbol: str) -> list[calc.Trade]:
 def position_of(asset: dict) -> dict:
     """PRUM, quantity, invested, market value and gain for one asset."""
     symbol = asset["symbol"]
-    result = calc.position(_trades(symbol), asset["base_quantity"], asset["base_prum"])
+    result = calc.position(
+        trades_of(symbol), asset["base_quantity"], asset["base_prum"]
+    )
     price = prices.current_price(symbol)
     market_value = result.quantity * price if price is not None else None
     gain = market_value - result.invested if market_value is not None else None
@@ -169,20 +172,15 @@ def summary() -> dict:
         market_value = to_eur(position["market_value"], currency, rate)
         bucket["invested"] += invested
         bucket["market_value"] += market_value
-        # Asset rows stay in their own currency. Only envelope and portfolio
-        # totals mix currencies, so only those are in EUR. A missing quote
-        # counts as no market value, like it does in the totals.
-        native_invested = position["invested"] or 0.0
-        native_value = position["market_value"] or 0.0
         bucket["assets"].append(
             {
                 "symbol": position["symbol"],
                 "label": position["label"],
                 "currency": currency,
-                "invested": native_invested,
-                "market_value": native_value,
-                "gain": native_value - native_invested,
-                "gain_percent": _percent(native_invested, native_value),
+                "invested": invested,
+                "market_value": market_value,
+                "gain": market_value - invested,
+                "gain_percent": _percent(invested, market_value),
             }
         )
 

@@ -2,6 +2,7 @@ import { session } from '#lib/state/session.svelte.js';
 import type {
 	AssetUpdate,
 	Chart,
+	ConnectorStatus,
 	Envelope,
 	EnvelopeStart,
 	FeedUrl,
@@ -123,6 +124,28 @@ export const importCsv = (envelope: string, csv: string) =>
 		method: 'POST',
 		body: JSON.stringify({ csv })
 	});
+
+export const connectorLogin = (login: string, password: string) =>
+	request<ConnectorStatus>('/connectors/bourso/login', {
+		method: 'POST',
+		body: JSON.stringify({ login, password })
+	});
+
+export const connectorAnswer = (sessionId: string, answer: string) =>
+	request<ConnectorStatus>(`/connectors/bourso/login/${encodeURIComponent(sessionId)}`, {
+		method: 'POST',
+		body: JSON.stringify({ answer })
+	});
+
+/** The envelope of each new account; null leaves it out of Allot. */
+export const connectorAccounts = (sessionId: string, envelopes: Record<string, string | null>) =>
+	request<ConnectorStatus>(
+		`/connectors/bourso/login/${encodeURIComponent(sessionId)}/accounts`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ envelopes })
+		}
+	);
 
 export const updateAsset = (symbol: string, body: AssetUpdate) =>
 	request<Position>(`/assets/${encodeURIComponent(symbol)}`, {
