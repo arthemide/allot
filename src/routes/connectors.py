@@ -7,7 +7,7 @@ seen for the first time waits for the user to pick its envelope, then every
 placed account is synced (src/services/bank_sync.py).
 
 Credentials reach this process in the request body and never leave it; woob
-does the actual login (src/connectors/woob_bourso.py). Because they are bank
+does the actual login (src/connectors/boursorama/connector.py). Because they are bank
 credentials, these routes refuse to run on an instance without a password.
 """
 

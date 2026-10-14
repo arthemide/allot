@@ -21,26 +21,10 @@ No network beyond the ticker search, no HTTP: rows in, a report dict out.
 
 from __future__ import annotations
 
-from typing import Protocol
-
 from src import calc
 from src.databases import sqlite as db
+from src.models.schema import SnapshotLine
 from src.services import portfolio, prices
-
-
-class SnapshotLine(Protocol):
-    """What a broker reports for one holding, whatever the source.
-
-    `isin` and `prum` are optional because a connector reads lines the broker
-    does not tag or price (a CEFP line by parts): those are reported
-    unresolved, never guessed. `currency`, when known, is what the Yahoo
-    listing must be quoted in.
-    """
-
-    isin: str | None
-    name: str
-    quantity: float
-    prum: float | None
 
 
 def apply_snapshot(
@@ -113,8 +97,7 @@ def _resolve(row: SnapshotLine) -> dict | None:
     if not row.isin:
         # No identifier to search with: never guess from a label.
         return None
-    currency = getattr(row, "currency", None)
-    currency = str(currency).upper() if currency else None
+    currency = row.currency.upper() if row.currency else None
     # Each hit costs a quote lookup: without a currency to filter on, the
     # first one is the answer (what the CSV import has always taken).
     for hit in prices.search(row.isin, limit=10 if currency else 1):

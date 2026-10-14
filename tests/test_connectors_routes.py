@@ -17,8 +17,8 @@ from src.connectors.errors import (
     ConnectorUnavailable,
     SessionExpired,
 )
-from src.connectors.woob_bourso import PositionRow
 from src.databases import sqlite as db
+from src.models.schema import PositionRow
 from src.routes import connectors as connectors_routes
 from src.services import portfolio, prices
 
@@ -96,8 +96,8 @@ def fresh(authenticated_client):
 
 @pytest.fixture
 def bank(fresh):
-    """The same, with PEA, CTO and CEFP placed in envelopes of their name."""
-    for account in ("PEA", "CTO", "CEFP"):
+    """The same, with PEA, CTO and FUND placed in envelopes of their name."""
+    for account in ("PEA", "CTO", "FUND"):
         db.upsert_envelope(account, 0.0)
         db.set_bank_account(account, account)
     return fresh
@@ -192,17 +192,15 @@ class TestStraightThrough:
         assert report["unresolved"] == [{"isin": "US0000000001", "name": "US fund"}]
         assert db.get_asset("VTI") is None
 
-    def test_a_cefp_line_without_isin_nor_cost_is_reported_not_dropped(
-        self, bank, mocker
-    ):
-        # Given a CEFP line as woob reads it: parts and value, no ISIN, no cost
+    def test_a_line_without_isin_nor_cost_is_reported_not_dropped(self, bank, mocker):
+        # Given a line with parts and value but no ISIN and no cost
         FakeLogin.rows = [
             PositionRow(
-                account="CEFP",
+                account="FUND",
                 support_type="security",
-                label="FONDS CEFP",
+                label="FUND LINE",
                 quantity=4.0,
-                value=640.20,
+                value=200.0,
                 currency="EUR",
             )
         ]
@@ -211,7 +209,7 @@ class TestStraightThrough:
         report = post(bank).json()["report"]
 
         # Then nothing is guessed from its label, and the user sees it
-        assert report["unresolved"] == [{"isin": None, "name": "FONDS CEFP"}]
+        assert report["unresolved"] == [{"isin": None, "name": "FUND LINE"}]
         search.assert_not_called()
 
     def test_a_cash_only_account_still_zeroes_what_was_sold(self, bank, resolver):
