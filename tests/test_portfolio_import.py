@@ -6,11 +6,10 @@ speaks for the whole account (authoritative=True).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pytest
 
 from src.databases import sqlite as db
+from src.models.schema import SnapshotLine
 from src.services import portfolio_import, prices
 
 HITS = {
@@ -19,13 +18,10 @@ HITS = {
 }
 
 
-@dataclass
-class Line:
-    isin: str | None
-    name: str
-    quantity: float
-    prum: float | None
-    currency: str | None = None
+def line(isin, name, quantity, prum, currency=None) -> SnapshotLine:
+    return SnapshotLine(
+        isin=isin, name=name, quantity=quantity, prum=prum, currency=currency
+    )
 
 
 @pytest.fixture
@@ -37,8 +33,8 @@ def resolver(mocker):
     return mocker.patch.object(prices, "search", side_effect=search)
 
 
-WORLD = Line("IE000BI8OT95", "World", 10.0, 100.0)
-EUROPE = Line("FR0000000001", "Europe", 2.0, 50.0)
+WORLD = line("IE000BI8OT95", "World", 10.0, 100.0)
+EUROPE = line("FR0000000001", "Europe", 2.0, 50.0)
 
 
 class TestNonAuthoritative:
@@ -54,7 +50,7 @@ class TestNonAuthoritative:
     def test_an_unresolved_isin_is_reported_and_nothing_is_written(
         self, database, resolver
     ):
-        report = portfolio_import.apply_snapshot("PEA", [Line("XX", "Mystery", 1, 1)])
+        report = portfolio_import.apply_snapshot("PEA", [line("XX", "Mystery", 1, 1)])
         assert report["unresolved"] == [{"isin": "XX", "name": "Mystery"}]
         assert db.get_asset("XX") is None
 
@@ -81,7 +77,7 @@ class TestNonAuthoritative:
         )
 
         portfolio_import.apply_snapshot(
-            "PEA", [Line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")]
+            "PEA", [line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")]
         )
 
         assert db.get_asset("WORLD") is None
@@ -97,7 +93,7 @@ class TestNonAuthoritative:
         )
 
         report = portfolio_import.apply_snapshot(
-            "PEA", [Line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")]
+            "PEA", [line("IE000BI8OT95", "World", 10.0, 100.0, "EUR")]
         )
 
         assert report["imported"] == []
@@ -106,14 +102,14 @@ class TestNonAuthoritative:
     def test_a_line_without_isin_is_never_guessed(self, database, mocker):
         search = mocker.patch.object(prices, "search")
 
-        report = portfolio_import.apply_snapshot("CEFP", [Line(None, "Fonds", 3, 10)])
+        report = portfolio_import.apply_snapshot("FUND", [line(None, "Fund", 3, 10)])
 
-        assert report["unresolved"] == [{"isin": None, "name": "Fonds"}]
+        assert report["unresolved"] == [{"isin": None, "name": "Fund"}]
         search.assert_not_called()
 
     def test_a_line_without_cost_basis_is_unresolved(self, database, resolver):
         report = portfolio_import.apply_snapshot(
-            "PEA", [Line("IE000BI8OT95", "World", 10.0, None)]
+            "PEA", [line("IE000BI8OT95", "World", 10.0, None)]
         )
 
         assert report["imported"] == []
@@ -186,7 +182,7 @@ class TestAuthoritative:
         portfolio_import.apply_snapshot("PEA", [WORLD])
 
         portfolio_import.apply_snapshot(
-            "PEA", [Line("XX", "Unresolved", 1.0, 1.0, "EUR")], authoritative=True
+            "PEA", [line("XX", "Unresolved", 1.0, 1.0, "EUR")], authoritative=True
         )
 
         assert db.get_asset("CW8.PA")["base_quantity"] == 10.0

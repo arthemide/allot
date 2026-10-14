@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import secrets
 import time
-from dataclasses import dataclass, field
 from typing import Any, Callable
+
+from pydantic import BaseModel, Field
 
 # How long an unanswered login may sit before it is forgotten.
 TTL_SECONDS = 15 * 60
@@ -19,7 +20,7 @@ TTL_SECONDS = 15 * 60
 
 def _default_factory(login: str, password: str) -> Any:
     # Imported here so woob is only needed when a sync actually runs.
-    from src.connectors.woob_bourso import WoobLogin
+    from src.connectors.boursorama.connector import WoobLogin
 
     return WoobLogin(login, password)
 
@@ -28,10 +29,9 @@ def _default_factory(login: str, password: str) -> Any:
 factory: Callable[[str, str], Any] = _default_factory
 
 
-@dataclass
-class _Entry:
+class _Entry(BaseModel):
     attempt: Any
-    created: float = field(default_factory=time.monotonic)
+    created: float = Field(default_factory=time.monotonic)
     # What the bank reported, kept while new accounts wait for an envelope so
     # the bank is not read twice.
     rows: list | None = None
@@ -64,7 +64,7 @@ def begin(login: str, password: str) -> tuple[str, Any]:
         attempt.deinit()
         raise
     sid = secrets.token_urlsafe(16)
-    _entries[sid] = _Entry(attempt)
+    _entries[sid] = _Entry(attempt=attempt)
     return sid, attempt
 
 
