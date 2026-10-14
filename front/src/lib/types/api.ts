@@ -135,7 +135,7 @@ export interface ImportedLine {
 
 /** A broker line no ticker in its currency answers to; nothing was written. */
 export interface UnresolvedLine {
-	/** Null for a line the broker does not tag (a CEFP line by parts). */
+	/** Null for a line the broker does not tag. */
 	isin: string | null;
 	name: string;
 }

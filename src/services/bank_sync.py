@@ -12,54 +12,29 @@ them never zeroes what the other holds.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Protocol
+from typing import Iterable
 
 from src.databases import sqlite as db
+from src.models.schema import PositionRow, SnapshotLine
 from src.services import portfolio_import
 
 
-class BankRow(Protocol):
-    """One line of an account as the connector read it (woob_bourso.PositionRow)."""
-
-    account: str
-    support_type: str
-    isin: str | None
-    label: str
-    quantity: float | None
-    currency: str
-    unit_cost: float | None
-
-
-@dataclass(frozen=True)
-class Line:
-    """A security line as portfolio_import wants it."""
-
-    isin: str | None
-    name: str
-    quantity: float
-    # None when the bank shows no cost basis (a CEFP page lists parts and
-    # their value only): the line is then reported unresolved.
-    prum: float | None
-    currency: str
-
-
-def by_account(rows: Iterable[BankRow]) -> dict[str, list[Line]]:
+def by_account(rows: Iterable[PositionRow]) -> dict[str, list[SnapshotLine]]:
     """The security lines of each account, cash-only accounts included.
 
     A cash balance is not an asset, and a line without a quantity cannot hold
-    a position. Everything else is kept, even without an ISIN or a cost basis
-    (a CEFP line has neither): those come back unresolved rather than
-    silently dropped. An account holding only cash is kept too, empty: it
-    still says that everything it held was sold.
+    a position. Everything else is kept, even without an ISIN or a cost
+    basis: those come back unresolved rather than silently dropped. An
+    account holding only cash is kept too, empty: it still says that
+    everything it held was sold.
     """
-    accounts: dict[str, list[Line]] = {}
+    accounts: dict[str, list[SnapshotLine]] = {}
     for row in rows:
         lines = accounts.setdefault(row.account, [])
         if row.support_type == "cash" or not row.quantity:
             continue
         lines.append(
-            Line(
+            SnapshotLine(
                 isin=row.isin,
                 name=row.label,
                 quantity=row.quantity,
@@ -70,7 +45,7 @@ def by_account(rows: Iterable[BankRow]) -> dict[str, list[Line]]:
     return accounts
 
 
-def new_accounts(rows: Iterable[BankRow]) -> list[dict]:
+def new_accounts(rows: Iterable[PositionRow]) -> list[dict]:
     """The accounts no envelope was chosen for yet, with a default to offer."""
     placed = db.bank_accounts()
     envelopes = {
@@ -87,7 +62,7 @@ def new_accounts(rows: Iterable[BankRow]) -> list[dict]:
     ]
 
 
-def place(envelopes: dict[str, str | None], rows: Iterable[BankRow]) -> None:
+def place(envelopes: dict[str, str | None], rows: Iterable[PositionRow]) -> None:
     """Record where each new account syncs; every one of them needs an answer.
 
     An empty answer, or None, leaves the account out. An
@@ -107,10 +82,10 @@ def place(envelopes: dict[str, str | None], rows: Iterable[BankRow]) -> None:
         db.set_bank_account(account, name)
 
 
-def apply(rows: Iterable[BankRow]) -> dict:
+def apply(rows: Iterable[PositionRow]) -> dict:
     """Sync every placed account into its envelope; return one ImportReport dict."""
     placed = db.bank_accounts()
-    by_envelope: dict[str, list[Line]] = {}
+    by_envelope: dict[str, list[SnapshotLine]] = {}
     for account, lines in by_account(rows).items():
         envelope = placed.get(account)
         if envelope is None:

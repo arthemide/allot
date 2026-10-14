@@ -22,6 +22,8 @@ import unicodedata
 
 from pydantic import BaseModel, ConfigDict
 
+from src.models.schema import SnapshotLine
+
 MAX_BYTES = 256 * 1024
 MAX_ROWS = 500
 
@@ -73,12 +75,10 @@ class CsvError(ValueError):
         self.line = line
 
 
-class Row(BaseModel):
-    model_config = ConfigDict(frozen=True)
+class Row(SnapshotLine):
+    """A CSV line always carries an identifier and a cost basis."""
 
     isin: str
-    name: str
-    quantity: float
     prum: float
     # Optional: the import resolves prices itself, the /demo page needs it.
     price: float | None
