@@ -99,7 +99,7 @@ def bank(fresh):
     """The same, with PEA, CTO and FUND placed in envelopes of their name."""
     for account in ("PEA", "CTO", "FUND"):
         db.upsert_envelope(account, 0.0)
-        db.set_bank_account(account, account)
+        db.set_source_account("bourso", account, account)
     return fresh
 
 

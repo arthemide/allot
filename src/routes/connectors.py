@@ -4,7 +4,7 @@ The login is interactive: the first call hands over the credentials, and if
 the bank asks for a second factor the caller answers it on a follow-up call
 carrying the session id. Once through, the accounts are read; an account
 seen for the first time waits for the user to pick its envelope, then every
-placed account is synced (src/services/bank_sync.py).
+placed account is synced (src/services/source_sync.py).
 
 Credentials reach this process in the request body and never leave it; woob
 does the actual login (src/connectors/boursorama/connector.py). Because they are bank
@@ -25,12 +25,16 @@ from src.connectors.errors import (
     SessionExpired,
 )
 from src.models.schema import (
+    AccountPlacement,
     ConnectorAccounts,
     ConnectorAnswer,
     ConnectorLogin,
     ConnectorStatus,
 )
-from src.services import auth, bank_sync, ratelimit
+from src.services import auth, ratelimit, source_sync
+
+# Where this connector's accounts and lines are remembered (source_account).
+SOURCE = "bourso"
 
 # A login reaches the bank, which locks an account after a few failures: far
 # fewer tries than the Yahoo endpoints get.
@@ -121,7 +125,15 @@ def place_accounts(session_id: str, payload: ConnectorAccounts):
             status.HTTP_404_NOT_FOUND, "No sync is waiting for its accounts."
         )
     try:
-        bank_sync.place(payload.envelopes, rows)
+        source_sync.place(
+            SOURCE,
+            [
+                AccountPlacement(account=account, envelope=envelope)
+                for account, envelope in payload.envelopes.items()
+            ],
+            [],
+            rows,
+        )
     except ValueError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
     return _done(session_id, rows)
@@ -142,7 +154,7 @@ def _advance(session_id: str, attempt) -> ConnectorStatus:
     # while the user picks envelopes.
     attempt.deinit()
     login_session.hold(session_id, rows)
-    pending = bank_sync.new_accounts(rows)
+    pending = source_sync.pending(SOURCE, rows).accounts
     if pending:
         return ConnectorStatus(
             session_id=session_id, status="accounts", accounts=pending
@@ -152,7 +164,7 @@ def _advance(session_id: str, attempt) -> ConnectorStatus:
 
 def _done(session_id: str, rows: list) -> ConnectorStatus:
     try:
-        report = bank_sync.apply(rows)
+        report = source_sync.apply(SOURCE, rows)
     finally:
         login_session.finish(session_id)
     return ConnectorStatus(session_id=session_id, status="done", report=report)
