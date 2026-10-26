@@ -38,9 +38,38 @@ def init(path: Path = DB_PATH) -> None:
         connection.execute("BEGIN")
         _add_by_amount(connection)
         _merge_bank_accounts(connection)
+        _unlink_source_line(connection)
         connection.commit()
     finally:
         connection.close()
+
+
+def _unlink_source_line(connection: sqlite3.Connection) -> None:
+    """Drop the foreign key an early `source_line` carried to `asset`.
+
+    A line is mapped to its ticker before the import creates the asset, so the
+    key refused every new ticker. SQLite cannot drop a constraint: the table
+    is rebuilt, its rows kept, and those whose asset is gone are dropped, as
+    the cascade would have.
+    """
+    keys = connection.execute("PRAGMA foreign_key_list(source_line)").fetchall()
+    if not keys:
+        return
+    connection.execute(
+        """
+        CREATE TABLE source_line_unlinked (
+            source TEXT NOT NULL,
+            label  TEXT NOT NULL,
+            symbol TEXT,
+            PRIMARY KEY (source, label)
+        )
+        """
+    )
+    connection.execute(
+        "INSERT INTO source_line_unlinked SELECT source, label, symbol FROM source_line"
+    )
+    connection.execute("DROP TABLE source_line")
+    connection.execute("ALTER TABLE source_line_unlinked RENAME TO source_line")
 
 
 def _merge_bank_accounts(connection: sqlite3.Connection) -> None:
