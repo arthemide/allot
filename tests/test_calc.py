@@ -317,6 +317,12 @@ class TestBoughtByAmount:
         assert calc.bought_by_amount("MC.PA", traded_in_fractions=True)
 
 
+class TestIsFraction:
+    def test_a_tenth_is_a_fraction_a_whole_unit_is_not(self):
+        assert calc.is_fraction(0.1) and calc.is_fraction(2.5)
+        assert not calc.is_fraction(3.0)
+
+
 class TestSharedFixture:
     """Replay tests/fixtures/calc_cases.json, the contract with the browser.
 

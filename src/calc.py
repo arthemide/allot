@@ -191,6 +191,11 @@ def bought_by_amount(symbol: str, traded_in_fractions: bool = False) -> bool:
     return traded_in_fractions or symbol.upper().endswith(BY_AMOUNT_SUFFIXES)
 
 
+def is_fraction(quantity: float) -> bool:
+    """Whether a traded quantity is a fraction of a unit: 0.4, 2.5."""
+    return quantity != int(quantity)
+
+
 def months_elapsed(start: date, today: date) -> int:
     """How many monthly contributions have landed between the two dates.
 
