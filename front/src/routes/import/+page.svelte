@@ -99,7 +99,8 @@
 				snapshot,
 				Object.entries(envelopes).map(([account, name]) => ({
 					account,
-					envelope: name.trim() ? name.trim().toUpperCase() : null
+					// As typed: the offered default is an existing envelope, case included.
+					envelope: name.trim() || null
 				})),
 				choices.lines
 					.filter((line) => !leftOut(line.account))

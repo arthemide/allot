@@ -98,7 +98,9 @@
 			done(await connectorAccounts(status.session_id, chosen));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'The sync failed.';
-			status = null;
+			// A refused choice leaves the reading held on the server: stay on the
+			// envelopes so it can be fixed, rather than logging into the bank again.
+			// A sync that is gone answers 404, and the next try says so.
 		} finally {
 			busy = false;
 		}
@@ -174,6 +176,17 @@
 				{/each}
 				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
 				<Dialog.Footer>
+					<!-- Forgets this sync here: the next try logs into the bank again. -->
+					<Button
+						variant="ghost"
+						disabled={busy}
+						onclick={() => {
+							error = '';
+							status = null;
+						}}
+					>
+						Start over
+					</Button>
 					<Button type="submit" disabled={busy}>Import</Button>
 				</Dialog.Footer>
 			</form>
