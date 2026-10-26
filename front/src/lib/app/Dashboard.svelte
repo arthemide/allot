@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AssetChart from '#lib/components/AssetChart.svelte';
+	import ChangeTicker from '#lib/components/ChangeTicker.svelte';
 	import GlobalSummary from '#lib/components/GlobalSummary.svelte';
 	import OpeningPosition from '#lib/components/OpeningPosition.svelte';
 	import PositionBanner from '#lib/components/PositionBanner.svelte';
@@ -10,6 +11,7 @@
 	import { getAssets, getChart, getEnvelopes } from '#lib/services/api.js';
 	import { refresh as refreshSignal } from '#lib/state/refresh.svelte.js';
 	import type { Chart, Envelope, Position } from '#lib/types/api.js';
+	import { demo } from '#lib/state/demo.svelte.js';
 
 	// Sentinel value of the selector: totals and settings instead of one asset.
 	const ALL = '*';
@@ -150,6 +152,17 @@
 			<TransactionTable {position} transactions={chart?.transactions ?? []} onChange={refresh}>
 				{#snippet actions()}
 					<OpeningPosition {position} onChange={refresh} />
+					{#if !demo.enabled}
+						<!-- The demo has no ticker search to pick the new one from. -->
+						<ChangeTicker
+							{position}
+							onChanged={(symbol) => {
+								// Selected first: reloading under the old name would fall back to all.
+								select(symbol);
+								loadPositions();
+							}}
+						/>
+					{/if}
 				{/snippet}
 			</TransactionTable>
 		{/if}

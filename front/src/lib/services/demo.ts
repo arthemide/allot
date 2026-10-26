@@ -392,6 +392,7 @@ export const demoBackend = {
 		return answer(positionOf(asset));
 	},
 
+	changeTicker: () => fail('Changing a ticker needs the real app.'),
 	importPreview: () => fail('Import needs the real app.'),
 	importSource: () => fail('Import needs the real app.'),
 

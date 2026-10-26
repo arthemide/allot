@@ -410,3 +410,61 @@ class TestChart:
         body = client.get("/assets/ESE.PA/chart").json()
         # Then the curve starts at the opening PRUM, from the window's first day
         assert [p["prum"] for p in body["prum"]] == [30.0]
+
+
+class TestTickerChange:
+    @pytest.fixture
+    def yahoo(self, mocker):
+        listings = {
+            "WPEA.DE": {
+                "symbol": "WPEA.DE",
+                "label": "Amundi Xetra",
+                "currency": "EUR",
+            },
+            "SPY": {"symbol": "SPY", "label": "S&P 500", "currency": "USD"},
+        }
+        return mocker.patch.object(
+            prices,
+            "search",
+            side_effect=lambda query, limit=10: (
+                [listings[query]] if query in listings else []
+            ),
+        )
+
+    def test_the_history_and_settings_move_to_the_new_ticker(
+        self, client, portfolio_data, yahoo
+    ):
+        # Given WPEA.PA with a buy and a sell, an opening position, a weight
+        db.set_opening_position("WPEA.PA", 2.0, 8.0)
+        db.set_source_line("afer", "Amundi PEA Monde", "WPEA.PA")
+        db.cache_prices("WPEA.PA", iter([("2026-01-10", 5.0)]))
+        # When it is moved to the ticker it should have had
+        response = client.put("/assets/WPEA.PA/symbol", json={"symbol": " spy "})
+        # Then the same position stands under the new name, in its currency
+        assert response.status_code == 200
+        body = response.json()
+        assert (body["symbol"], body["currency"], body["weight"]) == ("SPY", "USD", 2.0)
+        assert body["quantity"] == 8.0
+        assert len(db.transactions_of("SPY")) == 2
+        assert db.get_asset("WPEA.PA") is None
+        assert db.source_lines("afer") == {"Amundi PEA Monde": "SPY"}
+        assert db.cached_prices("WPEA.PA") == []
+
+    def test_a_ticker_already_tracked_is_a_409(self, client, portfolio_data, yahoo):
+        response = client.put("/assets/WPEA.PA/symbol", json={"symbol": "ESE.PA"})
+        assert response.status_code == 409
+        assert db.get_asset("WPEA.PA") is not None
+
+    def test_a_ticker_yahoo_does_not_list_is_a_422(self, client, portfolio_data, yahoo):
+        response = client.put("/assets/WPEA.PA/symbol", json={"symbol": "NOPE"})
+        assert response.status_code == 422
+        assert len(db.transactions_of("WPEA.PA")) == 2
+
+    def test_an_unknown_asset_is_a_404(self, client, yahoo):
+        response = client.put("/assets/GHOST/symbol", json={"symbol": "SPY"})
+        assert response.status_code == 404
+
+    def test_the_same_ticker_changes_nothing(self, client, portfolio_data, yahoo):
+        response = client.put("/assets/WPEA.PA/symbol", json={"symbol": "wpea.pa"})
+        assert response.json()["symbol"] == "WPEA.PA"
+        yahoo.assert_not_called()

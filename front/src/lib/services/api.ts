@@ -19,6 +19,8 @@ export const getSummary: typeof http.getSummary = () => backend().getSummary();
 export const getAsset: typeof http.getAsset = (symbol) => backend().getAsset(symbol);
 export const getChart: typeof http.getChart = (symbol, window) =>
 	backend().getChart(symbol, window);
+export const changeTicker: typeof http.changeTicker = (symbol, newSymbol) =>
+	backend().changeTicker(symbol, newSymbol);
 export const setOpeningPosition: typeof http.setOpeningPosition = (symbol, body) =>
 	backend().setOpeningPosition(symbol, body);
 export const getTransactions: typeof http.getTransactions = (symbol) =>
