@@ -45,6 +45,7 @@ type Asset = {
 	weight: number;
 	base_quantity: number;
 	base_prum: number | null;
+	by_amount: boolean;
 	price: number | null;
 };
 
@@ -79,6 +80,7 @@ function positionOf(asset: Asset): Position {
 		envelope: asset.envelope,
 		currency: asset.currency,
 		weight: asset.weight,
+		by_amount: asset.by_amount,
 		base_quantity: asset.base_quantity,
 		base_prum: asset.base_prum,
 		quantity: result.quantity,
@@ -110,7 +112,8 @@ const SAMPLE: Asset[] = [
 		weight: 3,
 		base_quantity: 42,
 		base_prum: 88.4,
-		price: 96.2
+		price: 96.2,
+		by_amount: false
 	},
 	{
 		symbol: 'FR0010315770',
@@ -121,7 +124,8 @@ const SAMPLE: Asset[] = [
 		base_quantity: 60,
 		base_prum: 27.9,
 		// Below the cost basis by more than 10%: the plan tops it up.
-		price: 24.1
+		price: 24.1,
+		by_amount: false
 	},
 	{
 		symbol: 'FR0011871128',
@@ -132,7 +136,8 @@ const SAMPLE: Asset[] = [
 		base_quantity: 25,
 		base_prum: 36.5,
 		// Well above: the plan eases off.
-		price: 44.8
+		price: 44.8,
+		by_amount: false
 	},
 	{
 		symbol: 'IE00BFNM3P36',
@@ -142,7 +147,8 @@ const SAMPLE: Asset[] = [
 		weight: 1,
 		base_quantity: 30,
 		base_prum: 21.3,
-		price: 22.05
+		price: 22.05,
+		by_amount: false
 	},
 	{
 		symbol: 'IE00BYZK4552',
@@ -152,7 +158,8 @@ const SAMPLE: Asset[] = [
 		weight: 1,
 		base_quantity: 18,
 		base_prum: 13.75,
-		price: 15.9
+		price: 15.9,
+		by_amount: false
 	}
 ];
 
@@ -309,7 +316,14 @@ export const demoBackend = {
 			return fail(`${asset.symbol} is already tracked.`);
 		assets = [
 			...assets,
-			{ ...asset, base_quantity: 0, base_prum: null, price: null }
+			{
+				...asset,
+				base_quantity: 0,
+				base_prum: null,
+				price: null,
+				// Seeded like the backend does: a crypto pair is bought for an amount.
+				by_amount: asset.by_amount ?? /-(USD|EUR|GBP)$/i.test(asset.symbol)
+			}
 		];
 		return answer(positionOf(assetOf(asset.symbol)));
 	},
@@ -350,7 +364,8 @@ export const demoBackend = {
 				weight: 1,
 				base_quantity: 0,
 				base_prum: null,
-				price: null
+				price: null,
+				by_amount: false
 			};
 			// An imported line is a holding that predates transaction tracking.
 			asset.base_quantity = row.quantity;
@@ -373,8 +388,12 @@ export const demoBackend = {
 		asset.label = body.label;
 		asset.envelope = body.envelope;
 		asset.weight = body.weight;
+		asset.by_amount = body.by_amount;
 		return answer(positionOf(asset));
 	},
+
+	importPreview: () => fail('Import needs the real app.'),
+	importSource: () => fail('Import needs the real app.'),
 
 	deleteAsset: (symbol: string) => {
 		assets = assets.filter((a) => a.symbol !== symbol);

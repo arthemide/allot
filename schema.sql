@@ -2,9 +2,11 @@
 -- statement is CREATE ... IF NOT EXISTS.
 --
 -- There is no migration framework and no schema versioning: this creates a
--- missing table, and nothing else. Changing an existing column means writing
--- the ALTER by hand against your own database, or deleting data/allot.db and
--- letting it be rebuilt.
+-- missing table, and nothing else. A column added to an existing table also
+-- needs its ALTER in src/databases/sqlite.py init(), or existing databases
+-- never get it. Changing an existing column means writing the ALTER by hand
+-- against your own database, or deleting data/allot.db and letting it be
+-- rebuilt.
 
 PRAGMA foreign_keys = ON;
 
@@ -34,6 +36,10 @@ CREATE TABLE IF NOT EXISTS asset (
     -- Relative weight inside the envelope. Never constrained to sum to 1:
     -- the monthly split normalises by the total of the envelope's weights.
     weight REAL NOT NULL DEFAULT 1 CHECK (weight >= 0),
+
+    -- 1 when the asset is bought for an amount (fund, crypto), 0 when it is
+    -- bought by the whole share. The user's choice, seeded on creation.
+    by_amount INTEGER NOT NULL DEFAULT 0 CHECK (by_amount IN (0, 1)),
 
     -- Opening position carried over from the legacy database: holdings that
     -- predate transaction tracking and have no transaction to back them.
@@ -96,3 +102,21 @@ CREATE TABLE IF NOT EXISTS price_cache (
     price  REAL NOT NULL,
     PRIMARY KEY (symbol, date)
 ) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS source_account (
+    source   TEXT NOT NULL,
+    account  TEXT NOT NULL,
+    envelope TEXT REFERENCES envelope(name) ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (source, account)
+);
+
+-- Which ticker a line of a source maps to, picked by the user the first time
+-- the line shows up. A NULL symbol leaves the line out. Not a foreign key: the
+-- ticker is chosen before the import creates its asset. Deleting the asset
+-- deletes the row (sqlite.delete_asset), so the line is asked about again.
+CREATE TABLE IF NOT EXISTS source_line (
+    source TEXT NOT NULL,
+    label  TEXT NOT NULL,
+    symbol TEXT,
+    PRIMARY KEY (source, label)
+);

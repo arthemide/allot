@@ -45,6 +45,7 @@ def position_of(asset: dict) -> dict:
         "envelope": asset["envelope"],
         "currency": asset["currency"],
         "weight": asset["weight"],
+        "by_amount": bool(asset.get("by_amount", False)),
         "base_quantity": asset["base_quantity"],
         "base_prum": asset["base_prum"],
         "quantity": result.quantity,

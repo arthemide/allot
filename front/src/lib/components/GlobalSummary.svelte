@@ -82,7 +82,18 @@
 		await updateAsset(asset.symbol, {
 			label: asset.label,
 			envelope: asset.envelope,
-			weight: value
+			weight: value,
+			by_amount: asset.by_amount
+		});
+		onChange();
+	}
+
+	async function toggleByAmount(asset: Position) {
+		await updateAsset(asset.symbol, {
+			label: asset.label,
+			envelope: asset.envelope,
+			weight: asset.weight,
+			by_amount: !asset.by_amount
 		});
 		onChange();
 	}
@@ -225,7 +236,18 @@
 							<Table.Cell class="w-24 text-right tabular-nums">
 								{shareOf(asset).toFixed(0)} %
 							</Table.Cell>
-							<Table.Cell class="w-32"></Table.Cell>
+							<Table.Cell class="w-32 text-right">
+								<button
+									type="button"
+									class="text-muted-foreground hover:text-primary text-xs hover:underline"
+									title={asset.by_amount
+										? 'Bought for an amount (fund, crypto). Click to buy whole shares.'
+										: 'Bought by the whole share. Click to buy for an amount.'}
+									onclick={() => toggleByAmount(asset)}
+								>
+									{asset.by_amount ? 'by amount' : 'whole shares'}
+								</button>
+							</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{eur(totals2?.invested ?? 0)}</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">
 								{eur(totals2?.market_value ?? 0)}
@@ -285,7 +307,8 @@
 	<p class="text-muted-foreground text-xs">
 		Weights are relative: only their share of the envelope matters, so 2 / 1 and 0.67 / 0.33 give
 		the same split. An envelope with a cash figure spends it on whole shares and carries what is
-		left to the next month; one showing a dash simply splits its monthly amount every month.
+		left to the next month, except for the assets bought by amount, which take their share as is;
+		one showing a dash simply splits its monthly amount every month.
 		Totals are converted to EUR{summary.eur_usd_rate
 			? ` at ${summary.eur_usd_rate.toFixed(4)} USD per EUR`
 			: ''}; every other figure stays in the asset's own currency.

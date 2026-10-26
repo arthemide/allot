@@ -172,3 +172,20 @@ export const setEnvelopeStart = (name: string, body: EnvelopeStart) =>
 
 export const clearEnvelopeStart = (name: string) =>
 	request<Envelope>(`/envelopes/${encodeURIComponent(name)}/start`, { method: 'DELETE' });
+
+
+export const importPreview = (snapshot: unknown) =>
+	request<{ accounts: { account: string; lines: number; envelope: string | null }[]; lines: { label: string; symbol: string | null }[] }>(
+		'/assets/imports/preview',
+		{ method: 'POST', body: JSON.stringify({ snapshot }) }
+	);
+
+export const importSource = (
+	snapshot: unknown,
+	placements: { account: string; envelope: string | null }[],
+	mappings: { label: string; symbol: string | null }[]
+) =>
+	request<ImportReport>('/assets/imports', {
+		method: 'POST',
+		body: JSON.stringify({ snapshot, placements, mappings })
+	});
