@@ -107,26 +107,25 @@
 <Dialog.Root bind:open>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant={waitingForUser ? 'default' : 'outline'} size="sm">
+			<Button
+				{...props}
+				variant={waitingForUser ? 'default' : 'outline'}
+				size="sm"
+				title={waitingForUser ? 'BoursoBank - action needed' : 'BoursoBank'}
+			>
 				{#if busy}
 					<LoaderCircle class="size-4 animate-spin" />
-					<span class="sr-only">BoursoBank sync in progress</span>
-				{:else if waitingForUser}
-					<span
-						class="bg-background text-foreground flex size-4 items-center justify-center rounded-full text-xs font-bold"
-						>!</span
-					>
-					Action needed
 				{:else}
-					Sync BoursoBank
+					<img src="/logos/bourso-logo.png" alt="" class="size-4" />
 				{/if}
+				<span class="sr-only">{waitingForUser ? 'BoursoBank - action needed' : 'BoursoBank'}</span>
 			</Button>
 		{/snippet}
 	</Dialog.Trigger>
 
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title>Sync BoursoBank</Dialog.Title>
+			<Dialog.Title>BoursoBank</Dialog.Title>
 			<Dialog.Description>
 				The login runs on the server; your login and password are neither stored nor logged. The
 				bank is authoritative: each account's positions replace what is tracked here, and the
@@ -194,7 +193,7 @@
 				{/each}
 				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
 				<Dialog.Footer>
-					<Button type="submit" disabled={busy}>Sync</Button>
+					<Button type="submit" disabled={busy}>Import</Button>
 				</Dialog.Footer>
 			</form>
 		{:else if status && status.status !== 'done'}

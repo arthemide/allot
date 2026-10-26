@@ -73,13 +73,13 @@
 <Dialog.Root bind:open>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant="outline" size="sm">Import a CSV</Button>
+			<Button {...props} variant="outline" size="sm">CSV</Button>
 		{/snippet}
 	</Dialog.Trigger>
 
 	<Dialog.Content class="sm:max-w-2xl">
 		<Dialog.Header>
-			<Dialog.Title>Import a portfolio export</Dialog.Title>
+			<Dialog.Title>Import a CSV</Dialog.Title>
 			<Dialog.Description>
 				Each line becomes the asset's opening position, PRUM included; importing again replaces
 				it. Assets already tracked keep their envelope and weight.

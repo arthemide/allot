@@ -125,7 +125,7 @@ docker compose run --rm --entrypoint python app -c \
     'import secrets; print("ALLOT_FEED_TOKEN=" + secrets.token_urlsafe(32))'
 ```
 
-The dialog behind **Monthly note** hands you the full address to paste. **That URL is a credential**: whoever holds it reads the tickers and the amounts. Leave `ALLOT_FEED_TOKEN` empty and the feed stays behind the session like every other route - which also means no calendar can reach it.
+The dialog behind **Note** hands you the full address to paste. **That URL is a credential**: whoever holds it reads the tickers and the amounts. Leave `ALLOT_FEED_TOKEN` empty and the feed stays behind the session like every other route - which also means no calendar can reach it.
 
 Note that a hosted calendar fetches from its own servers, not from the phone: Google Calendar can only subscribe to an address reachable from the internet. On a LAN-only instance, a client that fetches from the device - Apple Calendar, Thunderbird - works without exposing anything.
 

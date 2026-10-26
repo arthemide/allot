@@ -74,7 +74,7 @@
 <Dialog.Root bind:open>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant="outline" size="sm">Add an asset</Button>
+			<Button {...props} variant="outline" size="sm">Add</Button>
 		{/snippet}
 	</Dialog.Trigger>
 
