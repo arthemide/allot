@@ -382,3 +382,27 @@ class TestSourceLines:
         db.delete_asset("ESE.PA")
         # Then its line will be asked about again; the left-out one stays
         assert db.source_lines("afer") == {"Afer Euro": None}
+
+
+class TestBankAccountMerge:
+    def test_the_bourso_placements_move_into_source_account(self, database):
+        # Given a database from before every source shared one table
+        connection = db.connect(database)
+        connection.execute("INSERT INTO envelope (name) VALUES ('PEA')")
+        connection.execute(
+            "CREATE TABLE bank_account (account TEXT PRIMARY KEY, envelope TEXT)"
+        )
+        connection.executemany(
+            "INSERT INTO bank_account VALUES (?, ?)", [("PEA", "PEA"), ("LIVRET", None)]
+        )
+        connection.commit()
+        connection.close()
+        # When the app boots on it
+        db.init(database)
+        # Then BoursoBank's choices are where every source keeps them
+        assert db.source_accounts("bourso") == {"PEA": "PEA", "LIVRET": None}
+        tables = {
+            row["name"]
+            for row in db.query("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+        assert "bank_account" not in tables

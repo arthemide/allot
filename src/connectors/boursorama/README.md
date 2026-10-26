@@ -31,7 +31,7 @@ The woob trusted-device cookie then lives under `/data/connectors`, on the same 
 
 In the app, "Sync BoursoBank" asks for your login and password. If the bank wants a second factor, the dialog shows a code field, or asks you to validate in your bank app and confirm once done. The device is trusted for 90 days through woob's saved state (`data/connectors/woob-state/`, a secret, git-ignored), so the second factor is not asked again until it lapses.
 
-The first time an account shows up (PEA, CTO...), the dialog asks which envelope it syncs into, offering an envelope of the same name when there is one; leaving it empty keeps the account out of Allot. The choice is remembered (`bank_account` table). Deleting the envelope forgets it, so the account is asked about again.
+The first time an account shows up (PEA, CTO...), the dialog asks which envelope it syncs into, offering an envelope of the same name when there is one; leaving it empty keeps the account out of Allot. The choice is remembered (`source_account` table, under the `bourso` source). Deleting the envelope forgets it, so the account is asked about again.
 
 The bank is authoritative on what is held: after a sync, each asset it reports holds exactly its quantity and PRUM, and an asset of the envelope it no longer lists holds nothing. The trades you recorded are never deleted, because the envelope's cash is derived from them; the opening position absorbs the difference instead. When it cannot, because the trades already hold more than the bank reports (a sell not recorded yet), the line is reported as a conflict and left as it was: record the sell, then sync again. The cash balance is read but left for you to reconcile.
 
