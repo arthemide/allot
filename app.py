@@ -117,6 +117,19 @@ async def require_session(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def refuse_framing(request: Request, call_next):
+    """No other site may show Allot inside a frame of its own.
+
+    /import writes on a click: framed under a lure, that click could be
+    someone else's to arrange.
+    """
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+    return response
+
+
 # The front is same-origin in production: CORS is for `make dev-front` only,
 # and a permissive policy next to a session cookie is not worth leaving behind.
 if os.getenv("ALLOT_DEV_CORS"):

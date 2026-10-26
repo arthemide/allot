@@ -33,16 +33,24 @@ def apply_snapshot(
     *,
     authoritative: bool = False,
     scope: set[str] | None = None,
+    relocate: bool | None = None,
+    held_back: list[dict] = (),
 ) -> dict:
     """Write the lines as opening positions; return an ImportReport dict.
 
     `scope`, when given, is every asset the caller speaks for: an authoritative
     snapshot only zeroes those, and leaves the rest of the envelope alone.
+    `relocate` (by default: `authoritative`) moves into `envelope` an asset
+    filed in another; without it, an authoritative snapshot leaves that line
+    alone and reports it elsewhere. `held_back` are lines the caller already
+    knows unresolved: reported, and enough to zero nothing.
     """
+    if relocate is None:
+        relocate = authoritative
     if db.get_envelope(envelope) is None:
         db.upsert_envelope(envelope, 0.0)
 
-    imported, unresolved, elsewhere, conflicts = [], [], [], []
+    imported, unresolved, elsewhere, conflicts = [], list(held_back), [], []
     touched: set[str] = set()
     for row in lines:
         hit = _resolve(row)
@@ -59,13 +67,13 @@ def apply_snapshot(
                 hit.get("currency") or "EUR",
                 by_amount=row.by_amount or calc.bought_by_amount(symbol),
             )
-        elif existing["envelope"] != envelope and authoritative:
+        elif existing["envelope"] != envelope and relocate:
             # The broker says this line is in `envelope`; move it there,
             # keeping the user's label, weight and by_amount. Otherwise a later
             # account's zero-out would wrongly drop it.
             db.update_asset(symbol, existing["label"], envelope, existing["weight"])
         elif existing["envelope"] != envelope:
-            # Left where the user filed it; the position is updated below.
+            # Left where the user filed it.
             elsewhere.append(
                 {
                     "symbol": symbol,
@@ -74,6 +82,10 @@ def apply_snapshot(
                     "envelope": existing["envelope"],
                 }
             )
+            if authoritative:
+                # Its position belongs to that envelope's own sync: writing it
+                # from here would have two syncs overwrite each other.
+                continue
         touched.add(symbol)
         if authoritative:
             conflict = _reconcile(symbol, row.name, row.quantity, row.prum)
@@ -102,13 +114,17 @@ def apply_snapshot(
         "unresolved": unresolved,
         "elsewhere": elsewhere,
         "conflicts": conflicts,
-        "total": len(lines),
+        "total": len(lines) + len(held_back),
     }
 
 
 def _resolve(row: SnapshotLine) -> dict | None:
     """The Yahoo listing for the line, or the one already chosen by the user."""
     if row.symbol:
+        tracked = db.get_asset(row.symbol)
+        if tracked is not None:
+            # Already tracked: its currency is known, no need to ask Yahoo.
+            return {"symbol": row.symbol, "currency": tracked["currency"]}
         # The search only tells the listing's currency: whatever it ranks
         # first, the ticker stays the one the user picked.
         for hit in prices.search(row.symbol, limit=10):

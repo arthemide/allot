@@ -80,3 +80,10 @@ class TestExposedSurface:
         ]
         # Then no permissive policy sits next to the session cookie
         assert "CORSMiddleware" not in names
+
+    def test_no_other_site_may_frame_the_app(self, client):
+        # Given any answer, the front or the API
+        response = client.get("/health")
+        # Then a browser refuses to show it inside another site's frame
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Content-Security-Policy"] == "frame-ancestors 'none'"

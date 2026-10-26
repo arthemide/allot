@@ -110,10 +110,20 @@ def import_csv(payload: ImportCsv, envelope: str):
 
 
 def _known_source(source: str) -> None:
+    """Only a source read in the browser hands its reading over in a body.
+
+    A bank read on the server owns its envelopes: a crafted body claiming to
+    be it would zero whatever of the envelope it leaves out.
+    """
     try:
-        registry.get(source)
+        known = registry.get(source)
     except KeyError:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown source {source}")
+        known = None
+    if known is None or not known.in_browser:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"No source read in the browser is named {source}",
+        )
 
 
 @router.post(
@@ -146,7 +156,7 @@ def import_source(payload: SourceImport):
             rows,
         )
     except ValueError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(error))
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
     return source_sync.apply(snapshot.source, rows)
 
 
