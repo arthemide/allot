@@ -160,16 +160,42 @@ export interface ConflictLine {
 	tracked_quantity: number;
 }
 
+/** A line held as an amount, without units (cash, euro fund): shown, not written. */
+export interface AvailableLine {
+	account: string;
+	envelope: string;
+	label: string;
+	value: number;
+	currency: string;
+}
+
 export interface ImportReport {
 	imported: ImportedLine[];
 	unresolved: UnresolvedLine[];
 	elsewhere: ElsewhereLine[];
 	/** Only a bank sync reconciles against the recorded trades. */
 	conflicts?: ConflictLine[];
+	/** Only a source sync reads amounts without units. */
+	available?: AvailableLine[];
 	total: number;
 }
 
-/** A bank account no envelope was chosen for yet. */
+/** A line without an ISIN no ticker was chosen for yet. */
+export interface PendingLine {
+	/** The first account it shows up in: leaving that account out hides it. */
+	account: string;
+	label: string;
+	/** A guess among the tracked assets, from the words of the label. */
+	symbol: string | null;
+}
+
+/** What a source reading still needs before it can be imported. */
+export interface PendingChoices {
+	accounts: AccountChoice[];
+	lines: PendingLine[];
+}
+
+/** An account of a source no envelope was chosen for yet. */
 export interface AccountChoice {
 	account: string;
 	lines: number;

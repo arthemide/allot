@@ -63,19 +63,15 @@
 					class="underline underline-offset-2">Afer member area</a
 				>.
 			</li>
-			<li>Click the bookmark there. Allot opens with what it read.</li>
+			<li>
+				Click the bookmark there. Allot opens with what it read, and imports it once you have
+				checked it.
+			</li>
 		</ol>
 
 		{#if clickedHere}
 			<p class="text-sm text-amber-600">Drag it to the bookmarks bar, then click it on Afer.</p>
 		{/if}
-
-		<p
-			class="rounded-md border border-amber-600/30 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-		>
-			<strong class="font-semibold">Preview only for now.</strong> Allot shows what it read and writes
-			nothing yet.
-		</p>
 
 		<p class="text-muted-foreground text-xs">
 			Nothing happens when you click the bookmark on Afer? Open the browser console on the Afer tab
