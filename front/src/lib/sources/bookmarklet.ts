@@ -3,8 +3,8 @@
  *
  * A source hands it its reader (a function that knows the site's pages and
  * XPaths) and the Allot origin to send the result to. The launcher handles
- * everything that does not depend on the site: fetching pages with the user's
- * session, reporting progress, and handing the snapshot to Allot through a URL
+ * everything that does not depend on the site: checking the domain, fetching
+ * pages with the user's session, reporting progress, and handing the snapshot to Allot through a URL
  * fragment.
  *
  * `run` and the reader are serialised into one `javascript:` URL, so neither
@@ -52,6 +52,9 @@ export type Reader = (io: Io) => Promise<SourceSnapshot>;
 export async function run(
 	reader: Reader,
 	allot: string,
+	// The site's domains: anywhere else, the reader would fetch the wrong pages
+	// with whatever session that site holds.
+	hosts: string[],
 	// The bookmarklet passes nothing: the default is the page it runs on.
 	// Declared here, not in the module, so it travels with the function.
 	io: Io = {
@@ -83,6 +86,12 @@ export async function run(
 		return response;
 	};
 
+	const host = new URL(io.here).hostname;
+	if (!hosts.some((h) => host === h || host.endsWith(`.${h}`))) {
+		io.say(`Allot reads ${hosts.join(', ')} only. Open it, log in, then click the bookmark.`);
+		return;
+	}
+
 	try {
 		show('reading...');
 		const snapshot = await reader({ ...io, fetch: fetchOk });
@@ -95,11 +104,18 @@ export async function run(
 	}
 }
 
-/** The code the bookmark (or the console) runs: the launcher, the reader, this instance. */
-export function launcherCode(reader: Reader, allot: string): string {
-	return `(${run.toString()})(${reader.toString()}, ${JSON.stringify(allot)})`;
+/** A source as the launcher takes it: where it is read, and how. */
+export interface BrowserSource {
+	hosts: string[];
+	read: Reader;
 }
 
-export function bookmarkletHref(reader: Reader, allot: string): string {
-	return 'javascript:' + encodeURIComponent(`void ${launcherCode(reader, allot)}`);
+/** The code the bookmark (or the console) runs: the launcher, the reader, this instance. */
+export function launcherCode(source: BrowserSource, allot: string): string {
+	const args = [source.read.toString(), JSON.stringify(allot), JSON.stringify(source.hosts)];
+	return `(${run.toString()})(${args.join(', ')})`;
+}
+
+export function bookmarkletHref(source: BrowserSource, allot: string): string {
+	return 'javascript:' + encodeURIComponent(`void ${launcherCode(source, allot)}`);
 }

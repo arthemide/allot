@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { decode, prum, shape } from './payload.js';
-import type { SourceSnapshot } from '../sources/bookmarklet.js';
+import type { SourceSnapshot } from './bookmarklet.js';
 
 const snapshot: SourceSnapshot = {
 	source: 'afer',
@@ -27,14 +27,15 @@ const snapshot: SourceSnapshot = {
 	]
 };
 
-describe('the Afer reading', () => {
+describe('a source reading', () => {
 	it('decodes what the bookmarklet sends', () => {
 		expect(decode(`#${encodeURIComponent(JSON.stringify(snapshot))}`)).toEqual(snapshot);
 	});
 
 	it.each([
 		['not JSON', '#%7Bnope', 'does not carry'],
-		['another source', `#${encodeURIComponent('{"source":"bourso"}')}`, 'unexpected shape'],
+		['a reading without accounts', `#${encodeURIComponent('{"source":"afer"}')}`, 'unexpected shape'],
+		['a reading without a source', `#${encodeURIComponent('{"version":1,"accounts":[]}')}`, 'unexpected shape'],
 		[
 			'a line with text for a number',
 			`#${encodeURIComponent(
@@ -54,6 +55,15 @@ describe('the Afer reading', () => {
 	it('derives the PRUM from what was paid in', () => {
 		expect(prum(snapshot.accounts[0].lines![0])).toBe(40);
 		expect(prum({ ...snapshot.accounts[0].lines![0], invested: null })).toBeNull();
+	});
+
+	it('prefers the unit cost the source states, as the backend does', () => {
+		expect(prum({ ...snapshot.accounts[0].lines![0], unit_cost: 38 })).toBe(38);
+	});
+
+	it('accepts any source: the backend knows which exist', () => {
+		const other = { ...snapshot, source: 'another' };
+		expect(decode(`#${encodeURIComponent(JSON.stringify(other))}`).source).toBe('another');
 	});
 
 	it('describes the reading without an amount', () => {

@@ -2,19 +2,19 @@
 	import { page } from '$app/state';
 
 	import { bookmarkletHref, launcherCode } from '#lib/sources/bookmarklet.js';
-	import { read as readAfer } from '#lib/sources/afer.js';
+	import * as afer from '#lib/sources/afer.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 
 	// Built for this very instance: the bookmark sends the reading back here.
-	const href = $derived(bookmarkletHref(readAfer, page.url.origin));
+	const href = $derived(bookmarkletHref(afer, page.url.origin));
 	let copied = $state(false);
 	let clickedHere = $state(false);
 
 	// Fallback when Afer's browser policy blocks bookmarks: the same code,
 	// pasted into the DevTools console of the Afer tab.
 	async function copyForConsole() {
-		await navigator.clipboard.writeText(launcherCode(readAfer, page.url.origin));
+		await navigator.clipboard.writeText(launcherCode(afer, page.url.origin));
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	}
