@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
 
 	import { bookmarkletHref, launcherCode } from '#lib/sources/bookmarklet.js';
 	import * as afer from '#lib/sources/afer.js';
@@ -24,7 +25,7 @@
 	<Dialog.Trigger>
 		{#snippet child({ props })}
 			<Button {...props} variant="outline" size="sm" title="Afer">
-				<img src="/logos/afer-logo.png" alt="" class="size-4" />
+				<ShieldCheckIcon class="size-4" />
 				<span class="sr-only">Afer</span>
 			</Button>
 		{/snippet}
@@ -64,8 +65,8 @@
 				>.
 			</li>
 			<li>
-				Click the bookmark there. Allot opens with what it read, and imports it once you have
-				checked it.
+				Click the bookmark there. Allot opens in a new tab with what it read, and imports it once
+				you have checked it. Allow pop-ups on the Afer site if the browser asks.
 			</li>
 		</ol>
 
