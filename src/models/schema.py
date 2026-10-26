@@ -95,6 +95,12 @@ class AssetUpdate(BaseModel):
     by_amount: bool | None = None
 
 
+class TickerChange(BaseModel):
+    """The Yahoo ticker an asset is quoted under from now on."""
+
+    symbol: str = Field(min_length=1, max_length=32)
+
+
 class OpeningPosition(BaseModel):
     """A holding that predates tracking, as it reads on a statement."""
 
