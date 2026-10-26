@@ -3,8 +3,8 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { decode } from '#lib/afer/payload.js';
 	import type { SourceSnapshot } from '#lib/sources/bookmarklet.js';
+	import { decode, prum } from '#lib/sources/payload.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { formatMoney } from '#lib/utils.js';
 
@@ -14,7 +14,7 @@
 	onMount(() => {
 		const fragment = page.url.hash;
 		try {
-			if (fragment.length > 1) snapshot = decode(fragment) as unknown as SourceSnapshot;
+			if (fragment.length > 1) snapshot = decode(fragment);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'The reading could not be read.';
 		} finally {
@@ -37,7 +37,8 @@
 		<p class="text-muted-foreground text-sm">Nothing to show. Click a source's bookmark on its site.</p>
 	{:else}
 		<p class="text-sm">Read on {snapshot.read_on}: {snapshot.accounts.length} account(s).</p>
-		{#each snapshot.accounts as account (account.label)}
+		<!-- Keyed by position: nothing guarantees a site names two lines apart. -->
+		{#each snapshot.accounts as account, a (a)}
 			<section class="space-y-2 rounded-lg border p-4">
 				<header class="flex flex-wrap items-baseline justify-between gap-2">
 					<h2 class="font-semibold">{account.label}</h2>
@@ -48,15 +49,22 @@
 				{#if account.lines && account.lines.length > 0}
 					<table class="w-full text-sm">
 						<thead class="text-muted-foreground text-left text-xs uppercase">
-							<tr><th class="py-1 pr-3">Fund</th><th class="py-1 pr-3 text-right">Units</th><th class="py-1 pr-3 text-right">Value</th><th class="py-1">PRUM</th></tr>
+							<tr>
+								<th class="py-1 pr-3">Fund</th>
+								<th class="py-1 pr-3 text-right">Units</th>
+								<th class="py-1 pr-3 text-right">Value</th>
+								<th class="py-1 text-right">PRUM</th>
+							</tr>
 						</thead>
 						<tbody class="divide-y tabular-nums">
-							{#each account.lines as line (line.label)}
+							{#each account.lines as line, l (l)}
 								<tr>
 									<td class="py-1 pr-3">{line.label}</td>
 									<td class="py-1 pr-3 text-right">{line.quantity ?? '-'}</td>
-									<td class="py-1 pr-3 text-right">{formatMoney(line.valuation ?? null, 'EUR')}</td>
-									<td class="py-1">{line.unit_cost ?? (line.invested && line.quantity ? line.invested / line.quantity : '-')}</td>
+									<td class="py-1 pr-3 text-right">
+										{formatMoney(line.valuation, line.currency ?? 'EUR')}
+									</td>
+									<td class="py-1 text-right">{formatMoney(prum(line), line.currency ?? 'EUR')}</td>
 								</tr>
 							{/each}
 						</tbody>
