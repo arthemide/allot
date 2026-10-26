@@ -406,3 +406,38 @@ class TestBankAccountMerge:
             for row in db.query("SELECT name FROM sqlite_master WHERE type = 'table'")
         }
         assert "bank_account" not in tables
+
+
+class TestSourceLineUnlink:
+    def test_an_early_source_line_drops_its_key_to_asset(self, tmp_path):
+        # Given a database whose source_line was created with a foreign key
+        path = tmp_path / "early.db"
+        schema = db.SCHEMA_PATH.read_text(encoding="utf-8").replace(
+            "    symbol TEXT,\n    PRIMARY KEY (source, label)",
+            "    symbol TEXT REFERENCES asset(symbol) ON DELETE CASCADE,\n"
+            "    PRIMARY KEY (source, label)",
+        )
+        connection = db.connect(path)
+        connection.executescript(schema)
+        connection.execute("INSERT INTO envelope (name) VALUES ('AV')")
+        connection.execute(
+            "INSERT INTO asset (symbol, label, envelope, currency) "
+            "VALUES ('AFM', 'Afer Monde', 'AV', 'EUR')"
+        )
+        connection.execute("INSERT INTO source_line VALUES ('afer', 'Monde', 'AFM')")
+        connection.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute("INSERT INTO source_line VALUES ('afer', 'X', 'NEW')")
+        connection.close()
+        # When the app boots on it
+        db.init(path)
+        # Then a ticker not tracked yet can be mapped, and nothing was lost
+        connection = db.connect(path)
+        connection.execute("INSERT INTO source_line VALUES ('afer', 'X', 'NEW')")
+        rows = connection.execute(
+            "SELECT label, symbol FROM source_line ORDER BY label"
+        ).fetchall()
+        keys = connection.execute("PRAGMA foreign_key_list(source_line)").fetchall()
+        connection.close()
+        assert [tuple(row) for row in rows] == [("Monde", "AFM"), ("X", "NEW")]
+        assert keys == []
