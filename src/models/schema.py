@@ -18,6 +18,7 @@ class Position(BaseModel):
     envelope: str
     currency: str
     weight: float
+    by_amount: bool
     base_quantity: float
     base_prum: float | None
     quantity: float
@@ -82,12 +83,16 @@ class AssetCreate(BaseModel):
     envelope: str
     currency: str
     weight: float = Field(default=1.0, ge=0)
+    # None: seeded from the ticker (calc.bought_by_amount).
+    by_amount: bool | None = None
 
 
 class AssetUpdate(BaseModel):
     label: str
     envelope: str
     weight: float = Field(ge=0)
+    # None: left as it is, so a client that does not know the flag keeps it.
+    by_amount: bool | None = None
 
 
 class OpeningPosition(BaseModel):
@@ -105,7 +110,8 @@ class ImportCsv(BaseModel):
 
 class ImportedLine(BaseModel):
     symbol: str
-    isin: str
+    # None for a line mapped to its ticker by hand (a source without ISINs).
+    isin: str | None
     label: str
     quantity: float
     prum: float
@@ -129,7 +135,7 @@ class ElsewhereLine(BaseModel):
     """
 
     symbol: str
-    isin: str
+    isin: str | None
     label: str
     envelope: str
 
@@ -279,6 +285,7 @@ class PositionRow(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    source: str = "bourso"
     account: str
     # "security" for a holding, "cash" for the account's cash balance.
     support_type: str
@@ -308,6 +315,72 @@ class SnapshotLine(BaseModel):
     quantity: float
     prum: float | None
     currency: str | None = None
+    symbol: str | None = None
+    by_amount: bool = False
+
+
+class SourceLine(BaseModel):
+    """One holding read from a source, before resolution."""
+
+    model_config = ConfigDict(frozen=True)
+
+    label: str
+    isin: str | None = None
+    quantity: float | None = None
+    unit_cost: float | None = None
+    invested: float | None = None
+    unit_value: float | None = None
+    valuation: float | None = None
+    currency: str | None = None
+    value_date: str | None = None
+    by_amount: bool = True
+
+
+class SourceAccount(BaseModel):
+    label: str
+    product: str = ""
+    balance: float | None = None
+    available: bool = True
+    lines: list[SourceLine] = Field(default_factory=list)
+
+
+class SourceSnapshot(BaseModel):
+    source: str
+    version: int = 1
+    read_on: str = ""
+    accounts: list[SourceAccount] = Field(default_factory=list)
+
+
+class PendingAccount(BaseModel):
+    account: str
+    lines: int
+    envelope: str | None = None
+
+
+class PendingLine(BaseModel):
+    label: str
+    symbol: str | None = None
+
+
+class PendingChoices(BaseModel):
+    accounts: list[PendingAccount] = Field(default_factory=list)
+    lines: list[PendingLine] = Field(default_factory=list)
+
+
+class AccountPlacement(BaseModel):
+    account: str
+    envelope: str | None = None
+
+
+class LineMapping(BaseModel):
+    label: str
+    symbol: str | None = None
+
+
+class SourceImport(BaseModel):
+    snapshot: SourceSnapshot
+    placements: list[AccountPlacement] = Field(default_factory=list)
+    mappings: list[LineMapping] = Field(default_factory=list)
 
 
 class Trade(BaseModel):
@@ -379,7 +452,7 @@ class EnvelopeAsset(BaseModel):
 
     symbol: str
     weight: float
-    fractional: bool
+    by_amount: bool
     currency: str
     price: float | None
     # 0.0 when the quote is missing, so the arithmetic never guards for None.

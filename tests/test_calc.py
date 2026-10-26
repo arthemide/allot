@@ -303,19 +303,18 @@ class TestBuyLots:
         assert first == second
 
 
-class TestIsFractional:
+class TestBoughtByAmount:
     def test_a_crypto_pair_is_bought_by_the_amount(self):
-        assert calc.is_fractional("ETH-USD")
-        assert calc.is_fractional("BTC-EUR")
+        assert calc.bought_by_amount("ETH-USD")
+        assert calc.bought_by_amount("btc-eur")
 
     def test_a_share_is_bought_whole_until_proven_otherwise(self):
         # The careful default: it makes an envelope save up rather than
         # produce an order the broker would refuse
-        assert not calc.is_fractional("MC.PA")
+        assert not calc.bought_by_amount("MC.PA")
 
     def test_a_fraction_already_traded_settles_it(self):
-        # Whatever the ticker looks like: a quantity of 0.4 is proof
-        assert calc.is_fractional("MC.PA", traded_in_fractions=True)
+        assert calc.bought_by_amount("MC.PA", traded_in_fractions=True)
 
 
 class TestSharedFixture:

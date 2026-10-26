@@ -23,13 +23,13 @@ from src.services import note
 BASE = "https://allot.example.com/"
 
 
-def _line(symbol, amount, units=None, weight=1.0, fractional=True, price=None):
+def _line(symbol, amount, units=None, weight=1.0, by_amount=True, price=None):
     return PlanAsset(
         symbol=symbol,
         weight=weight,
         amount=amount,
         units=units,
-        fractional=fractional,
+        by_amount=by_amount,
         currency="EUR",
         price=price,
         price_eur=price or 0.0,  # what to_eur() gives back with no quote
@@ -43,7 +43,7 @@ def _waiting(symbol, price_eur=500.0, missing=0.0, months_left=None):
     return WaitingAsset(
         symbol=symbol,
         weight=1.0,
-        fractional=False,
+        by_amount=False,
         currency="EUR",
         price=price_eur,
         price_eur=price_eur,
@@ -77,7 +77,7 @@ PLAN = [
         cash=_cash(650.0),
         carry=50.0,
         market_value=0.0,
-        assets=[_line("MC.PA", 600.0, units=1, fractional=False, price=600.0)],
+        assets=[_line("MC.PA", 600.0, units=1, by_amount=False, price=600.0)],
         waiting=[],
     ),
     PlanEntry(
@@ -300,7 +300,7 @@ PROJECTION = [
                 envelope="CTO",
                 tracked=True,
                 budget=620.0,
-                assets=[_line("MC.PA", 600.0, units=1, fractional=False, price=600.0)],
+                assets=[_line("MC.PA", 600.0, units=1, by_amount=False, price=600.0)],
                 carry=20.0,
             )
         ],

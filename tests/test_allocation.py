@@ -31,6 +31,7 @@ def _asset(symbol, envelope, currency, weight):
         "envelope": envelope,
         "currency": currency,
         "weight": weight,
+        "by_amount": symbol.endswith(("-USD", "-EUR", "-GBP")),
     }
 
 
@@ -127,7 +128,7 @@ class TestCashRegime:
         mocker.patch.object(
             allocation.db,
             "all_assets",
-            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0)],
+            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0) | {"by_amount": False}],
         )
         mocker.patch.object(
             allocation.db,
@@ -182,7 +183,7 @@ class TestCashRegime:
             allocation.db,
             "all_assets",
             return_value=[
-                _asset("MC.PA", "CTO", "EUR", 1.0),
+                _asset("MC.PA", "CTO", "EUR", 1.0) | {"by_amount": False},
                 _asset("OLD.PA", "CTO", "EUR", 0.0),
             ],
         )
@@ -206,7 +207,7 @@ class TestCashRegime:
             allocation.db,
             "all_assets",
             return_value=[
-                _asset("MC.PA", "CTO", "EUR", 1.0),
+                _asset("MC.PA", "CTO", "EUR", 1.0) | {"by_amount": False},
                 _asset("ETH-USD", "CTO", "USD", 1.0),
             ],
         )
@@ -230,9 +231,11 @@ class TestCashRegime:
         assert envelope.waiting[0].missing == pytest.approx(400.0)
 
     def test_a_fractional_asset_keeps_its_euro_amount(self, cto, mocker):
-        # Given a line already traded by the tenth: the broker has settled it
+        # Given an asset flagged as bought by the amount
         mocker.patch.object(
-            allocation.db, "symbols_traded_in_fractions", return_value={"MC.PA"}
+            allocation.db,
+            "all_assets",
+            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0) | {"by_amount": True}],
         )
         self._with_cash(mocker, 320.0)
         envelope = _by_name(allocation.plan())["CTO"]
@@ -256,7 +259,7 @@ class TestProjection:
         mocker.patch.object(
             allocation.db,
             "all_assets",
-            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0)],
+            return_value=[_asset("MC.PA", "CTO", "EUR", 1.0) | {"by_amount": False}],
         )
         mocker.patch.object(
             allocation.db,

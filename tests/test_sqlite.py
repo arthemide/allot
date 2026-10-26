@@ -302,19 +302,83 @@ class TestPriceCache:
         assert db.cached_prices("WPEA.PA") == []
 
 
-class TestFractionalTrading:
-    def test_a_whole_quantity_says_nothing(self, portfolio_data):
-        # Given only whole quantities traded
-        # Then no asset is known to trade in fractions
-        assert db.symbols_traded_in_fractions() == set()
+class TestByAmount:
+    @pytest.fixture
+    def legacy(self, tmp_path):
+        """A database laid out before `asset.by_amount` existed."""
+        path = tmp_path / "legacy.db"
+        schema = db.SCHEMA_PATH.read_text(encoding="utf-8")
+        old = "\n".join(
+            line for line in schema.splitlines() if "by_amount INTEGER" not in line
+        )
+        connection = db.connect(path)
+        connection.executescript(old)
+        connection.execute("INSERT INTO envelope (name) VALUES ('CTO')")
+        for symbol in ("MC.PA", "ETH-USD", "ESE.PA"):
+            connection.execute(
+                "INSERT INTO asset (symbol, label, envelope, currency) "
+                "VALUES (?, ?, 'CTO', 'EUR')",
+                (symbol, symbol),
+            )
+        connection.execute(
+            'INSERT INTO "transaction" (symbol, date, side, quantity, unit_price) '
+            "VALUES ('ESE.PA', '2026-03-10', 'buy', 0.4, 20.0)"
+        )
+        connection.commit()
+        connection.close()
+        return path
 
-    def test_a_fractional_quantity_settles_it(self, portfolio_data):
-        # Given a tenth of a unit bought
-        db.add_transaction("ESE.PA", "2026-03-10", "buy", 0.1, 20.0)
-        # Then the broker has answered the question: no setting needed
-        assert db.symbols_traded_in_fractions() == {"ESE.PA"}
+    def _flags(self, path):
+        connection = db.connect(path)
+        try:
+            return {
+                row["symbol"]: row["by_amount"]
+                for row in connection.execute("SELECT symbol, by_amount FROM asset")
+            }
+        finally:
+            connection.close()
 
-    def test_a_fractional_sell_counts_too(self, portfolio_data):
-        db.add_transaction("ESE.PA", "2026-03-10", "buy", 2.0, 20.0)
-        db.add_transaction("ESE.PA", "2026-04-10", "sell", 0.5, 25.0)
-        assert "ESE.PA" in db.symbols_traded_in_fractions()
+    def test_an_older_database_gets_the_column_seeded_by_the_former_rule(self, legacy):
+        # When the app boots on a database that predates the flag
+        db.init(legacy)
+        # Then crypto pairs and assets traded in fractions keep buying by amount
+        assert self._flags(legacy) == {"MC.PA": 0, "ETH-USD": 1, "ESE.PA": 1}
+
+    def test_the_seeding_runs_once(self, legacy):
+        # Given an upgraded database where the user then changed a flag
+        db.init(legacy)
+        connection = db.connect(legacy)
+        connection.execute("UPDATE asset SET by_amount = 0 WHERE symbol = 'ETH-USD'")
+        connection.commit()
+        connection.close()
+        # When it boots again
+        db.init(legacy)
+        # Then the user's choice stands
+        assert self._flags(legacy)["ETH-USD"] == 0
+
+    def test_an_update_that_does_not_say_keeps_the_flag(self, portfolio_data):
+        # Given an asset bought by amount
+        db.update_asset("ESE.PA", "BNP S&P 500", "PEA", 1.0, by_amount=True)
+        # When it is moved without a word about the flag, as a sync does
+        db.update_asset("ESE.PA", "BNP S&P 500", "PEA", 3.0)
+        # Then it is still bought by amount
+        assert db.get_asset("ESE.PA")["by_amount"] == 1
+        # And saying so still turns it off
+        db.update_asset("ESE.PA", "BNP S&P 500", "PEA", 3.0, by_amount=False)
+        assert db.get_asset("ESE.PA")["by_amount"] == 0
+
+
+class TestSourceLines:
+    def test_a_line_can_map_to_a_ticker_not_tracked_yet(self, database):
+        # Given no asset at all: the import creates it after the choice
+        db.set_source_line("afer", "Afer Actions Monde", "FR0010821470.SG")
+        assert db.source_lines("afer") == {"Afer Actions Monde": "FR0010821470.SG"}
+
+    def test_deleting_the_asset_forgets_its_lines(self, portfolio_data):
+        # Given a line mapped to a tracked asset, and one left out
+        db.set_source_line("afer", "Afer Actions Monde", "ESE.PA")
+        db.set_source_line("afer", "Afer Euro", None)
+        # When the asset is deleted
+        db.delete_asset("ESE.PA")
+        # Then its line will be asked about again; the left-out one stays
+        assert db.source_lines("afer") == {"Afer Euro": None}
