@@ -5,7 +5,7 @@
 
 	import { importPreview, importSource, searchTickers } from '#lib/services/api.js';
 	import { READING, READY, type SourceSnapshot } from '#lib/sources/bookmarklet.js';
-	import { readsFrom } from '#lib/sources/index.js';
+	import { BROWSER_SOURCES, readsFrom } from '#lib/sources/index.js';
 	import { decode, prum, validate } from '#lib/sources/payload.js';
 	import type { ImportReport, PendingChoices, SearchHit } from '#lib/types/api.js';
 	import ImportReportView from '#lib/components/ImportReportView.svelte';
@@ -22,10 +22,12 @@
 	let error = $state('');
 	let busy = $state(false);
 
-	// Envelope typed for each new account, ticker for each new line; empty
-	// leaves it out, and the choice is remembered for the next imports.
+	// Envelope typed for each new account (empty leaves it out), ticker for
+	// each new line. Both are remembered for the next imports. A line left
+	// blank is asked again; leaving it out is a choice of its own.
 	let envelopes = $state<Record<string, string>>({});
 	let symbols = $state<Record<string, string>>({});
+	let excluded = $state<Record<string, boolean>>({});
 	let hits = $state<Record<string, SearchHit[]>>({});
 
 	// Opened by a bookmark click: say so, and the reading comes by postMessage.
@@ -36,7 +38,11 @@
 		if (fragment.length > 1) {
 			// The fallback, when the source's site cuts this tab off from it.
 			try {
-				receive(decode(fragment));
+				const read = decode(fragment);
+				if (!(read.source in BROWSER_SOURCES)) {
+					throw new Error(`${read.source} is not read in the browser: nothing to import.`);
+				}
+				receive(read);
 			} catch (e) {
 				error = e instanceof Error ? e.message : 'The reading could not be read.';
 			}
@@ -72,7 +78,9 @@
 		try {
 			choices = await importPreview(reading);
 			envelopes = Object.fromEntries(choices.accounts.map((a) => [a.account, a.envelope ?? '']));
-			symbols = Object.fromEntries(choices.lines.map((l) => [l.label, l.symbol ?? '']));
+			// The guess is only offered: a wrong ticker silently merges two funds.
+			symbols = Object.fromEntries(choices.lines.map((l) => [l.label, '']));
+			excluded = {};
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Allot could not check the reading.';
 		}
@@ -104,7 +112,11 @@
 				})),
 				choices.lines
 					.filter((line) => !leftOut(line.account))
-					.map((line) => ({ label: line.label, symbol: symbols[line.label].trim() || null }))
+					.filter((line) => excluded[line.label] || symbols[line.label].trim())
+					.map((line) => ({
+						label: line.label,
+						symbol: excluded[line.label] ? null : symbols[line.label].trim()
+					}))
 			);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'The import failed.';
@@ -201,21 +213,41 @@
 				{#if choices.lines.some((line) => !leftOut(line.account))}
 					<div class="space-y-2">
 						<p class="text-sm">
-							These funds carry no ISIN: pick the ticker each one is quoted under. Leave it empty to
-							keep a fund out.
+							These funds carry no ISIN: pick the ticker each one is quoted under. A fund left blank
+							is asked again next time, and holds back the zeroing of its envelope until then.
 						</p>
 						{#each choices.lines as line (line.label)}
 							{#if !leftOut(line.account)}
 								<div class="space-y-1 text-sm">
 									<span>{line.label}</span>
-									<div class="flex gap-2">
+									<div class="flex items-center gap-2">
 										<Input
 											bind:value={symbols[line.label]}
-											placeholder="Left out"
+											placeholder={excluded[line.label] ? 'Left out' : 'Ticker'}
+											disabled={excluded[line.label]}
 											class="font-mono"
 										/>
-										<Button variant="outline" onclick={() => search(line.label)}>Search</Button>
+										<Button
+											variant="outline"
+											disabled={excluded[line.label]}
+											onclick={() => search(line.label)}
+										>
+											Search
+										</Button>
+										<label class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
+											<input type="checkbox" bind:checked={excluded[line.label]} />
+											Leave out
+										</label>
 									</div>
+									{#if line.symbol && !symbols[line.label] && !excluded[line.label]}
+										<button
+											type="button"
+											class="text-muted-foreground hover:text-primary text-xs hover:underline"
+											onclick={() => (symbols[line.label] = line.symbol ?? '')}
+										>
+											Maybe <span class="font-mono">{line.symbol}</span>, already tracked? Use it
+										</button>
+									{/if}
 									{#if hits[line.label]?.length}
 										<div class="flex flex-wrap gap-1">
 											{#each hits[line.label] as hit (hit.symbol)}

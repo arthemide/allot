@@ -261,6 +261,14 @@ class TestResolution:
         assert [line["symbol"] for line in report["imported"]] == ["AFERMONDE"]
         assert db.get_asset("AFERMONDE")["currency"] == "EUR"
 
+    def test_a_ticker_already_tracked_is_not_searched_again(
+        self, database, offline, mocker, rows
+    ):
+        _place_and_apply(rows)
+        search = mocker.patch("src.services.prices.search", return_value=[])
+        source_sync.apply("afer", rows)
+        search.assert_not_called()
+
     def test_a_line_the_source_buys_by_the_share_stays_so(self, database, offline):
         snapshot = {**SNAPSHOT}
         snapshot["accounts"] = [
@@ -310,3 +318,191 @@ class TestPendingLines:
     def test_the_lines_of_an_account_left_out_are_not_asked(self, database, rows):
         db.set_source_account("afer", ACCOUNT, None)
         assert source_sync.pending("afer", rows).lines == []
+
+
+class TestServerSources:
+    @pytest.mark.parametrize("path", ["/assets/imports/preview", "/assets/imports"])
+    def test_a_bank_read_on_the_server_cannot_be_posted(self, client, path):
+        # Given a body claiming to be a BoursoBank reading, which would zero
+        # whatever of the envelope it leaves out
+        snapshot = {**SNAPSHOT, "source": "bourso"}
+        body = snapshot if path.endswith("preview") else {"snapshot": snapshot}
+        # Then the endpoint knows no such browser source
+        assert client.post(path, json=body).status_code == 404
+
+
+def _contract(label, *lines):
+    return {"label": label, "lines": list(lines)}
+
+
+def _fund(label, quantity, invested=None):
+    return {"label": label, "quantity": quantity, "invested": invested}
+
+
+def _rows_of(*accounts):
+    snapshot = {**SNAPSHOT, "accounts": list(accounts)}
+    return source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
+
+
+class TestOneFundTwoContracts:
+    def test_two_contracts_of_one_envelope_add_up(self, database, offline):
+        # Given the same fund in two contracts, both placed in AV
+        rows = _rows_of(
+            _contract("C1", _fund(FUND, 4, 160)), _contract("C2", _fund(FUND, 6, 300))
+        )
+        source_sync.place(
+            "afer",
+            [
+                AccountPlacement(account="C1", envelope="AV"),
+                AccountPlacement(account="C2", envelope="AV"),
+            ],
+            [LineMapping(label=FUND, symbol="AFERMONDE")],
+            rows,
+        )
+        source_sync.apply("afer", rows)
+        # Then the asset holds both, at the PRUM of what was paid in overall
+        asset = db.get_asset("AFERMONDE")
+        assert asset["base_quantity"] == 10
+        assert asset["base_prum"] == pytest.approx(46.0)
+
+    def test_two_contracts_in_two_envelopes_are_refused(self, database):
+        rows = _rows_of(
+            _contract("C1", _fund(FUND, 4, 160)), _contract("C2", _fund(FUND, 6, 300))
+        )
+        with pytest.raises(ValueError, match="held in AV, AV2"):
+            source_sync.place(
+                "afer",
+                [
+                    AccountPlacement(account="C1", envelope="AV"),
+                    AccountPlacement(account="C2", envelope="AV2"),
+                ],
+                [LineMapping(label=FUND, symbol="AFERMONDE")],
+                rows,
+            )
+
+    def test_split_after_the_mapping_it_is_held_back_and_zeroes_nothing(
+        self, database, offline
+    ):
+        # Given the fund mapped while one contract held it, then a second
+        # contract placed elsewhere reporting it too
+        db.upsert_envelope("AV", 0.0)
+        db.upsert_envelope("AV2", 0.0)
+        db.set_source_account("afer", "C1", "AV")
+        db.set_source_account("afer", "C2", "AV2")
+        db.set_source_line("afer", FUND, "AFERMONDE")
+        rows = _rows_of(
+            _contract("C1", _fund(FUND, 4, 160)), _contract("C2", _fund(FUND, 6, 300))
+        )
+        report = source_sync.apply("afer", rows)
+        # Then nothing is written for it, and it says where it is held
+        assert db.get_asset("AFERMONDE") is None
+        assert {line["name"] for line in report["unresolved"]} == {
+            f"{FUND} (held in AV, AV2)"
+        }
+
+
+class TestTickerChoices:
+    def test_two_funds_cannot_share_a_ticker(self, database, rows):
+        db.set_source_line("afer", "Another fund", "AFERMONDE")
+        with pytest.raises(ValueError, match="already the ticker of Another fund"):
+            source_sync.place(
+                "afer",
+                [AccountPlacement(account=ACCOUNT, envelope="AV")],
+                [LineMapping(label=FUND, symbol="AFERMONDE")],
+                rows,
+            )
+
+    def test_a_ticker_tracked_in_another_envelope_is_refused(self, database, rows):
+        # Given CW8.PA in the PEA, and the Afer contract going to AV
+        db.upsert_envelope("PEA", 0.0)
+        db.add_asset("CW8.PA", "Amundi World", "PEA", "EUR")
+        with pytest.raises(ValueError, match="tracked in PEA"):
+            source_sync.place(
+                "afer",
+                [AccountPlacement(account=ACCOUNT, envelope="AV")],
+                [LineMapping(label=FUND, symbol="CW8.PA")],
+                rows,
+            )
+
+    def test_a_ticker_is_kept_as_yahoo_spells_it(self, database, rows):
+        source_sync.place(
+            "afer",
+            [AccountPlacement(account=ACCOUNT, envelope="AV")],
+            [LineMapping(label=FUND, symbol=" afermonde ")],
+            rows,
+        )
+        assert db.source_lines("afer") == {FUND: "AFERMONDE"}
+
+    def test_a_line_not_answered_is_asked_again(self, database, rows):
+        # When the account is placed, the fund's ticker left for later
+        source_sync.place(
+            "afer", [AccountPlacement(account=ACCOUNT, envelope="AV")], [], rows
+        )
+        # Then the next reading asks for it again
+        assert [line.label for line in source_sync.pending("afer", rows).lines] == [
+            FUND
+        ]
+
+    def test_the_guess_ignores_the_words_every_fund_shares(self, database):
+        # Given one Afer fund tracked already
+        db.upsert_envelope("AV", 0.0)
+        db.add_asset("AFM", "Afer Actions Monde", "AV", "EUR")
+        rows = _rows_of(
+            _contract(
+                ACCOUNT,
+                _fund("Afer Actions Euro", 1),
+                _fund("Afer Sfer", 1),
+                _fund("Afer Immo", 1),
+            )
+        )
+        guesses = {
+            line.label: line.symbol for line in source_sync.pending("afer", rows).lines
+        }
+        # Then "Afer" alone suggests nothing, "Actions" still does
+        assert guesses == {
+            "Afer Actions Euro": "AFM",
+            "Afer Sfer": None,
+            "Afer Immo": None,
+        }
+
+    def test_the_guess_never_points_at_a_ticker_already_mapped(self, database):
+        db.upsert_envelope("AV", 0.0)
+        db.add_asset("AFM", "Afer Actions Monde", "AV", "EUR")
+        db.set_source_line("afer", "Afer Actions Monde", "AFM")
+        rows = _rows_of(_contract(ACCOUNT, _fund("Afer Actions Euro", 1)))
+        assert source_sync.pending("afer", rows).lines[0].symbol is None
+
+
+class TestMovedAsset:
+    def test_an_afer_import_never_moves_an_asset_out_of_its_envelope(
+        self, database, offline, rows
+    ):
+        # Given the fund mapped, then its asset moved to the PEA by the user
+        _place_and_apply(rows)
+        db.upsert_envelope("PEA", 0.0)
+        db.update_asset("AFERMONDE", "Afer", "PEA", 1.0)
+        db.set_opening_position("AFERMONDE", 9.0, 450.0)
+        # When the contract is imported again
+        report = source_sync.apply("afer", rows)
+        # Then it stays where it is, as it is, and the report says so
+        asset = db.get_asset("AFERMONDE")
+        assert (asset["envelope"], asset["base_quantity"]) == ("PEA", 9.0)
+        assert report["elsewhere"][0]["envelope"] == "PEA"
+
+
+class TestUnitsMissing:
+    def test_a_mapped_fund_read_without_units_is_held_back(
+        self, database, offline, rows
+    ):
+        # Given a first import, then a reading where the fund lost its units
+        _place_and_apply(rows)
+        broken = _rows_of(
+            _contract(ACCOUNT, {"label": FUND, "valuation": 200}, _fund("Other", 1))
+        )
+        report = source_sync.apply("afer", broken)
+        # Then it is not sold, not counted as available, and is reported
+        assert db.get_asset("AFERMONDE")["base_quantity"] == 4
+        assert report["available"] == []
+        assert f"{FUND} (no units read)" in {
+            line["name"] for line in report["unresolved"]
+        }

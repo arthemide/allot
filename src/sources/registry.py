@@ -13,11 +13,17 @@ class Source(BaseModel):
     # added it. False when the source only speaks for the assets its lines
     # were mapped to, and leaves the rest of the envelope alone.
     owns_envelope: bool
+    # True when the reading is done in the user's browser and posted to
+    # /assets/imports. False for a source the server reads itself: its
+    # readings never come from a request body, so the endpoint refuses them.
+    in_browser: bool
 
 
 SOURCES: dict[str, Source] = {
-    "bourso": Source(id="bourso", name="BoursoBank", owns_envelope=True),
-    "afer": Source(id="afer", name="Afer", owns_envelope=False),
+    "bourso": Source(
+        id="bourso", name="BoursoBank", owns_envelope=True, in_browser=False
+    ),
+    "afer": Source(id="afer", name="Afer", owns_envelope=False, in_browser=True),
 }
 
 

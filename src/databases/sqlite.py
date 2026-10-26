@@ -33,6 +33,9 @@ def init(path: Path = DB_PATH) -> None:
     connection = connect(path)
     try:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        # One transaction for the upgrades: sqlite3 would commit the ALTER on
+        # its own, and a crash before the seeding would leave it half done.
+        connection.execute("BEGIN")
         _add_by_amount(connection)
         _merge_bank_accounts(connection)
         connection.commit()
