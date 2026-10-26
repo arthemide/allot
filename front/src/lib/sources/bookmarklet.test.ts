@@ -9,8 +9,8 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { decode } from '../afer/payload.js';
-import { read } from './afer.js';
+import { decode } from './payload.js';
+import * as afer from './afer.js';
 import { bookmarkletHref, launcherCode } from './bookmarklet.js';
 
 const ALLOT = 'https://allot.example.com';
@@ -57,13 +57,13 @@ function stubDocument(name: string, xpaths: string[]) {
 	return doc;
 }
 
-async function click(code: string, summary = 'summary') {
+async function click(code: string, summary = 'summary', here = `${AFER}/Synthese-Contrats`) {
 	const xpaths: string[] = [];
 	const said: string[] = [];
 	let went = '';
 	const context = {
 		URL,
-		location: { href: `${AFER}/Synthese-Contrats`, assign: (url: string) => (went = url) },
+		location: { href: here, assign: (url: string) => (went = url) },
 		alert: (message: string) => said.push(message),
 		fetch: async (url: string) => ({
 			ok: true,
@@ -91,7 +91,7 @@ async function click(code: string, summary = 'summary') {
 
 describe('the Afer bookmarklet', () => {
 	it('reads a contract and opens Allot with it', async () => {
-		const { went, said } = await click(launcherCode(read, ALLOT));
+		const { went, said } = await click(launcherCode(afer, ALLOT));
 		expect(said).toEqual([]);
 		expect(went.startsWith(`${ALLOT}/import/#`)).toBe(true);
 		const snapshot = decode(went.slice(went.indexOf('#')));
@@ -117,19 +117,31 @@ describe('the Afer bookmarklet', () => {
 	});
 
 	it('asks only valid class tests', async () => {
-		const { xpaths } = await click(launcherCode(read, ALLOT));
+		const { xpaths } = await click(launcherCode(afer, ALLOT));
 		expect(xpaths.some((x) => x.includes('o-product-tab-category'))).toBe(true);
 		expect(xpaths.filter((x) => /\)\(|has-class/.test(x))).toEqual([]);
 	});
 
 	it('says so when the Afer session has ended', async () => {
-		const { went, said } = await click(launcherCode(read, ALLOT), 'login');
+		const { went, said } = await click(launcherCode(afer, ALLOT), 'login');
 		expect(went).toBe('');
 		expect(said).toEqual([expect.stringContaining('the Afer session has ended')]);
 	});
 
+	it('refuses to read another site', async () => {
+		// gie-afer.fr.evil.com ends with the name, not with the domain
+		const { went, said, xpaths } = await click(
+			launcherCode(afer, ALLOT),
+			'summary',
+			'https://gie-afer.fr.evil.com/'
+		);
+		expect(went).toBe('');
+		expect(xpaths).toEqual([]);
+		expect(said).toEqual([expect.stringContaining('reads gie-afer.fr only')]);
+	});
+
 	it('runs the same code from the bookmark', async () => {
-		const href = bookmarkletHref(read, ALLOT);
+		const href = bookmarkletHref(afer, ALLOT);
 		expect(href.startsWith('javascript:')).toBe(true);
 		const { went } = await click(decodeURIComponent(href.slice('javascript:'.length)));
 		expect(went.startsWith(`${ALLOT}/import/#`)).toBe(true);

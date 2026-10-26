@@ -107,18 +107,31 @@
 <Dialog.Root bind:open>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
+			{@const label = busy
+				? 'BoursoBank - sync in progress'
+				: waitingForUser
+					? 'BoursoBank - action needed'
+					: 'BoursoBank'}
 			<Button
 				{...props}
 				variant={waitingForUser ? 'default' : 'outline'}
 				size="sm"
-				title={waitingForUser ? 'BoursoBank - action needed' : 'BoursoBank'}
+				class="relative"
+				title={label}
 			>
 				{#if busy}
 					<LoaderCircle class="size-4 animate-spin" />
 				{:else}
 					<img src="/logos/bourso-logo.png" alt="" class="size-4" />
 				{/if}
-				<span class="sr-only">{waitingForUser ? 'BoursoBank - action needed' : 'BoursoBank'}</span>
+				{#if waitingForUser}
+					<!-- The logo alone no longer says it: a dot does, as "!" did. -->
+					<span
+						class="bg-destructive ring-background absolute -top-1 -right-1 size-2.5 rounded-full ring-2"
+						aria-hidden="true"
+					></span>
+				{/if}
+				<span class="sr-only">{label}</span>
 			</Button>
 		{/snippet}
 	</Dialog.Trigger>

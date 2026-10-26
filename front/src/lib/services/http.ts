@@ -173,12 +173,17 @@ export const setEnvelopeStart = (name: string, body: EnvelopeStart) =>
 export const clearEnvelopeStart = (name: string) =>
 	request<Envelope>(`/envelopes/${encodeURIComponent(name)}/start`, { method: 'DELETE' });
 
+/** What a source reading still needs before it can be imported. */
+export interface PendingChoices {
+	accounts: { account: string; lines: number; envelope: string | null }[];
+	lines: { label: string; symbol: string | null }[];
+}
 
 export const importPreview = (snapshot: unknown) =>
-	request<{ accounts: { account: string; lines: number; envelope: string | null }[]; lines: { label: string; symbol: string | null }[] }>(
-		'/assets/imports/preview',
-		{ method: 'POST', body: JSON.stringify({ snapshot }) }
-	);
+	request<PendingChoices>('/assets/imports/preview', {
+		method: 'POST',
+		body: JSON.stringify(snapshot)
+	});
 
 export const importSource = (
 	snapshot: unknown,

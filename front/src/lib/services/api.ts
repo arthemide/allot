@@ -33,8 +33,10 @@ export const getSession: typeof http.getSession = () => backend().getSession();
 export const login: typeof http.login = (password) => backend().login(password);
 export const searchTickers: typeof http.searchTickers = (query) => backend().searchTickers(query);
 export const createAsset: typeof http.createAsset = (asset) => backend().createAsset(asset);
-export const importPreview: typeof http.importPreview = (snapshot) => backend().importPreview(snapshot);
-export const importSource: typeof http.importSource = (snapshot, envelopes, symbols) => backend().importSource(snapshot, envelopes, symbols);
+export const importPreview: typeof http.importPreview = (snapshot) =>
+	backend().importPreview(snapshot);
+export const importSource: typeof http.importSource = (snapshot, placements, mappings) =>
+	backend().importSource(snapshot, placements, mappings);
 export const importCsv: typeof http.importCsv = (envelope, csv) =>
 	backend().importCsv(envelope, csv);
 export const connectorLogin: typeof http.connectorLogin = (login, password) =>

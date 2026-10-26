@@ -11,6 +11,9 @@
 
 import type { Io, SourceAccount, SourceLine, SourceSnapshot } from './bookmarklet.js';
 
+/** The member area lives on adherent.gie-afer.fr. */
+export const hosts = ['gie-afer.fr'];
+
 export async function read(io: Io): Promise<SourceSnapshot> {
 	const IGNORED = [
 		'Prévoyance',
