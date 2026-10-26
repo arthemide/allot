@@ -44,7 +44,7 @@
 <Dialog.Root bind:open>
 	<Dialog.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant="outline" size="sm">Monthly note</Button>
+			<Button {...props} variant="outline" size="sm">Note</Button>
 		{/snippet}
 	</Dialog.Trigger>
 
