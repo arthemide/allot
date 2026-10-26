@@ -166,6 +166,10 @@ def update_asset(
     )
 
 
+def set_by_amount(symbol: str, by_amount: bool) -> None:
+    execute("UPDATE asset SET by_amount = ? WHERE symbol = ?", (int(by_amount), symbol))
+
+
 def set_opening_position(symbol: str, quantity: float, invested: float | None) -> None:
     """Record a holding that predates tracking: a quantity and what it cost.
 
@@ -311,6 +315,15 @@ def set_source_account(source: str, account: str, envelope: str | None) -> None:
         ON CONFLICT(source, account) DO UPDATE SET envelope = excluded.envelope
         """,
         (source, account, envelope),
+    )
+
+
+def envelope_sources(envelope: str) -> list[dict[str, Any]]:
+    """The accounts, of any source, that sync into `envelope`."""
+    return query(
+        "SELECT source, account FROM source_account WHERE envelope = ? "
+        "ORDER BY source, account",
+        (envelope,),
     )
 
 

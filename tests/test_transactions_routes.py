@@ -111,6 +111,33 @@ class TestCreation:
         assert len(db.all_transactions()) == 2
 
 
+class TestByAmount:
+    def _buy(self, client, quantity):
+        return client.post(
+            "/transactions",
+            json={
+                "symbol": "ESE.PA",
+                "date": "2026-03-10",
+                "side": "buy",
+                "quantity": quantity,
+                "unit_price": 20.0,
+            },
+        )
+
+    def test_a_fraction_bought_switches_the_asset_to_buying_by_amount(
+        self, client, portfolio_data
+    ):
+        # Given an asset bought by the whole share
+        # When a tenth of a unit is recorded
+        self._buy(client, 0.1)
+        # Then the broker has settled it, as the former rule said
+        assert db.get_asset("ESE.PA")["by_amount"] == 1
+
+    def test_whole_units_leave_it_as_it_is(self, client, portfolio_data):
+        self._buy(client, 2.0)
+        assert db.get_asset("ESE.PA")["by_amount"] == 0
+
+
 class TestDeletion:
     def test_deleting_a_transaction_changes_the_position_it_backed(
         self, client, portfolio_data
