@@ -9,9 +9,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { decode } from './payload.js';
 import * as afer from './afer.js';
-import { bookmarkletHref, launcherCode } from './bookmarklet.js';
+import { bookmarkletHref, launcherCode, READING, READY } from './bookmarklet.js';
+import { readsFrom } from './index.js';
+import { decode, validate } from './payload.js';
 
 const ALLOT = 'https://allot.example.com';
 const AFER = 'https://adherent.gie-afer.fr/espaceadherent/Accueil';
@@ -38,14 +39,37 @@ const PAGES: Record<string, [string, Answer][]> = {
 	]
 };
 
+const CONTRACT = [
+	{
+		label: 'Afer Multisupport',
+		product: 'Assurance vie',
+		balance: 12345.67,
+		available: true,
+		lines: [
+			{
+				label: 'Afer Actions Monde C/D',
+				quantity: 4,
+				unit_value: 50,
+				valuation: 200,
+				invested: 160,
+				value_date: '2026-10-14',
+				by_amount: true
+			}
+		]
+	}
+];
+
 function stubDocument(name: string, xpaths: string[]) {
 	const doc = {
-		querySelector: (selector: string) => (name === 'login' && selector === 'form#loginForm' ? {} : null),
+		querySelector: (selector: string) =>
+			name === 'login' && selector === 'form#loginForm' ? {} : null,
 		evaluate(xpath: string) {
 			xpaths.push(xpath);
 			const answer = (PAGES[name] ?? []).find(([key]) => xpath.includes(key))?.[1] ?? null;
 			const node = (value: Answer) =>
-				typeof value === 'string' ? { ownerDocument: doc, textContent: value } : { ownerDocument: doc, ...value };
+				typeof value === 'string'
+					? { ownerDocument: doc, textContent: value }
+					: { ownerDocument: doc, ...value };
 			const nodes = Array.isArray(answer) ? answer.map(node) : answer === null ? [] : [node(answer)];
 			return {
 				singleNodeValue: nodes[0] ?? null,
@@ -57,14 +81,56 @@ function stubDocument(name: string, xpaths: string[]) {
 	return doc;
 }
 
-async function click(code: string, summary = 'summary', here = `${AFER}/Synthese-Contrats`) {
+/** How the Allot tab the click opens behaves. */
+type Tab = 'answers' | 'impostor' | 'silent' | 'blocked';
+
+/**
+ * Click the bookmark. The tab says it is ready, only other pages say so, it
+ * never answers (the site cut it off from its opener), or it is blocked as a
+ * pop-up.
+ */
+async function click(
+	code: string,
+	{ summary = 'summary', here = `${AFER}/Synthese-Contrats`, tab = 'answers' as Tab } = {}
+) {
 	const xpaths: string[] = [];
 	const said: string[] = [];
+	const posted: { message: { type: string; snapshot: unknown }; origin: string }[] = [];
+	const handlers: ((event: unknown) => void)[] = [];
 	let went = '';
+	let opened = '';
+	let closed = false;
+	const target = {
+		postMessage: (message: never, origin: string) => posted.push({ message, origin }),
+		close: () => (closed = true)
+	};
 	const context = {
 		URL,
 		location: { href: here, assign: (url: string) => (went = url) },
 		alert: (message: string) => said.push(message),
+		window: {
+			open: (url: string) => {
+				if (tab === 'blocked') return null;
+				opened = url;
+				if (tab === 'answers' || tab === 'impostor') {
+					// The tab loads, then says it is ready; impostors say so too.
+					queueMicrotask(() => {
+						const ready = { data: { type: READY } };
+						for (const handler of [...handlers]) {
+							handler({ ...ready, origin: 'https://evil.example', source: target });
+							handler({ ...ready, origin: ALLOT, source: {} });
+							if (tab === 'answers') handler({ ...ready, origin: ALLOT, source: target });
+						}
+					});
+				}
+				return target;
+			}
+		},
+		addEventListener: (_: string, handler: (event: unknown) => void) => handlers.push(handler),
+		removeEventListener: (_: string, handler: (event: unknown) => void) =>
+			handlers.splice(handlers.indexOf(handler), 1),
+		// Patience runs out at once when the tab is silent, never otherwise.
+		setTimeout: (resolve: () => void) => (tab === 'answers' ? undefined : resolve()),
 		fetch: async (url: string) => ({
 			ok: true,
 			status: 200,
@@ -84,36 +150,42 @@ async function click(code: string, summary = 'summary', here = `${AFER}/Synthese
 	// A Function body sees only globals and its parameters, never this module.
 	const names = Object.keys(context);
 	new Function(...names, code)(...names.map((name) => context[name as keyof typeof context]));
-	// The bookmark's `void` drops the promise: let every stubbed fetch settle.
+	// The bookmark's `void` drops the promise: let every stubbed call settle.
 	await new Promise((resolve) => setTimeout(resolve, 0));
-	return { went, said, xpaths };
+	return { went, said, xpaths, posted, opened, closed, listening: handlers.length };
 }
 
 describe('the Afer bookmarklet', () => {
-	it('reads a contract and opens Allot with it', async () => {
-		const { went, said } = await click(launcherCode(afer, ALLOT));
+	it('posts the reading to the Allot tab, never through a URL', async () => {
+		const { went, said, posted, opened, listening } = await click(launcherCode(afer, ALLOT));
 		expect(said).toEqual([]);
+		expect(opened).toBe(`${ALLOT}/import/`);
+		expect(went).toBe('');
+		// Once, to the tab that said it was ready, and to Allot's origin only
+		expect(posted).toHaveLength(1);
+		expect(posted[0].origin).toBe(ALLOT);
+		expect(posted[0].message.type).toBe(READING);
+		expect(validate(posted[0].message.snapshot).accounts).toEqual(CONTRACT);
+		expect(listening).toBe(0);
+	});
+
+	it('falls back to the URL when the tab never answers', async () => {
+		const { went, posted, closed } = await click(launcherCode(afer, ALLOT), { tab: 'silent' });
+		expect(posted).toEqual([]);
+		expect(closed).toBe(true);
 		expect(went.startsWith(`${ALLOT}/import/#`)).toBe(true);
-		const snapshot = decode(went.slice(went.indexOf('#')));
-		expect(snapshot.accounts).toEqual([
-			{
-				label: 'Afer Multisupport',
-				product: 'Assurance vie',
-				balance: 12345.67,
-				available: true,
-				lines: [
-					{
-						label: 'Afer Actions Monde C/D',
-						quantity: 4,
-						unit_value: 50,
-						valuation: 200,
-						invested: 160,
-						value_date: '2026-10-14',
-						by_amount: true
-					}
-				]
-			}
-		]);
+		expect(decode(went.slice(went.indexOf('#'))).accounts).toEqual(CONTRACT);
+	});
+
+	it('hands nothing over to a page that is not the tab it opened', async () => {
+		const { posted } = await click(launcherCode(afer, ALLOT), { tab: 'impostor' });
+		expect(posted).toEqual([]);
+	});
+
+	it('says so when the pop-up is blocked, before reading anything', async () => {
+		const { said, xpaths } = await click(launcherCode(afer, ALLOT), { tab: 'blocked' });
+		expect(xpaths).toEqual([]);
+		expect(said).toEqual([expect.stringContaining('Allow pop-ups')]);
 	});
 
 	it('asks only valid class tests', async () => {
@@ -123,19 +195,18 @@ describe('the Afer bookmarklet', () => {
 	});
 
 	it('says so when the Afer session has ended', async () => {
-		const { went, said } = await click(launcherCode(afer, ALLOT), 'login');
-		expect(went).toBe('');
+		const { posted, said, closed } = await click(launcherCode(afer, ALLOT), { summary: 'login' });
+		expect(posted).toEqual([]);
+		expect(closed).toBe(true);
 		expect(said).toEqual([expect.stringContaining('the Afer session has ended')]);
 	});
 
 	it('refuses to read another site', async () => {
 		// gie-afer.fr.evil.com ends with the name, not with the domain
-		const { went, said, xpaths } = await click(
-			launcherCode(afer, ALLOT),
-			'summary',
-			'https://gie-afer.fr.evil.com/'
-		);
-		expect(went).toBe('');
+		const { opened, said, xpaths } = await click(launcherCode(afer, ALLOT), {
+			here: 'https://gie-afer.fr.evil.com/'
+		});
+		expect(opened).toBe('');
 		expect(xpaths).toEqual([]);
 		expect(said).toEqual([expect.stringContaining('reads gie-afer.fr only')]);
 	});
@@ -143,7 +214,22 @@ describe('the Afer bookmarklet', () => {
 	it('runs the same code from the bookmark', async () => {
 		const href = bookmarkletHref(afer, ALLOT);
 		expect(href.startsWith('javascript:')).toBe(true);
-		const { went } = await click(decodeURIComponent(href.slice('javascript:'.length)));
-		expect(went.startsWith(`${ALLOT}/import/#`)).toBe(true);
+		const { posted } = await click(decodeURIComponent(href.slice('javascript:'.length)));
+		expect(posted).toHaveLength(1);
+	});
+});
+
+describe('who may hand over a reading', () => {
+	it.each([
+		['https://adherent.gie-afer.fr', true],
+		['https://gie-afer.fr', true],
+		['https://gie-afer.fr.evil.com', false],
+		['null', false]
+	])('afer from %s: %s', (origin, allowed) => {
+		expect(readsFrom('afer', origin)).toBe(allowed);
+	});
+
+	it('refuses a source it does not know', () => {
+		expect(readsFrom('bourso', 'https://clients.boursobank.com')).toBe(false);
 	});
 });

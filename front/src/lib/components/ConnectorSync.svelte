@@ -7,6 +7,7 @@
 	import ImportReportView from '#lib/components/ImportReportView.svelte';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
+	import LandmarkIcon from '@lucide/svelte/icons/landmark';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
 	// The login runs on the server; nothing is kept here. This dialog only
@@ -122,7 +123,7 @@
 				{#if busy}
 					<LoaderCircle class="size-4 animate-spin" />
 				{:else}
-					<img src="/logos/bourso-logo.png" alt="" class="size-4" />
+					<LandmarkIcon class="size-4" />
 				{/if}
 				{#if waitingForUser}
 					<!-- The logo alone no longer says it: a dot does, as "!" did. -->

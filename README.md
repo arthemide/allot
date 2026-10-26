@@ -77,7 +77,7 @@ Which file, from which broker. A row is added when a reader is written and teste
 | --- | --- | --- |
 | BoursoBank | Portefeuille (CSV) - the same file for a PEA or a CTO | **Supported** |
 
-Two sources are read directly rather than exported. **BoursoBank** is read on the server, through woob, from the login you type in its dialog. **Afer** is read in your own browser by a bookmarklet, in the session you opened on the member area: Allot never sees your Afer credentials. Its funds carry no ISIN, so the first import asks which ticker each one is quoted under, and the euro fund, which holds an amount rather than units, is shown in the report without becoming a position. Allot is not affiliated with Afer or BoursoBank; both read your own data, with your own session.
+Two sources are read directly rather than exported. **BoursoBank** is read on the server, through woob, from the login you type in its dialog. **Afer** is read in your own browser by a bookmarklet, in the session you opened on the member area: Allot never sees your Afer credentials, and the reading reaches the Allot tab the click opens by message, never through a URL or the browser history. Its funds carry no ISIN, so the first import asks which ticker each one is quoted under, and the euro fund, which holds an amount rather than units, is shown in the report without becoming a position. Allot is not affiliated with Afer or BoursoBank; both read your own data, with your own session.
 
 ## Self-hosting
 
@@ -202,4 +202,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY
 
 ## License
 
-Apache 2.0 - see [LICENSE](LICENSE). The vendored woob `boursorama` module under `vendor/woob-modules/` keeps its own licence, LGPL-3.0-or-later - see [its README](vendor/woob-modules/README.md).
+Apache 2.0 - see [LICENSE](LICENSE). The vendored woob `boursorama` module under `vendor/woob-modules/` keeps its own licence, LGPL-3.0-or-later - see [its README](vendor/woob-modules/README.md). The Afer reader (`front/src/lib/sources/afer.ts`) adapts the pages and XPaths of woob's `abeilleassurances` module, under the same licence.
+
+BoursoBank and Afer are trademarks of their owners. Allot is not affiliated with either; their names designate the sites each source reads.
