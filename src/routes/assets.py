@@ -17,6 +17,7 @@ from src.models.schema import (
     SourceImport,
     SourceSnapshot,
     Summary,
+    TickerChange,
 )
 from src.services import (
     boursorama_csv,
@@ -195,6 +196,45 @@ def delete_asset(symbol: str):
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     db.delete_asset(symbol)
     db.prune_empty_envelopes()
+
+
+@router.put(
+    "/{symbol}/symbol",
+    response_model=Position,
+    dependencies=[Depends(rate_limited)],
+)
+def change_ticker(symbol: str, payload: TickerChange):
+    """Quote the asset under another Yahoo ticker, keeping its history.
+
+    For a ticker picked wrong: the trades, the opening position and the
+    settings move over, and the currency becomes the new listing's.
+    """
+    if db.get_asset(symbol) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
+    new_symbol = payload.symbol.strip().upper()
+    if new_symbol == symbol:
+        return portfolio.position_of(db.get_asset(symbol))
+    existing = db.get_asset(new_symbol)
+    if existing is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{new_symbol} is already tracked, in envelope {existing['envelope']}.",
+        )
+    listing = next(
+        (
+            hit
+            for hit in prices.search(new_symbol, limit=10)
+            if str(hit.get("symbol") or "").upper() == new_symbol
+        ),
+        None,
+    )
+    if listing is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Yahoo has no listing named {new_symbol}. Pick one from the search.",
+        )
+    db.rename_asset(symbol, new_symbol, listing.get("currency") or "EUR")
+    return portfolio.position_of(db.get_asset(new_symbol))
 
 
 @router.put("/{symbol}/opening", response_model=Position)

@@ -71,6 +71,13 @@ export const getAsset = (symbol: string) =>
 export const getChart = (symbol: string, window = 'tx') =>
 	request<Chart>(`/assets/${encodeURIComponent(symbol)}/chart?window=${window}`);
 
+/** Quote an asset under another Yahoo ticker, its history kept. */
+export const changeTicker = (symbol: string, newSymbol: string) =>
+	request<Position>(`/assets/${encodeURIComponent(symbol)}/symbol`, {
+		method: 'PUT',
+		body: JSON.stringify({ symbol: newSymbol })
+	});
+
 export const setOpeningPosition = (
 	symbol: string,
 	body: { quantity: number; invested: number | null }

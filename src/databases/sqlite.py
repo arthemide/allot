@@ -191,6 +191,41 @@ def set_opening_position(symbol: str, quantity: float, invested: float | None) -
     )
 
 
+def rename_asset(symbol: str, new_symbol: str, currency: str) -> None:
+    """Quote an asset under another ticker, its history and settings kept.
+
+    The symbol is the key every transaction hangs on, without ON UPDATE
+    CASCADE: the asset is copied under the new key, its rows moved over, then
+    the old one removed, in one transaction. Its cached prices were the old
+    ticker's, so they go.
+    """
+    connection = connect()
+    try:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO asset (symbol, label, envelope, currency, weight,
+                                   by_amount, base_quantity, base_prum)
+                SELECT ?, label, envelope, ?, weight, by_amount, base_quantity,
+                       base_prum
+                FROM asset WHERE symbol = ?
+                """,
+                (new_symbol, currency, symbol),
+            )
+            connection.execute(
+                'UPDATE "transaction" SET symbol = ? WHERE symbol = ?',
+                (new_symbol, symbol),
+            )
+            connection.execute(
+                "UPDATE source_line SET symbol = ? WHERE symbol = ?",
+                (new_symbol, symbol),
+            )
+            connection.execute("DELETE FROM price_cache WHERE symbol = ?", (symbol,))
+            connection.execute("DELETE FROM asset WHERE symbol = ?", (symbol,))
+    finally:
+        connection.close()
+
+
 def delete_asset(symbol: str) -> None:
     """Transactions go with it, through ON DELETE CASCADE.
 
