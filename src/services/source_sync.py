@@ -122,7 +122,7 @@ def pending(source: str, rows: Iterable[PositionRow]) -> PendingChoices:
                 AccountChoice(
                     account=account,
                     lines=len(snapshot_lines),
-                    envelope=envelopes.get(account.upper()),
+                    envelope=_offer(envelopes.get(account.upper()), source),
                 )
             )
         elif placed[account] is None:
@@ -136,6 +136,11 @@ def pending(source: str, rows: Iterable[PositionRow]) -> PendingChoices:
                 symbol=_suggest_asset(line.name, assets),
             )
     return PendingChoices(accounts=accounts, lines=list(lines.values()))
+
+
+def _offer(envelope: str | None, source: str) -> str | None:
+    """An envelope of the account's name, unless another source syncs into it."""
+    return None if _taken_by(envelope, source) else envelope
 
 
 def _suggest_asset(label: str, assets: list[dict]) -> str | None:
@@ -160,10 +165,12 @@ def place(
     mappings: list[LineMapping],
     rows: Iterable[PositionRow],
 ) -> None:
-    """Remember the user's choices. Refuses, writing nothing, if an account is left.
+    """Remember the user's choices. Refuses, writing nothing, if one is wrong.
 
-    An empty answer, or None, leaves the account or the line out. An envelope
-    that does not exist yet is created, as adding an asset would.
+    Every new account needs an answer. An empty one, or None, leaves the
+    account or the line out. An envelope that does not exist yet is created,
+    as adding an asset would. An envelope another source already syncs into is
+    refused: each source would take the other's assets for sold.
     """
     envelopes = {p.account: _blank_to_none(p.envelope) for p in placements}
     symbols = {m.label: _blank_to_none(m.symbol) for m in mappings}
@@ -173,11 +180,30 @@ def place(
     if missing:
         raise ValueError(f"No envelope chosen for {', '.join(missing)}.")
     for account, envelope in envelopes.items():
+        taken = _taken_by(envelope, source)
+        if taken:
+            raise ValueError(
+                f"{envelope} already syncs {taken}. Pick another envelope for "
+                f"{account}: two sources in one envelope would each zero the "
+                "other's assets."
+            )
+    for account, envelope in envelopes.items():
         if envelope is not None and db.get_envelope(envelope) is None:
             db.upsert_envelope(envelope, 0.0)
         db.set_source_account(source, account, envelope)
     for label, symbol in symbols.items():
         db.set_source_line(source, label, symbol)
+
+
+def _taken_by(envelope: str | None, source: str) -> str | None:
+    """The other source and account already syncing into `envelope`, if any."""
+    if envelope is None:
+        return None
+    for owner in db.envelope_sources(envelope):
+        if owner["source"] != source:
+            name = registry.get(owner["source"]).name
+            return f"{name}'s account {owner['account']}"
+    return None
 
 
 def _blank_to_none(value: str | None) -> str | None:
@@ -190,8 +216,8 @@ def apply(source: str, rows: Iterable[PositionRow]) -> dict:
 
     A source that owns its envelopes zeroes whatever of the envelope it no
     longer reports. One that does not only zeroes the assets its lines map to:
-    another asset of the envelope, tracked by hand or by another source, is
-    left alone.
+    another asset of the envelope, tracked by hand, is left alone. Another
+    source never shares the envelope (`place` refuses it).
     """
     rows = list(rows)
     placed = db.source_accounts(source)

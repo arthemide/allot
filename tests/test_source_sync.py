@@ -12,6 +12,7 @@ from src.databases import sqlite as db
 from src.models.schema import (
     AccountPlacement,
     LineMapping,
+    PositionRow,
     SourceSnapshot,
 )
 from src.services import source_sync
@@ -190,6 +191,56 @@ class TestScope:
         source_sync.apply("afer", source_sync.rows_from_snapshot(empty))
         # Then nothing is taken for sold
         assert db.get_asset("AFERMONDE")["base_quantity"] == 4
+
+    def test_a_bank_sync_still_zeroes_what_it_no_longer_reports(
+        self, database, offline
+    ):
+        # Given an asset of the envelope nobody mapped, tracked by hand
+        db.upsert_envelope("PEA", 0.0)
+        db.add_asset("CW8.PA", "Amundi World", "PEA", "EUR")
+        db.set_opening_position("CW8.PA", 3.0, 1500.0)
+        db.set_source_account("bourso", "PEA", "PEA")
+        cash = PositionRow(
+            source="bourso", account="PEA", support_type="cash", label="Cash", value=5
+        )
+        # When the bank no longer reports it
+        source_sync.apply("bourso", [cash])
+        # Then it was sold, as a bank sync has always said
+        assert db.get_asset("CW8.PA")["base_quantity"] == 0
+
+
+class TestOneSourcePerEnvelope:
+    def test_an_envelope_a_bank_account_syncs_into_is_refused(self, database, rows):
+        # Given a BoursoBank account syncing into AV
+        db.upsert_envelope("AV", 0.0)
+        db.set_source_account("bourso", "BOURSO VIE", "AV")
+        # When the Afer contract is placed there too
+        with pytest.raises(ValueError, match="BoursoBank's account BOURSO VIE"):
+            source_sync.place(
+                "afer",
+                [AccountPlacement(account=ACCOUNT, envelope="AV")],
+                [LineMapping(label=FUND, symbol="AFERMONDE")],
+                rows,
+            )
+        # Then nothing was written, not even the line's ticker
+        assert db.source_accounts("afer") == {}
+        assert db.source_lines("afer") == {}
+
+    def test_it_is_not_even_offered(self, database, rows):
+        # Given an envelope named like the Afer account, already Bourso's
+        db.upsert_envelope(ACCOUNT, 0.0)
+        db.set_source_account("bourso", "PEA", ACCOUNT)
+        # Then the preview does not offer it as the default
+        assert source_sync.pending("afer", rows).accounts[0].envelope is None
+
+    def test_two_accounts_of_the_same_source_may_share_one(self, database, rows):
+        # A PEA and a PEA-PME at the bank, both in one envelope: one source
+        db.upsert_envelope("AV", 0.0)
+        db.set_source_account("afer", "Another contract", "AV")
+        source_sync.place(
+            "afer", [AccountPlacement(account=ACCOUNT, envelope="AV")], [], rows
+        )
+        assert db.source_accounts("afer")[ACCOUNT] == "AV"
 
 
 class TestResolution:
