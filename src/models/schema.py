@@ -298,6 +298,8 @@ class PositionRow(BaseModel):
     unit_cost: float | None = None
     unit_price: float | None = None
     gain: float | None = None
+    # Whether a new asset made from this line is bought for an amount.
+    by_amount: bool = False
 
 
 class SnapshotLine(BaseModel):

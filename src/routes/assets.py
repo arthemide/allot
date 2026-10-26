@@ -26,6 +26,7 @@ from src.services import (
     ratelimit,
     source_sync,
 )
+from src.sources import registry
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -108,6 +109,13 @@ def import_csv(payload: ImportCsv, envelope: str):
     return portfolio_import.apply_snapshot(envelope, parsed.rows)
 
 
+def _known_source(source: str) -> None:
+    try:
+        registry.get(source)
+    except KeyError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown source {source}")
+
+
 @router.post(
     "/imports/preview",
     response_model=PendingChoices,
@@ -115,14 +123,7 @@ def import_csv(payload: ImportCsv, envelope: str):
 )
 def import_preview(payload: SourceSnapshot):
     """What still needs a choice before an import can run. Writes nothing."""
-    from src.sources.registry import get as get_source
-
-    try:
-        get_source(payload.source)
-    except KeyError:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND, f"Unknown source {payload.source}"
-        )
+    _known_source(payload.source)
     rows = source_sync.rows_from_snapshot(payload)
     return source_sync.pending(payload.source, rows)
 
@@ -134,15 +135,8 @@ def import_preview(payload: SourceSnapshot):
 )
 def import_source(payload: SourceImport):
     """Apply a source snapshot once its accounts and lines are placed."""
-    from src.sources.registry import get as get_source
-
     snapshot = payload.snapshot
-    try:
-        get_source(snapshot.source)
-    except KeyError:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND, f"Unknown source {snapshot.source}"
-        )
+    _known_source(snapshot.source)
     rows = source_sync.rows_from_snapshot(snapshot)
     try:
         source_sync.place(
