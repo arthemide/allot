@@ -34,9 +34,31 @@ def init(path: Path = DB_PATH) -> None:
     try:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         _add_by_amount(connection)
+        _merge_bank_accounts(connection)
         connection.commit()
     finally:
         connection.close()
+
+
+def _merge_bank_accounts(connection: sqlite3.Connection) -> None:
+    """Move the BoursoBank placements of an older database into source_account.
+
+    They used to have their own table; every source now shares one, keyed by
+    the source. An account already placed there keeps its newer choice.
+    """
+    tables = {
+        row["name"]
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        )
+    }
+    if "bank_account" not in tables:
+        return
+    connection.execute(
+        "INSERT OR IGNORE INTO source_account (source, account, envelope) "
+        "SELECT 'bourso', account, envelope FROM bank_account"
+    )
+    connection.execute("DROP TABLE bank_account")
 
 
 def _add_by_amount(connection: sqlite3.Connection) -> None:
@@ -267,33 +289,11 @@ def prune_empty_envelopes() -> list[str]:
     return empty
 
 
-# --- bank accounts --------------------------------------------------------
-
-
-def bank_accounts() -> dict[str, str | None]:
-    """Each bank account already placed, and the envelope it syncs into."""
-    return {
-        row["account"]: row["envelope"]
-        for row in query("SELECT account, envelope FROM bank_account")
-    }
-
-
-def set_bank_account(account: str, envelope: str | None) -> None:
-    """Place a bank account in an envelope, or leave it out with None."""
-    execute(
-        """
-        INSERT INTO bank_account (account, envelope) VALUES (?, ?)
-        ON CONFLICT(account) DO UPDATE SET envelope = excluded.envelope
-        """,
-        (account, envelope),
-    )
-
-
 # --- sources -----------------------------------------------------------------
 
 
 def source_accounts(source: str) -> dict[str, str | None]:
-    """Each account already placed for `source`, and its envelope."""
+    """Each account already placed for `source`, and the envelope it syncs into."""
     return {
         row["account"]: row["envelope"]
         for row in query(

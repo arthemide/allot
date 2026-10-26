@@ -221,3 +221,41 @@ class TestResolution:
         rows = source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
         _place_and_apply(rows)
         assert db.get_asset("AFERMONDE")["by_amount"] == 0
+
+
+class TestAvailable:
+    def test_the_euro_fund_is_reported_not_written(self, database, offline, rows):
+        # When the contract is imported
+        report = _place_and_apply(rows)
+        # Then its euro fund is shown with its envelope, and no asset holds it
+        assert report["available"] == [
+            {
+                "account": ACCOUNT,
+                "envelope": "AV",
+                "label": "Fonds Garanti en Euros",
+                "value": 12000.0,
+                "currency": "EUR",
+            }
+        ]
+        assert [a["symbol"] for a in db.all_assets()] == ["AFERMONDE"]
+
+    def test_an_account_left_out_shows_nothing(self, database, offline, rows):
+        source_sync.place(
+            "afer", [AccountPlacement(account=ACCOUNT, envelope=None)], [], rows
+        )
+        assert source_sync.apply("afer", rows)["available"] == []
+
+
+class TestPendingLines:
+    def test_a_line_with_an_isin_is_resolved_by_the_search_not_by_hand(self, database):
+        tagged = {**SNAPSHOT["accounts"][0]["lines"][0], "isin": "FR0010821470"}
+        snapshot = {
+            **SNAPSHOT,
+            "accounts": [{**SNAPSHOT["accounts"][0], "lines": [tagged]}],
+        }
+        rows = source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
+        assert source_sync.pending("afer", rows).lines == []
+
+    def test_the_lines_of_an_account_left_out_are_not_asked(self, database, rows):
+        db.set_source_account("afer", ACCOUNT, None)
+        assert source_sync.pending("afer", rows).lines == []

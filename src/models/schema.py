@@ -155,6 +155,20 @@ class ConflictLine(BaseModel):
     tracked_quantity: float
 
 
+class AvailableLine(BaseModel):
+    """A line held as an amount, without units: a cash balance, a euro fund.
+
+    It cannot hold a position, so nothing is written for it. The report shows
+    it so that the money is not silently missing from the picture.
+    """
+
+    account: str
+    envelope: str
+    label: str
+    value: float
+    currency: str
+
+
 class ImportReport(BaseModel):
     imported: list[ImportedLine]
     unresolved: list[UnresolvedLine]
@@ -162,6 +176,8 @@ class ImportReport(BaseModel):
     elsewhere: list[ElsewhereLine]
     # Only a bank sync reconciles against the trades; a CSV import never has any.
     conflicts: list[ConflictLine] = []
+    # Only a source sync reads amounts without units; a CSV import never has any.
+    available: list[AvailableLine] = []
     total: int
 
 
@@ -179,7 +195,7 @@ class ConnectorAnswer(BaseModel):
 
 
 class AccountChoice(BaseModel):
-    """A bank account no envelope was chosen for yet."""
+    """An account of a source no envelope was chosen for yet."""
 
     account: str
     # Security lines it holds, to tell accounts apart.
@@ -353,19 +369,17 @@ class SourceSnapshot(BaseModel):
     accounts: list[SourceAccount] = Field(default_factory=list)
 
 
-class PendingAccount(BaseModel):
-    account: str
-    lines: int
-    envelope: str | None = None
-
-
 class PendingLine(BaseModel):
+    """A line without an ISIN no ticker was chosen for yet; `symbol` is a guess."""
+
+    # The first account it shows up in: leaving that account out hides it.
+    account: str
     label: str
     symbol: str | None = None
 
 
 class PendingChoices(BaseModel):
-    accounts: list[PendingAccount] = Field(default_factory=list)
+    accounts: list[AccountChoice] = Field(default_factory=list)
     lines: list[PendingLine] = Field(default_factory=list)
 
 
