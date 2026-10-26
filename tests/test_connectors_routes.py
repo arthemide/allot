@@ -266,6 +266,22 @@ class TestAccounts:
         assert response.status_code == 422
         assert "PEA" in response.json()["detail"]
 
+    def test_an_envelope_another_source_syncs_into_is_refused(self, fresh, resolver):
+        # Given an Afer contract already in PEA
+        db.upsert_envelope("PEA", 0.0)
+        db.set_source_account("afer", "Afer Multisupport", "PEA")
+        first = post(fresh).json()
+        # Then PEA is not offered for the bank's PEA account
+        assert first["accounts"][0]["envelope"] is None
+        # And picking it anyway says why, rather than zeroing the contract's funds
+        response = fresh.post(
+            f"/connectors/bourso/login/{first['session_id']}/accounts",
+            json={"envelopes": {"PEA": "PEA"}},
+        )
+        assert response.status_code == 422
+        assert "Afer's account Afer Multisupport" in response.json()["detail"]
+        assert db.source_accounts("bourso") == {}
+
     def test_placing_accounts_of_an_unknown_sync_is_404(self, fresh):
         response = fresh.post(
             "/connectors/bourso/login/nope/accounts", json={"envelopes": {}}
