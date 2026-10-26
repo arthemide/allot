@@ -117,8 +117,40 @@ class TestCreation:
         assert response.status_code == 422
         assert db.all_assets() == []
 
+    @pytest.mark.parametrize("symbol, by_amount", [("ETH-USD", True), ("MC.PA", False)])
+    def test_how_an_asset_is_bought_is_seeded_from_its_ticker(
+        self, client, symbol, by_amount
+    ):
+        # When an asset is added without saying how it is bought
+        response = client.post(
+            "/assets",
+            json={
+                "symbol": symbol,
+                "label": symbol,
+                "envelope": "CTO",
+                "currency": "EUR",
+            },
+        )
+        # Then a crypto pair goes by the amount, a share by the unit
+        assert response.json()["by_amount"] is by_amount
+
 
 class TestReadUpdateDelete:
+    def test_an_update_that_does_not_mention_by_amount_keeps_it(
+        self, client, portfolio_data
+    ):
+        # Given an asset switched to buying by the amount
+        client.put(
+            "/assets/ESE.PA",
+            json={"label": "BNP", "envelope": "PEA", "weight": 1.0, "by_amount": True},
+        )
+        # When an older client edits its weight, unaware of the flag
+        response = client.put(
+            "/assets/ESE.PA", json={"label": "BNP", "envelope": "PEA", "weight": 2.0}
+        )
+        # Then the flag stands
+        assert response.json()["by_amount"] is True
+
     def test_an_unknown_symbol_is_a_404_everywhere(self, client, portfolio_data):
         # Given a symbol nobody tracks
         # When each of the per-asset endpoints is called on it

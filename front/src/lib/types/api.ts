@@ -4,6 +4,7 @@ export interface Position {
 	envelope: string;
 	currency: string;
 	weight: number;
+	by_amount: boolean;
 	base_quantity: number;
 	base_prum: number | null;
 	quantity: number;
@@ -117,17 +118,20 @@ export interface NewAsset {
 	envelope: string;
 	currency: string;
 	weight: number;
+	by_amount?: boolean;
 }
 
 export interface AssetUpdate {
 	label: string;
 	envelope: string;
 	weight: number;
+	by_amount: boolean;
 }
 
 export interface ImportedLine {
 	symbol: string;
-	isin: string;
+	/** Null for a line mapped to its ticker by hand. */
+	isin: string | null;
 	label: string;
 	quantity: number;
 	prum: number;
@@ -143,7 +147,7 @@ export interface UnresolvedLine {
 /** An imported asset that already lived in another envelope. */
 export interface ElsewhereLine {
 	symbol: string;
-	isin: string;
+	isin: string | null;
 	label: string;
 	envelope: string;
 }

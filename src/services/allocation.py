@@ -54,7 +54,6 @@ def _assets_of(
     assets: list[dict],
     positions: dict,
     rate: float | None,
-    fractional: set[str],
 ) -> list[EnvelopeAsset]:
     """Everything the split needs about one envelope's assets, in EUR."""
     members = []
@@ -68,9 +67,7 @@ def _assets_of(
             EnvelopeAsset(
                 symbol=asset["symbol"],
                 weight=asset["weight"],
-                fractional=calc.is_fractional(
-                    asset["symbol"], asset["symbol"] in fractional
-                ),
+                by_amount=asset.get("by_amount", False),
                 currency=asset["currency"],
                 price=price,
                 price_eur=portfolio.to_eur(price, asset["currency"], rate),
@@ -109,7 +106,7 @@ def _spend(
     by_the_share: list[EnvelopeAsset] = []
 
     for member, share in zip(members, _split(members, budget)):
-        if member.fractional or not member.price_eur:
+        if member.by_amount or not member.price_eur:
             lines.append(_line(member, share))
             held[member.symbol] = held.get(member.symbol, 0.0) + share
         else:
@@ -150,12 +147,10 @@ def plan(today: date | None = None) -> list[PlanEntry]:
     positions = {p["symbol"]: p for p in portfolio.all_positions()}
     assets = db.all_assets()
     rate = prices.eur_usd_rate()
-    fractional = db.symbols_traded_in_fractions()
-
     envelopes = []
     for row in db.all_envelopes():
         monthly = row["monthly_amount"]
-        members = _assets_of(row["name"], assets, positions, rate, fractional)
+        members = _assets_of(row["name"], assets, positions, rate)
         balance = cash.available(row, today)
 
         if balance is None:
@@ -209,11 +204,9 @@ def projection(today: date | None = None, months: int = 11) -> list[ProjectionSt
     positions = {p["symbol"]: p for p in portfolio.all_positions()}
     assets = db.all_assets()
     rate = prices.eur_usd_rate()
-    fractional = db.symbols_traded_in_fractions()
-
     states = []
     for row in db.all_envelopes():
-        members = _assets_of(row["name"], assets, positions, rate, fractional)
+        members = _assets_of(row["name"], assets, positions, rate)
         balance = cash.available(row, today)
         held = {m.symbol: m.held_eur for m in members}
         states.append(

@@ -11,6 +11,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Iterator
 
+from src import calc
+
 ROOT = Path(__file__).parent.parent.parent
 
 # Overridable so the database can live on a mounted volume, outside the tree.
@@ -31,9 +33,40 @@ def init(path: Path = DB_PATH) -> None:
     connection = connect(path)
     try:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        _add_by_amount(connection)
         connection.commit()
     finally:
         connection.close()
+
+
+def _add_by_amount(connection: sqlite3.Connection) -> None:
+    """Add `asset.by_amount` to a database that predates it.
+
+    SQLite only adds columns explicitly, unlike CREATE TABLE IF NOT EXISTS.
+    Existing assets are seeded with the rule the flag replaces, so the monthly
+    split does not change on upgrade: crypto pairs and anything already
+    traded in fractions keep being bought by the amount.
+    """
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(asset)")}
+    if "by_amount" in columns:
+        return
+    connection.execute(
+        "ALTER TABLE asset ADD COLUMN by_amount INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (by_amount IN (0, 1))"
+    )
+    in_fractions = {
+        row["symbol"]
+        for row in connection.execute(
+            'SELECT DISTINCT symbol FROM "transaction" '
+            "WHERE quantity <> CAST(quantity AS INTEGER)"
+        )
+    }
+    seeded = [
+        (row["symbol"],)
+        for row in connection.execute("SELECT symbol FROM asset")
+        if calc.bought_by_amount(row["symbol"], row["symbol"] in in_fractions)
+    ]
+    connection.executemany("UPDATE asset SET by_amount = 1 WHERE symbol = ?", seeded)
 
 
 def query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
@@ -68,26 +101,46 @@ def get_asset(symbol: str) -> dict[str, Any] | None:
 
 
 def add_asset(
-    symbol: str, label: str, envelope: str, currency: str, weight: float = 1.0
+    symbol: str,
+    label: str,
+    envelope: str,
+    currency: str,
+    weight: float = 1.0,
+    by_amount: bool = False,
 ) -> None:
     execute(
         """
-        INSERT INTO asset (symbol, label, envelope, currency, weight)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO asset (symbol, label, envelope, currency, weight, by_amount)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(symbol) DO UPDATE SET
             label = excluded.label,
             envelope = excluded.envelope,
             currency = excluded.currency,
-            weight = excluded.weight
+            weight = excluded.weight,
+            by_amount = excluded.by_amount
         """,
-        (symbol, label, envelope, currency, weight),
+        (symbol, label, envelope, currency, weight, int(by_amount)),
     )
 
 
-def update_asset(symbol: str, label: str, envelope: str, weight: float) -> None:
+def update_asset(
+    symbol: str,
+    label: str,
+    envelope: str,
+    weight: float,
+    by_amount: bool | None = None,
+) -> None:
+    """Rewrite the user's settings; `by_amount=None` leaves the flag alone."""
     execute(
-        "UPDATE asset SET label = ?, envelope = ?, weight = ? WHERE symbol = ?",
-        (label, envelope, weight, symbol),
+        "UPDATE asset SET label = ?, envelope = ?, weight = ?, "
+        "by_amount = COALESCE(?, by_amount) WHERE symbol = ?",
+        (
+            label,
+            envelope,
+            weight,
+            None if by_amount is None else int(by_amount),
+            symbol,
+        ),
     )
 
 
@@ -110,8 +163,18 @@ def set_opening_position(symbol: str, quantity: float, invested: float | None) -
 
 
 def delete_asset(symbol: str) -> None:
-    """Transactions go with it, through ON DELETE CASCADE."""
-    execute("DELETE FROM asset WHERE symbol = ?", (symbol,))
+    """Transactions go with it, through ON DELETE CASCADE.
+
+    So do the source lines mapped to it: `source_line.symbol` cannot be a
+    foreign key, the ticker being picked before its asset exists.
+    """
+    connection = connect()
+    try:
+        connection.execute("DELETE FROM source_line WHERE symbol = ?", (symbol,))
+        connection.execute("DELETE FROM asset WHERE symbol = ?", (symbol,))
+        connection.commit()
+    finally:
+        connection.close()
 
 
 # --- envelopes ------------------------------------------------------------
@@ -226,6 +289,52 @@ def set_bank_account(account: str, envelope: str | None) -> None:
     )
 
 
+# --- sources -----------------------------------------------------------------
+
+
+def source_accounts(source: str) -> dict[str, str | None]:
+    """Each account already placed for `source`, and its envelope."""
+    return {
+        row["account"]: row["envelope"]
+        for row in query(
+            "SELECT account, envelope FROM source_account WHERE source = ?", (source,)
+        )
+    }
+
+
+def set_source_account(source: str, account: str, envelope: str | None) -> None:
+    """Place an account of `source` in an envelope, or leave it out with None."""
+    execute(
+        """
+        INSERT INTO source_account (source, account, envelope)
+        VALUES (?, ?, ?)
+        ON CONFLICT(source, account) DO UPDATE SET envelope = excluded.envelope
+        """,
+        (source, account, envelope),
+    )
+
+
+def source_lines(source: str) -> dict[str, str | None]:
+    """Each label already mapped for `source`, to a ticker or to None (left out)."""
+    return {
+        row["label"]: row["symbol"]
+        for row in query(
+            "SELECT label, symbol FROM source_line WHERE source = ?", (source,)
+        )
+    }
+
+
+def set_source_line(source: str, label: str, symbol: str | None) -> None:
+    """Remember which ticker a line of `source` maps to, or None to leave it out."""
+    execute(
+        """
+        INSERT INTO source_line (source, label, symbol) VALUES (?, ?, ?)
+        ON CONFLICT(source, label) DO UPDATE SET symbol = excluded.symbol
+        """,
+        (source, label, symbol),
+    )
+
+
 # --- transactions ---------------------------------------------------------
 
 
@@ -233,21 +342,6 @@ def transactions_of(symbol: str) -> list[dict[str, Any]]:
     return query(
         'SELECT * FROM "transaction" WHERE symbol = ? ORDER BY date, id', (symbol,)
     )
-
-
-def symbols_traded_in_fractions() -> set[str]:
-    """Assets a fraction of a unit was already bought or sold of.
-
-    The broker answers this better than a setting would: whatever the ticker
-    looks like, a quantity of 0.4 is proof.
-    """
-    rows = query(
-        """
-        SELECT DISTINCT symbol FROM "transaction"
-        WHERE quantity <> CAST(quantity AS INTEGER)
-        """
-    )
-    return {row["symbol"] for row in rows}
 
 
 def all_transactions() -> list[dict[str, Any]]:

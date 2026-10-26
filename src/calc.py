@@ -177,18 +177,18 @@ def renormalize(
 
 
 # How Yahoo names crypto pairs: BTC-EUR, ETH-USD.
-FRACTIONAL_SUFFIXES = ("-USD", "-EUR", "-GBP")
+BY_AMOUNT_SUFFIXES = ("-USD", "-EUR", "-GBP")
 
 
-def is_fractional(symbol: str, traded_in_fractions: bool = False) -> bool:
-    """Whether the asset can be bought by the amount rather than by the share.
+def bought_by_amount(symbol: str, traded_in_fractions: bool = False) -> bool:
+    """The starting value of an asset's `by_amount` flag.
 
-    Nothing to configure: a fractional quantity already recorded settles it,
-    the ticker is the clue until then. Whole shares is the careful default -
-    it makes an envelope save up rather than produce an order a broker would
-    refuse.
+    The flag is the user's to change; this only seeds it. A fractional
+    quantity already recorded settles it, the ticker is the clue until then.
+    Whole shares is the careful default - it makes an envelope save up rather
+    than produce an order a broker would refuse.
     """
-    return traded_in_fractions or symbol.upper().endswith(FRACTIONAL_SUFFIXES)
+    return traded_in_fractions or symbol.upper().endswith(BY_AMOUNT_SUFFIXES)
 
 
 def months_elapsed(start: date, today: date) -> int:

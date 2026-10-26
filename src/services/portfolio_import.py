@@ -44,10 +44,16 @@ def apply_snapshot(
         symbol = hit["symbol"]
         existing = db.get_asset(symbol)
         if existing is None:
-            db.add_asset(symbol, row.name, envelope, hit.get("currency") or "EUR")
+            db.add_asset(
+                symbol,
+                row.name,
+                envelope,
+                hit.get("currency") or "EUR",
+                by_amount=row.by_amount or calc.bought_by_amount(symbol),
+            )
         elif existing["envelope"] != envelope and authoritative:
             # The broker says this line is in `envelope`; move it there,
-            # keeping the user's label and weight. Otherwise a later
+            # keeping the user's label, weight and by_amount. Otherwise a later
             # account's zero-out would wrongly drop it.
             db.update_asset(symbol, existing["label"], envelope, existing["weight"])
         elif existing["envelope"] != envelope:
@@ -93,7 +99,12 @@ def apply_snapshot(
 
 
 def _resolve(row: SnapshotLine) -> dict | None:
-    """The Yahoo listing of the line's ISIN, in the broker's currency if known."""
+    """The Yahoo listing for the line, or the one already chosen by the user."""
+    if row.symbol:
+        currency = None
+        for hit in prices.search(row.symbol, limit=1):
+            return hit
+        return {"symbol": row.symbol, "currency": row.currency or "EUR"}
     if not row.isin:
         # No identifier to search with: never guess from a label.
         return None

@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from src import calc
 from src.databases import sqlite as db
 from src.models.schema import (
     AssetCreate,
@@ -10,11 +11,21 @@ from src.models.schema import (
     ImportCsv,
     ImportReport,
     OpeningPosition,
+    PendingChoices,
     Position,
     SearchHit,
+    SourceImport,
+    SourceSnapshot,
     Summary,
 )
-from src.services import boursorama_csv, portfolio, portfolio_import, prices, ratelimit
+from src.services import (
+    boursorama_csv,
+    portfolio,
+    portfolio_import,
+    prices,
+    ratelimit,
+    source_sync,
+)
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -56,6 +67,10 @@ def create_asset(payload: AssetCreate):
         payload.envelope,
         payload.currency,
         payload.weight,
+        # Not said: seeded from the ticker, as for the assets already tracked.
+        payload.by_amount
+        if payload.by_amount is not None
+        else calc.bought_by_amount(payload.symbol),
     )
     return portfolio.position_of(db.get_asset(payload.symbol))
 
@@ -93,6 +108,54 @@ def import_csv(payload: ImportCsv, envelope: str):
     return portfolio_import.apply_snapshot(envelope, parsed.rows)
 
 
+@router.post(
+    "/imports/preview",
+    response_model=PendingChoices,
+    dependencies=[Depends(rate_limited)],
+)
+def import_preview(payload: SourceSnapshot):
+    """What still needs a choice before an import can run. Writes nothing."""
+    from src.sources.registry import get as get_source
+
+    try:
+        get_source(payload.source)
+    except KeyError:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"Unknown source {payload.source}"
+        )
+    rows = source_sync.rows_from_snapshot(payload)
+    return source_sync.pending(payload.source, rows)
+
+
+@router.post(
+    "/imports",
+    response_model=ImportReport,
+    dependencies=[Depends(rate_limited)],
+)
+def import_source(payload: SourceImport):
+    """Apply a source snapshot once its accounts and lines are placed."""
+    from src.sources.registry import get as get_source
+
+    snapshot = payload.snapshot
+    try:
+        get_source(snapshot.source)
+    except KeyError:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"Unknown source {snapshot.source}"
+        )
+    rows = source_sync.rows_from_snapshot(snapshot)
+    try:
+        source_sync.place(
+            snapshot.source,
+            payload.placements,
+            payload.mappings,
+            rows,
+        )
+    except ValueError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(error))
+    return source_sync.apply(snapshot.source, rows)
+
+
 @router.get("/summary", response_model=Summary)
 def get_summary():
     """Totals across every asset, converted to EUR."""
@@ -109,12 +172,14 @@ def get_asset(symbol: str):
 
 @router.put("/{symbol}", response_model=Position)
 def update_asset(symbol: str, payload: AssetUpdate):
-    """Change the label, the envelope or the weight inside the envelope."""
+    """Change the label, the envelope, the weight or how the asset is bought."""
     if db.get_asset(symbol) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No asset named {symbol}")
     if db.get_envelope(payload.envelope) is None:
         db.upsert_envelope(payload.envelope, 0.0)
-    db.update_asset(symbol, payload.label, payload.envelope, payload.weight)
+    db.update_asset(
+        symbol, payload.label, payload.envelope, payload.weight, payload.by_amount
+    )
     db.prune_empty_envelopes()
     return portfolio.position_of(db.get_asset(symbol))
 
