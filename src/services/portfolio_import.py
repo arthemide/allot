@@ -28,9 +28,17 @@ from src.services import portfolio, prices
 
 
 def apply_snapshot(
-    envelope: str, lines: list[SnapshotLine], *, authoritative: bool = False
+    envelope: str,
+    lines: list[SnapshotLine],
+    *,
+    authoritative: bool = False,
+    scope: set[str] | None = None,
 ) -> dict:
-    """Write the lines as opening positions; return an ImportReport dict."""
+    """Write the lines as opening positions; return an ImportReport dict.
+
+    `scope`, when given, is every asset the caller speaks for: an authoritative
+    snapshot only zeroes those, and leaves the rest of the envelope alone.
+    """
     if db.get_envelope(envelope) is None:
         db.upsert_envelope(envelope, 0.0)
 
@@ -87,7 +95,7 @@ def apply_snapshot(
     # An unresolved line may still be held. Never mark anything sold until
     # every broker row was matched to a ticker in its own currency.
     if authoritative and not unresolved:
-        conflicts.extend(_zero_sold(envelope, touched))
+        conflicts.extend(_zero_sold(envelope, touched, scope))
 
     return {
         "imported": imported,
@@ -101,9 +109,11 @@ def apply_snapshot(
 def _resolve(row: SnapshotLine) -> dict | None:
     """The Yahoo listing for the line, or the one already chosen by the user."""
     if row.symbol:
-        currency = None
-        for hit in prices.search(row.symbol, limit=1):
-            return hit
+        # The search only tells the listing's currency: whatever it ranks
+        # first, the ticker stays the one the user picked.
+        for hit in prices.search(row.symbol, limit=10):
+            if str(hit.get("symbol") or "").upper() == row.symbol.upper():
+                return {**hit, "symbol": row.symbol}
         return {"symbol": row.symbol, "currency": row.currency or "EUR"}
     if not row.isin:
         # No identifier to search with: never guess from a label.
@@ -137,11 +147,15 @@ def _reconcile(
     return None
 
 
-def _zero_sold(envelope: str, touched: set[str]) -> list[dict]:
+def _zero_sold(
+    envelope: str, touched: set[str], scope: set[str] | None = None
+) -> list[dict]:
     """An asset of the envelope the broker no longer reports was sold off."""
     conflicts = []
     for asset in db.all_assets():
         if asset["envelope"] != envelope or asset["symbol"] in touched:
+            continue
+        if scope is not None and asset["symbol"] not in scope:
             continue
         held = calc.position(
             portfolio.trades_of(asset["symbol"]),

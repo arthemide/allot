@@ -138,3 +138,86 @@ class TestRoutes:
             "/assets/imports/preview", json={**SNAPSHOT, "source": "nowhere"}
         )
         assert response.status_code == 404
+
+
+def _place_and_apply(rows, symbol="AFERMONDE"):
+    source_sync.place(
+        "afer",
+        [AccountPlacement(account=ACCOUNT, envelope="AV")],
+        [LineMapping(label=FUND, symbol=symbol)],
+        rows,
+    )
+    return source_sync.apply("afer", rows)
+
+
+class TestScope:
+    def test_an_asset_of_the_envelope_tracked_by_hand_is_left_alone(
+        self, database, offline, rows
+    ):
+        # Given the envelope already holds an asset bought by hand
+        db.upsert_envelope("AV", 0.0)
+        db.add_asset("CW8.PA", "Amundi World", "AV", "EUR")
+        db.set_opening_position("CW8.PA", 3.0, 1500.0)
+        # When the Afer account is imported into it
+        _place_and_apply(rows)
+        # Then the source only spoke for its own line
+        assert db.get_asset("CW8.PA")["base_quantity"] == 3.0
+
+    def test_a_fund_the_source_no_longer_reports_is_zeroed(
+        self, database, offline, rows
+    ):
+        # Given a first import, then a reading where only the euro fund is left
+        _place_and_apply(rows)
+        account = SNAPSHOT["accounts"][0]
+        gone = SourceSnapshot.model_validate(
+            {**SNAPSHOT, "accounts": [{**account, "lines": account["lines"][1:]}]}
+        )
+        # When it is applied
+        source_sync.apply("afer", source_sync.rows_from_snapshot(gone))
+        # Then the fund the source mapped is sold off
+        assert db.get_asset("AFERMONDE")["base_quantity"] == 0
+
+    def test_an_account_read_without_any_line_zeroes_nothing(
+        self, database, offline, rows
+    ):
+        # Given a first import, then a reading that found no line at all, as
+        # when the site changed its tables
+        _place_and_apply(rows)
+        empty = SourceSnapshot.model_validate(
+            {**SNAPSHOT, "accounts": [{**SNAPSHOT["accounts"][0], "lines": []}]}
+        )
+        # When it is applied
+        source_sync.apply("afer", source_sync.rows_from_snapshot(empty))
+        # Then nothing is taken for sold
+        assert db.get_asset("AFERMONDE")["base_quantity"] == 4
+
+
+class TestResolution:
+    def test_the_chosen_ticker_wins_over_the_search_ranking(
+        self, database, offline, mocker, rows
+    ):
+        # Given a search that ranks another listing first
+        mocker.patch(
+            "src.services.prices.search",
+            return_value=[
+                {"symbol": "AFERMONDE.X", "currency": "USD"},
+                {"symbol": "AFERMONDE", "currency": "EUR"},
+            ],
+        )
+        # When the line mapped to AFERMONDE is applied
+        report = _place_and_apply(rows)
+        # Then it is AFERMONDE, in the currency of its own listing
+        assert [line["symbol"] for line in report["imported"]] == ["AFERMONDE"]
+        assert db.get_asset("AFERMONDE")["currency"] == "EUR"
+
+    def test_a_line_the_source_buys_by_the_share_stays_so(self, database, offline):
+        snapshot = {**SNAPSHOT}
+        snapshot["accounts"] = [
+            {
+                **SNAPSHOT["accounts"][0],
+                "lines": [{**SNAPSHOT["accounts"][0]["lines"][0], "by_amount": False}],
+            }
+        ]
+        rows = source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
+        _place_and_apply(rows)
+        assert db.get_asset("AFERMONDE")["by_amount"] == 0
