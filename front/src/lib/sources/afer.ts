@@ -2,19 +2,21 @@
  * Reader for the Afer member area.
  *
  * Only the site's pages and XPaths live here; everything else is the launcher's.
- * The XPaths are the ones of woob's abeilleassurances module, which Afer's
- * site is built on.
+ *
+ * The pages and XPaths are adapted from woob's `abeilleassurances` module,
+ * which Afer's site is built on: woob (https://woob.tech), LGPL-3.0-or-later.
+ * No woob code runs here; the credit is for knowing where each figure sits.
  *
  * `read` is serialised into the bookmarklet with `toString()`: every helper it
  * needs is declared inside its body, nothing may come from this module.
  */
 
-import type { Io, SourceAccount, SourceLine, SourceSnapshot } from './bookmarklet.js';
+import type { ReadIo, SourceAccount, SourceLine, SourceSnapshot } from './bookmarklet.js';
 
 /** The member area lives on adherent.gie-afer.fr. */
 export const hosts = ['gie-afer.fr'];
 
-export async function read(io: Io): Promise<SourceSnapshot> {
+export async function read(io: ReadIo): Promise<SourceSnapshot> {
 	const IGNORED = [
 		'Prévoyance',
 		'Responsabilité civile',

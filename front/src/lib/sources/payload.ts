@@ -45,6 +45,11 @@ export function decode(fragment: string): SourceSnapshot {
 	} catch {
 		throw new Error('The link does not carry a reading. Click the bookmark again.');
 	}
+	return validate(value);
+}
+
+/** The snapshot a value is, posted or decoded, or why it is not one. */
+export function validate(value: unknown): SourceSnapshot {
 	const snapshot = value as SourceSnapshot;
 	if (
 		typeof snapshot !== 'object' ||
