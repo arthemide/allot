@@ -77,6 +77,8 @@ Which file, from which broker. A row is added when a reader is written and teste
 | --- | --- | --- |
 | BoursoBank | Portefeuille (CSV) - the same file for a PEA or a CTO | **Supported** |
 
+Two sources are read directly rather than exported. **BoursoBank** is read on the server, through woob, from the login you type in its dialog. **Afer** is read in your own browser by a bookmarklet, in the session you opened on the member area: Allot never sees your Afer credentials. Its funds carry no ISIN, so the first import asks which ticker each one is quoted under, and the euro fund, which holds an amount rather than units, is shown in the report without becoming a position. Allot is not affiliated with Afer or BoursoBank; both read your own data, with your own session.
+
 ## Self-hosting
 
 To run Allot on a machine of your own - a Raspberry Pi, a NAS, a spare box - without installing Python or Node:
@@ -181,6 +183,8 @@ The version in `pyproject.toml` is the source of truth. Bumping it and merging t
 | `GET`/`PUT`/`DELETE` | `/assets/{symbol}` | Read, edit, or stop tracking |
 | `PUT` | `/assets/{symbol}/opening` | Set the holding that predates tracking |
 | `GET` | `/assets/{symbol}/chart` | Prices, transactions and the step PRUM |
+| `POST` | `/assets/imports/preview` | What a source reading still needs chosen; writes nothing |
+| `POST` | `/assets/imports` | Import a source reading, with the envelopes and tickers chosen |
 | `GET`/`PUT`/`DELETE` | `/envelopes` | Envelopes and their monthly amount |
 | `GET`/`POST`/`DELETE` | `/transactions` | Buys and sells |
 | `PUT`/`DELETE` | `/envelopes/{name}/start` | Start tracking an envelope's cash, or stop |

@@ -4,6 +4,7 @@
 	import type { ConnectorStatus, ImportReport } from '#lib/types/api.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import ImportReportView from '#lib/components/ImportReportView.svelte';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
@@ -23,7 +24,6 @@
 	let status = $state<ConnectorStatus | null>(null);
 	let report = $state<ImportReport | null>(null);
 	const waitingForUser = $derived(status !== null && status.status !== 'done');
-	const conflicts = $derived(report?.conflicts ?? []);
 
 	$effect(() => {
 		if (open || waitingForUser || busy) return;
@@ -147,40 +147,7 @@
 		</Dialog.Header>
 
 		{#if report}
-			<p class="text-sm">
-				{report.imported.length} line{report.imported.length === 1 ? '' : 's'} imported{#if report.unresolved.length},
-					{report.unresolved.length} unresolved{/if}{#if conflicts.length},
-					{conflicts.length} in conflict{/if}.
-			</p>
-			{#if report.unresolved.length}
-				<div class="space-y-2 rounded-md border p-3 text-sm">
-					<p class="text-muted-foreground">
-						Nothing was written for these lines: no ISIN, no cost price, or no Yahoo listing in the
-						bank's currency. Add them by hand. Until they are, nothing in their account is zeroed.
-					</p>
-					<ul class="list-inside list-disc">
-						{#each report.unresolved as line, index (index)}
-							<li>{line.name}{line.isin ? ` (${line.isin})` : ''}</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
-			{#if conflicts.length}
-				<div class="space-y-2 rounded-md border p-3 text-sm">
-					<p class="text-muted-foreground">
-						The trades recorded here hold more than the bank reports, so these lines were left as
-						they were. Record the missing sells, then sync again.
-					</p>
-					<ul class="list-inside list-disc">
-						{#each conflicts as line (line.symbol)}
-							<li>
-								<span class="font-mono">{line.symbol}</span>
-								{line.label}: {line.tracked_quantity} tracked, {line.bank_quantity} at the bank
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
+			<ImportReportView {report} />
 			{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
 			<Dialog.Footer>
 				<Button onclick={() => (open = false)}>Close</Button>

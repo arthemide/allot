@@ -9,12 +9,14 @@ import type {
 	ImportReport,
 	NewAsset,
 	NewTransaction,
+	PendingChoices,
 	Position,
 	SearchHit,
 	Session,
 	Summary,
 	Transaction
 } from '#lib/types/api.js';
+import type { SourceSnapshot } from '#lib/sources/bookmarklet.js';
 
 // Empty in production: app.py serves the front from the same origin.
 const BASE = import.meta.env.DEV ? 'http://localhost:8000' : '';
@@ -173,20 +175,16 @@ export const setEnvelopeStart = (name: string, body: EnvelopeStart) =>
 export const clearEnvelopeStart = (name: string) =>
 	request<Envelope>(`/envelopes/${encodeURIComponent(name)}/start`, { method: 'DELETE' });
 
-/** What a source reading still needs before it can be imported. */
-export interface PendingChoices {
-	accounts: { account: string; lines: number; envelope: string | null }[];
-	lines: { label: string; symbol: string | null }[];
-}
-
-export const importPreview = (snapshot: unknown) =>
+/** What a reading still needs chosen before it can be imported. Writes nothing. */
+export const importPreview = (snapshot: SourceSnapshot) =>
 	request<PendingChoices>('/assets/imports/preview', {
 		method: 'POST',
 		body: JSON.stringify(snapshot)
 	});
 
+/** Remember the choices, then import the reading. */
 export const importSource = (
-	snapshot: unknown,
+	snapshot: SourceSnapshot,
 	placements: { account: string; envelope: string | null }[],
 	mappings: { label: string; symbol: string | null }[]
 ) =>
