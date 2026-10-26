@@ -6,6 +6,8 @@ accounts and line-to-ticker mappings. The reading itself is the source's job.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Iterable
 
 from src.databases import sqlite as db
@@ -48,15 +50,17 @@ def rows_from_snapshot(snapshot: SourceSnapshot) -> list[PositionRow]:
                     currency=line.currency or "EUR",
                     unit_cost=unit_cost,
                     unit_price=line.unit_value,
+                    by_amount=line.by_amount,
                 )
             )
     return rows
 
 
-def by_account(rows: Iterable[PositionRow]) -> dict[str, list[SnapshotLine]]:
+def by_account(
+    source: str, rows: Iterable[PositionRow]
+) -> dict[str, list[SnapshotLine]]:
     """The security lines of each account, with the remembered ticker mapping."""
-    rows = list(rows)
-    mapping = db.source_lines(next(iter({r.source for r in rows}), ""))
+    mapping = db.source_lines(source)
     accounts: dict[str, list[SnapshotLine]] = {}
     for row in rows:
         lines = accounts.setdefault(row.account, [])
@@ -73,7 +77,7 @@ def by_account(rows: Iterable[PositionRow]) -> dict[str, list[SnapshotLine]]:
                 prum=row.unit_cost,
                 currency=row.currency,
                 symbol=symbol,
-                by_amount=True,
+                by_amount=row.by_amount,
             )
         )
     return accounts
@@ -88,7 +92,7 @@ def pending(source: str, rows: Iterable[PositionRow]) -> PendingChoices:
     assets = db.all_assets()
     accounts: list[PendingAccount] = []
     lines: dict[str, PendingLine] = {}
-    for account, snapshot_lines in by_account(rows).items():
+    for account, snapshot_lines in by_account(source, rows).items():
         if account not in placed:
             accounts.append(
                 PendingAccount(
@@ -120,9 +124,6 @@ def _suggest_asset(label: str, assets: list[dict]) -> str | None:
 
 
 def _words(value: str) -> set[str]:
-    import re
-    import unicodedata
-
     normalised = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
     return {w for w in re.split(r"[^a-z0-9]+", normalised.lower()) if w and len(w) > 2}
 
@@ -155,9 +156,15 @@ def _blank_to_none(value: str | None) -> str | None:
 
 
 def apply(source: str, rows: Iterable[PositionRow]) -> dict:
+    """Set the positions the source reports, envelope by envelope.
+
+    A source speaks only for the assets its lines map to: another asset of the
+    same envelope, tracked by hand or by another source, is never zeroed.
+    """
     placed = db.source_accounts(source)
+    owned = {symbol for symbol in db.source_lines(source).values() if symbol}
     by_envelope: dict[str, list[SnapshotLine]] = {}
-    for account, lines in by_account(rows).items():
+    for account, lines in by_account(source, rows).items():
         envelope = placed.get(account)
         if envelope is None:
             continue
@@ -170,7 +177,9 @@ def apply(source: str, rows: Iterable[PositionRow]) -> dict:
         "total": 0,
     }
     for envelope, lines in by_envelope.items():
-        report = portfolio_import.apply_snapshot(envelope, lines, authoritative=True)
+        report = portfolio_import.apply_snapshot(
+            envelope, lines, authoritative=True, scope=owned
+        )
         for key in ("imported", "unresolved", "elsewhere", "conflicts"):
             merged[key].extend(report[key])
         merged["total"] += report["total"]
