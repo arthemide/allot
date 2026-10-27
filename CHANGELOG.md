@@ -6,6 +6,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.11.0] - 2026-10-27
+
+### Added
+
+- read BoursoBank positions into Allot
+- load woob modules locally, no network at runtime
+- resolve Bourso lines without ISIN by hand
+- read Afer in the browser, buy by amount as a stored flag
+- import a browser reading from /import
+- hand the reading over by postMessage, drop the brand logos
+- change an asset's Yahoo ticker, its history kept
+
+### Changed
+
+- drop the Playwright path
+- move manual resolution and broker identity out
+- give BoursoBank its own subpackage, keep sync models in schema
+- compact the toolbar, BoursoBank behind its logo
+- one sync and one table for every source, report amounts without units
+
+### Fixed
+
+- handle interrupted Bourso authentication
+- resolve Bourso positions by ISIN
+- tolerate missing quotes in summary, skip browser tests without playwright
+- import Bourso lines without a cost basis
+- replace $ by # for new sveltekit version
+- keep recorded trades, place bank accounts explicitly
+- speak only for the source's own assets, keep the chosen ticker
+- check the source's domain, align the import preview with the backend
+- a fractional trade switches its asset to buying by amount
+- one source per envelope
+- one asset per line choice, nothing zeroed on a doubtful reading
+- drop the early source_line key to asset on boot
+
+### Other
+
+- refresh the woob boursorama module from woob's signed repository
+- drop .gitignore lines already covered by data/
+
+### Revert
+
+- move the native-currency rows to their own PR
+
 ## [0.10.0] - 2026-10-27
 
 ### Fixed
