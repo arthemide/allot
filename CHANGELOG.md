@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.10.0] - 2026-10-27
+
+### Fixed
+
+- show asset rows in their native currency
+- change node from 22 to 26
+
+### Other
+
+- bump the front group in /front with 5 updates
+- bump the python group with 2 updates
+- bump @sveltejs/kit from 2.70.3 to 3.0.1 in /front
+- migrate front to SvelteKit 3 and adapter-static 4
+- bump the python group across 1 directory with 3 updates
+- bump the front group across 1 directory with 6 updates
+
 ## [0.9.0] - 2026-10-04
 
 ### Other
