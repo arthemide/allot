@@ -86,6 +86,10 @@ def apply_snapshot(
                 # Its position belongs to that envelope's own sync: writing it
                 # from here would have two syncs overwrite each other.
                 continue
+        elif row.by_amount and not existing["by_amount"]:
+            # The source only sells by amount : a position
+            # tracked by hand before the first sync takes it up too.
+            db.set_by_amount(symbol, True)
         touched.add(symbol)
         if authoritative:
             conflict = _reconcile(symbol, row.name, row.quantity, row.prum)
