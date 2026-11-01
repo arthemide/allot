@@ -31,6 +31,7 @@ from src.models.schema import (
     PendingLine,
     PositionRow,
     SnapshotLine,
+    SourceLine,
     SourceSnapshot,
 )
 from src.services import portfolio_import
@@ -42,19 +43,20 @@ def rows_from_snapshot(snapshot: SourceSnapshot) -> list[PositionRow]:
     rows: list[PositionRow] = []
     for account in snapshot.accounts:
         for line in account.lines:
+            quantity = _quantity(line)
             unit_cost = line.unit_cost
-            if unit_cost is None and line.invested is not None and line.quantity:
-                unit_cost = line.invested / line.quantity
+            if unit_cost is None and line.invested is not None and quantity:
+                unit_cost = line.invested / quantity
             rows.append(
                 PositionRow(
                     source=snapshot.source,
                     account=account.label,
                     # No quantity: an amount, not units - the euro fund of an
                     # assurance vie. Reported as available, never a position.
-                    support_type="cash" if line.quantity is None else "security",
+                    support_type="cash" if quantity is None else "security",
                     isin=line.isin,
                     label=line.label,
-                    quantity=line.quantity,
+                    quantity=quantity,
                     value=line.valuation or 0.0,
                     currency=line.currency or "EUR",
                     unit_cost=unit_cost,
@@ -63,6 +65,26 @@ def rows_from_snapshot(snapshot: SourceSnapshot) -> list[PositionRow]:
                 )
             )
     return rows
+
+
+# How far a quantity worked out from the line's amount may sit from the one
+# displayed: the half-unit of its last decimal, Afer showing two.
+DISPLAY_ROUNDING = 0.005
+
+
+def _quantity(line: SourceLine) -> float | None:
+    """The line's units, as precise as its amount and unit value allow.
+
+    A site displays units rounded (0,42 for 0,4229 at Afer), which is off by
+    euros on an expensive unit. The amount divided by the unit value is exact;
+    it is taken only when it rounds to the units displayed, so a misread amount
+    never replaces them.
+    """
+    quantity = line.quantity
+    if not quantity or not line.valuation or not line.unit_value:
+        return quantity
+    exact = line.valuation / line.unit_value
+    return exact if abs(exact - quantity) <= DISPLAY_ROUNDING + 1e-9 else quantity
 
 
 def _is_amount(row: PositionRow) -> bool:

@@ -281,6 +281,46 @@ class TestResolution:
         _place_and_apply(rows)
         assert db.get_asset("AFERMONDE")["by_amount"] == 0
 
+    def test_a_position_tracked_by_whole_shares_takes_up_buying_by_amount(
+        self, database, offline, rows
+    ):
+        # Given the fund tracked by hand before the first sync, by whole shares
+        db.upsert_envelope("AV", 0.0)
+        db.add_asset("AFERMONDE", FUND, "AV", "EUR", by_amount=False)
+        # When Afer, which only sells by amount, is synced
+        _place_and_apply(rows)
+        # Then the asset is bought by amount from now on
+        assert db.get_asset("AFERMONDE")["by_amount"] == 1
+
+
+def _one_line(**line):
+    snapshot = {
+        **SNAPSHOT,
+        "accounts": [{**SNAPSHOT["accounts"][0], "lines": [line]}],
+    }
+    return source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
+
+
+class TestQuantity:
+    def test_units_displayed_rounded_are_worked_out_from_the_amount(self):
+        # Given 0,42 units displayed, worth 921,68 at 2 179,58 a unit
+        [row] = _one_line(
+            label=FUND,
+            quantity=0.42,
+            unit_value=2179.58,
+            valuation=921.68,
+            invested=747.39,
+        )
+        # Then the units are the exact ones, and the PRU follows them
+        assert row.quantity == pytest.approx(0.422870, abs=1e-6)
+        assert row.unit_cost == pytest.approx(747.39 / row.quantity)
+
+    def test_an_amount_that_does_not_round_to_the_units_is_ignored(self):
+        # Given an amount misread: 4 units of 50 cannot be worth 300
+        [row] = _one_line(label=FUND, quantity=4, unit_value=50, valuation=300)
+        # Then the units displayed stand
+        assert row.quantity == 4
+
 
 class TestAvailable:
     def test_the_euro_fund_is_reported_not_written(self, database, offline, rows):
