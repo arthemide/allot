@@ -86,6 +86,7 @@ jobs:
           context: .
           platforms: linux/arm/v7
           push: false
+          build-args: INSTALL_WOOB=1
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -96,9 +97,13 @@ jobs:
           context: .
           push: false
           load: true
+          build-args: INSTALL_WOOB=1
           tags: allot:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # The BoursoBank sync only says it is missing once someone logs in.
+      - name: woob is installed
+        run: docker run --rm --entrypoint python allot:ci -c "import woob.core"
       - name: Start it and wait for /health
         run: |
           docker run -d --name allot-ci -p 8000:8000 allot:ci
@@ -195,8 +200,9 @@ jobs:
             type=raw,value=latest
 
       # arm/v7 is the deployment target (a 32-bit Raspberry Pi); the other two
-      # are for development machines. Nothing in the image is compiled from
-      # source, so the emulated builds stay cheap.
+      # are for development machines. The image carries woob, for the in-app
+      # BoursoBank sync: on arm/v7 pillow has no wheel and compiles from source
+      # under emulation, the one slow part of this build.
       - name: Build and push
         id: push
         uses: docker/build-push-action@v7
@@ -204,6 +210,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          build-args: INSTALL_WOOB=1
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
