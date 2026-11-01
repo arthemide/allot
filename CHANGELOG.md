@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.11.1] - 2026-11-01
+
+### Fixed
+
+- exact Afer units, an assurance vie bought by amount
+
 ## [0.11.0] - 2026-10-27
 
 ### Added
