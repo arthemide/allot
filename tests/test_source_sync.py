@@ -346,14 +346,22 @@ class TestAvailable:
 
 
 class TestPendingLines:
-    def test_a_line_with_an_isin_is_resolved_by_the_search_not_by_hand(self, database):
+    def test_a_line_with_an_isin_is_asked_with_its_listing_offered(
+        self, database, mocker
+    ):
         tagged = {**SNAPSHOT["accounts"][0]["lines"][0], "isin": "FR0010821470"}
         snapshot = {
             **SNAPSHOT,
             "accounts": [{**SNAPSHOT["accounts"][0], "lines": [tagged]}],
         }
         rows = source_sync.rows_from_snapshot(SourceSnapshot.model_validate(snapshot))
-        assert source_sync.pending("afer", rows).lines == []
+        mocker.patch(
+            "src.services.prices.search",
+            return_value=[{"symbol": "AMUNDI.PA", "currency": "EUR"}],
+        )
+        [line] = source_sync.pending("afer", rows).lines
+        assert line.isin == "FR0010821470"
+        assert line.found == "AMUNDI.PA"
 
     def test_the_lines_of_an_account_left_out_are_not_asked(self, database, rows):
         db.set_source_account("afer", ACCOUNT, None)
