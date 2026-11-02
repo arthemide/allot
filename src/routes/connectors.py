@@ -3,8 +3,8 @@
 The login is interactive: the first call hands over the credentials, and if
 the bank asks for a second factor the caller answers it on a follow-up call
 carrying the session id. Once through, the accounts are read; an account
-seen for the first time waits for the user to pick its envelope, then every
-placed account is synced (src/services/source_sync.py).
+seen for the first time waits for the user to pick its envelope, a line for
+its ticker, then every placed account is synced (src/services/source_sync.py).
 
 Credentials reach this process in the request body and never leave it; woob
 does the actual login (src/connectors/boursorama/connector.py). Because they are bank
@@ -118,7 +118,8 @@ def answer(session_id: str, payload: ConnectorAnswer):
 
 @router.post("/bourso/login/{session_id}/accounts", response_model=ConnectorStatus)
 def place_accounts(session_id: str, payload: ConnectorAccounts):
-    """Pick the envelope of each new account, then finish the sync."""
+    """Pick the envelope of each new account and the ticker of each new line,
+    then finish the sync."""
     rows = login_session.held(session_id)
     if rows is None:
         raise HTTPException(
@@ -131,7 +132,7 @@ def place_accounts(session_id: str, payload: ConnectorAccounts):
                 AccountPlacement(account=account, envelope=envelope)
                 for account, envelope in payload.envelopes.items()
             ],
-            [],
+            payload.mappings,
             rows,
         )
     except ValueError as error:
@@ -154,10 +155,13 @@ def _advance(session_id: str, attempt) -> ConnectorStatus:
     # while the user picks envelopes.
     attempt.deinit()
     login_session.hold(session_id, rows)
-    pending = source_sync.pending(SOURCE, rows).accounts
-    if pending:
+    pending = source_sync.pending(SOURCE, rows)
+    if pending.accounts or pending.lines:
         return ConnectorStatus(
-            session_id=session_id, status="accounts", accounts=pending
+            session_id=session_id,
+            status="accounts",
+            accounts=pending.accounts,
+            lines=pending.lines,
         )
     return _done(session_id, rows)
 

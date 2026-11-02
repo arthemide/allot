@@ -211,9 +211,13 @@ class AccountChoice(BaseModel):
 
 
 class ConnectorAccounts(BaseModel):
-    """The envelope each new account syncs into; None leaves it out of Allot."""
+    """The envelope each new account syncs into; None leaves it out of Allot.
+
+    `mappings` answers the new lines, as an import from the browser does.
+    """
 
     envelopes: dict[str, str | None]
+    mappings: list[LineMapping] = []
 
 
 class ConnectorStatus(BaseModel):
@@ -221,13 +225,15 @@ class ConnectorStatus(BaseModel):
 
     `status` is "otp" or "app_validation" while the bank waits for a second
     factor, "accounts" while new accounts wait for an envelope (`accounts`),
-    then "done". `report` is filled only on "done".
+    then "done". "accounts" also waits for the new lines' tickers (`lines`).
+    `report` is filled only on "done".
     """
 
     session_id: str
     status: Literal["otp", "app_validation", "accounts", "done"]
     prompt: str = ""
     accounts: list[AccountChoice] = []
+    lines: list[PendingLine] = []
     report: ImportReport | None = None
 
 
@@ -376,12 +382,15 @@ class SourceSnapshot(BaseModel):
 
 
 class PendingLine(BaseModel):
-    """A line without an ISIN no ticker was chosen for yet; `symbol` is a guess."""
+    """A line no ticker was chosen for yet; `symbol` is a guess."""
 
     # The first account it shows up in: leaving that account out hides it.
     account: str
     label: str
+    isin: str | None = None
     symbol: str | None = None
+    # The listing the line's ISIN resolves to, offered to be confirmed.
+    found: str | None = None
 
 
 class PendingChoices(BaseModel):

@@ -180,13 +180,16 @@ export interface ImportReport {
 	total: number;
 }
 
-/** A line without an ISIN no ticker was chosen for yet. */
+/** A line no ticker was chosen for yet. */
 export interface PendingLine {
 	/** The first account it shows up in: leaving that account out hides it. */
 	account: string;
 	label: string;
+	isin: string | null;
 	/** A guess among the tracked assets, from the words of the label. */
 	symbol: string | null;
+	/** The listing the line's ISIN resolves to, offered to be confirmed. */
+	found: string | null;
 }
 
 /** What a source reading still needs before it can be imported. */
@@ -209,6 +212,8 @@ export interface ConnectorStatus {
 	status: 'otp' | 'app_validation' | 'accounts' | 'done';
 	prompt: string;
 	accounts: AccountChoice[];
+	/** The new lines waiting for their ticker, with `accounts`. */
+	lines: PendingLine[];
 	report: ImportReport | null;
 }
 

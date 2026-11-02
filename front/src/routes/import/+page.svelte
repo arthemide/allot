@@ -3,12 +3,13 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { importPreview, importSource, searchTickers } from '#lib/services/api.js';
+	import { importPreview, importSource } from '#lib/services/api.js';
 	import { READING, READY, type SourceSnapshot } from '#lib/sources/bookmarklet.js';
 	import { BROWSER_SOURCES, readsFrom } from '#lib/sources/index.js';
 	import { decode, prum, validate } from '#lib/sources/payload.js';
-	import type { ImportReport, PendingChoices, SearchHit } from '#lib/types/api.js';
+	import type { ImportReport, PendingChoices } from '#lib/types/api.js';
 	import ImportReportView from '#lib/components/ImportReportView.svelte';
+	import LineTickers, { mappings, prefilled } from '#lib/components/LineTickers.svelte';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { formatMoney } from '#lib/utils.js';
@@ -28,7 +29,6 @@
 	let envelopes = $state<Record<string, string>>({});
 	let symbols = $state<Record<string, string>>({});
 	let excluded = $state<Record<string, boolean>>({});
-	let hits = $state<Record<string, SearchHit[]>>({});
 
 	// Opened by a bookmark click: say so, and the reading comes by postMessage.
 	let waiting = $state(false);
@@ -78,8 +78,7 @@
 		try {
 			choices = await importPreview(reading);
 			envelopes = Object.fromEntries(choices.accounts.map((a) => [a.account, a.envelope ?? '']));
-			// The guess is only offered: a wrong ticker silently merges two funds.
-			symbols = Object.fromEntries(choices.lines.map((l) => [l.label, '']));
+			symbols = prefilled(choices.lines);
 			excluded = {};
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Allot could not check the reading.';
@@ -88,14 +87,6 @@
 
 	// A line of a new account left out needs no ticker.
 	const leftOut = (account: string) => account in envelopes && !envelopes[account].trim();
-
-	async function search(label: string) {
-		try {
-			hits[label] = (await searchTickers(symbols[label].trim() || label)).slice(0, 5);
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'The search failed.';
-		}
-	}
 
 	async function run(event: SubmitEvent) {
 		event.preventDefault();
@@ -110,13 +101,11 @@
 					// As typed: the offered default is an existing envelope, case included.
 					envelope: name.trim() || null
 				})),
-				choices.lines
-					.filter((line) => !leftOut(line.account))
-					.filter((line) => excluded[line.label] || symbols[line.label].trim())
-					.map((line) => ({
-						label: line.label,
-						symbol: excluded[line.label] ? null : symbols[line.label].trim()
-					}))
+				mappings(
+					choices.lines.filter((line) => !leftOut(line.account)),
+					symbols,
+					excluded
+				)
 			);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'The import failed.';
@@ -211,66 +200,11 @@
 				{/if}
 
 				{#if choices.lines.some((line) => !leftOut(line.account))}
-					<div class="space-y-2">
-						<p class="text-sm">
-							These funds carry no ISIN: pick the ticker each one is quoted under. A fund left blank
-							is asked again next time, and holds back the zeroing of its envelope until then.
-						</p>
-						{#each choices.lines as line (line.label)}
-							{#if !leftOut(line.account)}
-								<div class="space-y-1 text-sm">
-									<span>{line.label}</span>
-									<div class="flex items-center gap-2">
-										<Input
-											bind:value={symbols[line.label]}
-											placeholder={excluded[line.label] ? 'Left out' : 'Ticker'}
-											disabled={excluded[line.label]}
-											class="font-mono"
-										/>
-										<Button
-											variant="outline"
-											disabled={excluded[line.label]}
-											onclick={() => search(line.label)}
-										>
-											Search
-										</Button>
-										<label class="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
-											<input type="checkbox" bind:checked={excluded[line.label]} />
-											Leave out
-										</label>
-									</div>
-									{#if line.symbol && !symbols[line.label] && !excluded[line.label]}
-										<button
-											type="button"
-											class="text-muted-foreground hover:text-primary text-xs hover:underline"
-											onclick={() => (symbols[line.label] = line.symbol ?? '')}
-										>
-											Maybe <span class="font-mono">{line.symbol}</span>, already tracked? Use it
-										</button>
-									{/if}
-									{#if hits[line.label]?.length}
-										<div class="flex flex-wrap gap-1">
-											{#each hits[line.label] as hit (hit.symbol)}
-												<Button
-													variant="ghost"
-													size="sm"
-													onclick={() => {
-														symbols[line.label] = hit.symbol;
-														hits[line.label] = [];
-													}}
-												>
-													<span class="font-mono">{hit.symbol}</span>
-													<span class="text-muted-foreground">{hit.label}</span>
-												</Button>
-											{/each}
-										</div>
-									{:else if hits[line.label]}
-										<p class="text-muted-foreground text-xs">No listing found.</p>
-									{/if}
-								</div>
-							{/if}
-						{/each}
-					</div>
+					<LineTickers
+						lines={choices.lines.filter((line) => !leftOut(line.account))}
+						bind:symbols
+						bind:excluded
+					/>
 				{/if}
 
 				<p class="text-muted-foreground text-xs">

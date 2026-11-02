@@ -5,6 +5,7 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import ImportReportView from '#lib/components/ImportReportView.svelte';
+	import LineTickers, { mappings, prefilled } from '#lib/components/LineTickers.svelte';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
 	import LandmarkIcon from '@lucide/svelte/icons/landmark';
@@ -12,13 +13,16 @@
 
 	// The login runs on the server; nothing is kept here. This dialog only
 	// carries the credentials through, shows the one second factor the bank
-	// asks, and asks where a new account goes.
+	// asks, and asks where a new account goes and what a new line is quoted as.
 	let open = $state(false);
 	let login = $state('');
 	let password = $state('');
 	let code = $state('');
 	// Envelope typed for each new account; empty leaves the account out.
 	let envelopes = $state<Record<string, string>>({});
+	// Ticker typed for each new line; a line left blank is asked again.
+	let symbols = $state<Record<string, string>>({});
+	let excluded = $state<Record<string, boolean>>({});
 
 	let busy = $state(false);
 	let error = $state('');
@@ -31,6 +35,8 @@
 		// Clear everything on close: credentials never linger in memory.
 		login = password = code = error = '';
 		envelopes = {};
+		symbols = {};
+		excluded = {};
 		status = report = null;
 	});
 
@@ -40,6 +46,8 @@
 			envelopes = Object.fromEntries(
 				result.accounts.map((choice) => [choice.account, choice.envelope ?? ''])
 			);
+			symbols = prefilled(result.lines);
+			excluded = {};
 		}
 		if (result.status === 'done') {
 			report = result.report;
@@ -83,6 +91,12 @@
 		}
 	}
 
+	// A line of a new account left out needs no ticker.
+	const leftOut = (account: string) => account in envelopes && !envelopes[account].trim();
+	const asked = $derived(
+		status?.status === 'accounts' ? status.lines.filter((line) => !leftOut(line.account)) : []
+	);
+
 	async function place(event: SubmitEvent) {
 		event.preventDefault();
 		if (!status) return;
@@ -95,7 +109,9 @@
 					name.trim() ? name.trim().toUpperCase() : null
 				])
 			);
-			done(await connectorAccounts(status.session_id, chosen));
+			done(
+				await connectorAccounts(status.session_id, chosen, mappings(asked, symbols, excluded))
+			);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'The sync failed.';
 			// A refused choice leaves the reading held on the server: stay on the
@@ -139,7 +155,7 @@
 		{/snippet}
 	</Dialog.Trigger>
 
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class={asked.length ? 'sm:max-w-xl' : 'sm:max-w-md'}>
 		<Dialog.Header>
 			<Dialog.Title>BoursoBank</Dialog.Title>
 			<Dialog.Description>
@@ -156,12 +172,14 @@
 				<Button onclick={() => (open = false)}>Close</Button>
 			</Dialog.Footer>
 		{:else if status && status.status === 'accounts'}
-			<form class="space-y-3" onsubmit={place}>
-				<p class="text-sm">
-					{status.accounts.length === 1 ? 'This account is' : 'These accounts are'} new. Pick the envelope
-					each one syncs into; it is remembered for the next syncs. Leave it empty to keep an account
-					out of Allot.
-				</p>
+			<form class="max-h-[70vh] space-y-3 overflow-y-auto" onsubmit={place}>
+				{#if status.accounts.length}
+					<p class="text-sm">
+						{status.accounts.length === 1 ? 'This account is' : 'These accounts are'} new. Pick the
+						envelope each one syncs into; it is remembered for the next syncs. Leave it empty to keep an
+						account out of Allot.
+					</p>
+				{/if}
 				{#each status.accounts as choice (choice.account)}
 					<div class="space-y-1">
 						<Label for="sync-account-{choice.account}">
@@ -174,6 +192,9 @@
 						/>
 					</div>
 				{/each}
+				{#if asked.length}
+					<LineTickers lines={asked} bind:symbols bind:excluded />
+				{/if}
 				{#if error}<p class="text-destructive text-sm">{error}</p>{/if}
 				<Dialog.Footer>
 					<!-- Forgets this sync here: the next try logs into the bank again. -->

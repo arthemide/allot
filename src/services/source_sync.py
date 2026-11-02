@@ -8,8 +8,9 @@ Each account syncs into the envelope the user placed it in, once, the first
 time the account shows up. Nothing is ever filed under an envelope named after
 whatever label the source happens to use: an account nobody placed yet stops
 the sync until it is, and an account left out (no envelope) is skipped from
-then on. A line without an ISIN is mapped to its ticker by hand the same way,
-once; mapped to nothing, it is left out.
+then on. Each line is mapped to its ticker by hand the same way, once; mapped
+to nothing, it is left out. An ISIN only offers a listing: Yahoo ranks several
+for one ISIN, and the one already tracked here may not be the first.
 
 Accounts placed in the same envelope are applied together, so that one of
 them never zeroes what the other holds. How far a sync zeroes is the source's
@@ -138,7 +139,8 @@ def pending(source: str, rows: Iterable[PositionRow]) -> PendingChoices:
     """What still needs a choice before the sync can run.
 
     The accounts never placed, with an envelope of the same name to offer, and
-    the lines without an ISIN never mapped, with a guess among the assets.
+    the lines never mapped, with a guess among the assets and, for a line with
+    an ISIN, the listing it resolves to.
     """
     rows = list(rows)
     placed = db.source_accounts(source)
@@ -162,12 +164,15 @@ def pending(source: str, rows: Iterable[PositionRow]) -> PendingChoices:
         elif placed[account] is None:
             continue  # Left out: none of its lines matter.
         for line in snapshot_lines:
-            if line.isin or line.name in mapped or line.name in lines:
+            if line.name in mapped or line.name in lines:
                 continue
+            hit = portfolio_import.resolve(line) if line.isin else None
             lines[line.name] = PendingLine(
                 account=account,
                 label=line.name,
+                isin=line.isin,
                 symbol=_suggest_asset(line.name, assets, common),
+                found=hit["symbol"] if hit else None,
             )
     return PendingChoices(accounts=accounts, lines=list(lines.values()))
 

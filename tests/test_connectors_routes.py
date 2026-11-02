@@ -96,10 +96,12 @@ def fresh(authenticated_client):
 
 @pytest.fixture
 def bank(fresh):
-    """The same, with PEA, CTO and FUND placed in envelopes of their name."""
+    """The same, with PEA, CTO and FUND placed in envelopes of their name, and
+    the World line mapped to CW8.PA."""
     for account in ("PEA", "CTO", "FUND"):
         db.upsert_envelope(account, 0.0)
         db.set_source_account("bourso", account, account)
+    db.set_source_line("bourso", "World", "CW8.PA")
     return fresh
 
 
@@ -116,6 +118,16 @@ def post(client, login="u", password="p"):
     return client.post(
         "/connectors/bourso/login", json={"login": login, "password": password}
     )
+
+
+def unanswered(client):
+    """Sync, leaving every new line's ticker blank: its ISIN is searched."""
+    first = post(client).json()
+    assert first["status"] == "accounts"
+    return client.post(
+        f"/connectors/bourso/login/{first['session_id']}/accounts",
+        json={"envelopes": {}},
+    ).json()
 
 
 def held(symbol):
@@ -186,7 +198,7 @@ class TestStraightThrough:
             return_value=[{"symbol": "VTI", "label": "US fund", "currency": "USD"}],
         )
 
-        report = post(bank).json()["report"]
+        report = unanswered(bank)["report"]
 
         assert report["imported"] == []
         assert report["unresolved"] == [{"isin": "US0000000001", "name": "US fund"}]
@@ -206,7 +218,7 @@ class TestStraightThrough:
         ]
         search = mocker.patch.object(prices, "search")
 
-        report = post(bank).json()["report"]
+        report = unanswered(bank)["report"]
 
         # Then nothing is guessed from its label, and the user sees it
         assert report["unresolved"] == [{"isin": None, "name": "FUND LINE"}]
@@ -240,12 +252,52 @@ class TestAccounts:
         first = post(fresh).json()
         done = fresh.post(
             f"/connectors/bourso/login/{first['session_id']}/accounts",
-            json={"envelopes": {"PEA": "MY PEA"}},
+            json={
+                "envelopes": {"PEA": "MY PEA"},
+                "mappings": [{"label": "World", "symbol": "CW8.PA"}],
+            },
         ).json()
         assert done["status"] == "done"
         assert db.get_asset("CW8.PA")["envelope"] == "MY PEA"
         # The next sync goes straight through
         assert post(fresh).json()["status"] == "done"
+
+    def test_a_new_line_offers_the_listing_its_isin_resolves_to(self, bank, resolver):
+        # Given a line of a placed account no ticker was chosen for yet
+        db.execute("DELETE FROM source_line")
+        # When it syncs
+        first = post(bank).json()
+        # Then it waits for its ticker, with the ISIN's listing offered
+        assert first["status"] == "accounts"
+        assert first["accounts"] == []
+        assert first["lines"] == [
+            {
+                "account": "PEA",
+                "label": "World",
+                "isin": "IE000BI8OT95",
+                "symbol": None,
+                "found": "CW8.PA",
+            }
+        ]
+        assert db.get_asset("CW8.PA") is None
+
+    def test_the_ticker_chosen_wins_over_the_isin(self, bank, resolver):
+        # Given the fund already tracked by hand under another listing
+        db.execute("DELETE FROM source_line")
+        db.add_asset("IWDA.AS", "World", "PEA", "EUR")
+        first = post(bank).json()
+        # When the user points the line at it
+        done = bank.post(
+            f"/connectors/bourso/login/{first['session_id']}/accounts",
+            json={
+                "envelopes": {},
+                "mappings": [{"label": "World", "symbol": "IWDA.AS"}],
+            },
+        ).json()
+        # Then that asset holds the position, and no second one is made
+        assert done["status"] == "done"
+        assert held("IWDA.AS")["quantity"] == pytest.approx(10.0)
+        assert db.get_asset("CW8.PA") is None
 
     def test_an_account_left_out_is_skipped(self, fresh, resolver):
         first = post(fresh).json()

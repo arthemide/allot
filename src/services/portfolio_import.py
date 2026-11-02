@@ -53,7 +53,7 @@ def apply_snapshot(
     imported, unresolved, elsewhere, conflicts = [], list(held_back), [], []
     touched: set[str] = set()
     for row in lines:
-        hit = _resolve(row)
+        hit = resolve(row)
         if hit is None or row.prum is None:
             unresolved.append({"isin": row.isin, "name": row.name})
             continue
@@ -122,7 +122,7 @@ def apply_snapshot(
     }
 
 
-def _resolve(row: SnapshotLine) -> dict | None:
+def resolve(row: SnapshotLine) -> dict | None:
     """The Yahoo listing for the line, or the one already chosen by the user."""
     if row.symbol:
         tracked = db.get_asset(row.symbol)
