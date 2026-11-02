@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.12.0] - 2026-11-02
+
+### Added
+
+- ask the ticker of every new line, BoursoBank included
+
 ## [0.11.1] - 2026-11-01
 
 ### Fixed
