@@ -24,7 +24,7 @@ RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
 # curl_cffi ships an armv7 wheel; its own dependency cffi does not, and has to
 # be compiled. Doing it in a throwaway stage keeps gcc and the headers out of
 # the image that actually ships.
-FROM python:3.14-slim AS wheels
+FROM python:3.15-slim AS wheels
 # INSTALL_WOOB=1 adds the in-app BoursoBank sync; it is off unless asked for.
 # lxml has an armv7 wheel, but pillow does not, so on the Pi it compiles from
 # source and needs the jpeg and zlib headers. Those are only installed then.
@@ -65,7 +65,7 @@ RUN set -eu; \
         "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-${asset}.tar.gz"; \
     tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin litestream
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 WORKDIR /app
 
 # A pillow compiled on the Pi links against the shared jpeg library.
